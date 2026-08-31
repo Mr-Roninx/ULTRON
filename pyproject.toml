@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ultron"
+version = "3.2.0"
+description = "Autonomous Fintech / Revenue Recovery Agent"
+authors = [{ name = "ULTRON Team" }]
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic",
+    "networkx",
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "huggingface_hub",
+    "python-dotenv"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "mock: mark test as using mock provider/components",
+    "fixture: mark test as using static fixtures or emulation",
+    "swu: mark test as running against synthetic payment universe",
+    "sandbox: mark test as running against provider test/sandbox",
+    "live: mark test as running against live production environment"
+]

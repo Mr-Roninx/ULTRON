@@ -1,0 +1,3348 @@
+# ULTRON v3.0
+
+## Autonomous Revenue Recovery Operating System
+
+### **Build-Ready Advanced Architecture**
+
+### Agent • Payment Intelligence • Revenue Graph • Interference • Adaptive Recovery • Memory • Replanning • Governance • Counterfactual Evaluation • Chaos Simulation
+
+---
+
+> **ULTRON v3 is an autonomous revenue-recovery agent that operates inside a dynamic financial world. It reconstructs the true state of revenue, diagnoses payment failures, discovers relationships between revenue events, chooses among feasible recovery actions, executes them through deterministic controls, observes the consequences, learns from experience, and autonomously replans when its model of the world becomes wrong.**
+
+The v2 build specification already corrected the most important architectural problems: seeded counterfactual replay, single-source-of-truth events, emergent memory, bounded tool access, delayed outcomes, and phased implementation. 
+
+**v3 keeps those foundations and adds the advanced mechanisms from the later RevGuard/QuantRev designs without allowing them to turn the project into an unbuildable platform.**
+
+---
+
+# PART I — THE NEW ULTRON THESIS
+
+## 1. The problem
+
+Most revenue recovery systems operate on one event:
+
+```text
+Payment failed
+       ↓
+Retry
+```
+
+or:
+
+```text
+Invoice overdue
+       ↓
+Reminder
+```
+
+or:
+
+```text
+Cart abandoned
+       ↓
+Email
+```
+
+But the merchant has one customer.
+
+Consider:
+
+```text
+ANANYA TEXTILES
+
+Payment failure          ₹8,200
+Checkout abandonment     ₹4,500
+Overdue invoice         ₹12,000
+────────────────────────────────
+Total revenue exposure  ₹24,700
+```
+
+ULTRON sees:
+
+```text
+             CUSTOMER
+                 │
+       ┌─────────┼─────────┐
+       ▼         ▼         ▼
+    Payment   Checkout   Invoice
+       │         │         │
+       └─────────┼─────────┘
+                 ▼
+          REVENUE STATE
+                 │
+                 ▼
+          ULTRON MISSION
+```
+
+The central thesis is:
+
+# **Revenue recovery must be coordinated at the revenue-state level, not independently at the transaction level.**
+
+---
+
+# 2. The ULTRON v3 mission
+
+ULTRON is given a goal, not a recommendation request.
+
+Example:
+
+```text
+MISSION
+────────────────────────────
+
+Recover: ₹10,00,000
+
+Deadline: 48 hours
+
+Recovery capacity:
+10 human-hours
+
+Communication budget:
+200 contacts
+
+Discount authority:
+₹50,000
+
+Autonomous risk limit:
+10%
+
+Status:
+ACTIVE
+```
+
+The agent owns this mission.
+
+---
+
+# 3. ULTRON's fundamental loop
+
+```text
+                    MISSION
+                       │
+                       ▼
+                   PERCEIVE
+                       │
+                       ▼
+                 INVESTIGATE
+                       │
+                       ▼
+              RECONSTRUCT STATE
+                       │
+                       ▼
+              DISCOVER INTERFERENCE
+                       │
+                       ▼
+                  USE MEMORY
+                       │
+                       ▼
+                 FORM OPTIONS
+                       │
+                       ▼
+             FEASIBILITY CHECK
+                       │
+                       ▼
+              ECONOMIC PLANNING
+                       │
+                       ▼
+                     ACT
+                       │
+                       ▼
+              WORLD CHANGES
+                       │
+                       ▼
+                   OBSERVE
+                       │
+                       ▼
+              EXPECTED VS ACTUAL
+                       │
+                ┌──────┴──────┐
+                ▼             ▼
+              NORMAL        DEVIATION
+                │             │
+                ▼             ▼
+              LEARN         REPLAN
+                              │
+                              └────────► INVESTIGATE
+```
+
+This is the **heart of ULTRON**.
+
+---
+
+# PART II — THE ULTRON v3 ARCHITECTURE
+
+# 4. Complete architecture
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           FINANCIAL WORLD                                    │
+│                                                                              │
+│ Payments │ Cards │ UPI │ Checkout │ Subscriptions │ Invoices │ Customers   │
+│ Gateway Health │ Communications │ PTP │ Disputes                            │
+└───────────────────────────────────┬──────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         WORLD EVENT PROJECTION                               │
+│                                                                              │
+│ State transitions → derived events → bounded agent observations             │
+└───────────────────────────────────┬──────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              ULTRON CORE                                     │
+│                                                                              │
+│ ┌─────────────┐    ┌──────────────┐    ┌──────────────────┐                 │
+│ │  Mission    │───►│  Perception  │───►│ State Reconstructor│               │
+│ │  Manager    │    │    Engine    │    │                  │                 │
+│ └─────────────┘    └──────────────┘    └─────────┬────────┘                 │
+│                                                  │                            │
+│                                                  ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │   Revenue Graph      │                │
+│                                      └──────────┬───────────┘                │
+│                                                 │                            │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │ Interference Engine  │                │
+│                                      └──────────┬───────────┘                │
+│                                                 │                            │
+│              ┌──────────────────────────────────┼───────────────────┐        │
+│              ▼                                  ▼                   ▼        │
+│    Payment Intelligence                    Memory              Customer     │
+│    • failure analysis                    • episodes             state        │
+│    • reconciliation                      • retrieval                          │
+│    • rail health                         • lessons                            │
+│              │                                  │                   │        │
+│              └──────────────────────────────────┼───────────────────┘        │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │ Recovery Economics   │                │
+│                                      │ Decay + LTV + Cost   │                │
+│                                      └──────────┬───────────┘                │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │ Feasible Action Set  │                │
+│                                      └──────────┬───────────┘                │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │ Adaptive Planner     │                │
+│                                      │ MAB + Economics      │                │
+│                                      └──────────┬───────────┘                │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │   LLM Reasoner       │                │
+│                                      └──────────┬───────────┘                │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │ Authority / Policy   │                │
+│                                      │ Risk / Safety        │                │
+│                                      └──────────┬───────────┘                │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │ Deterministic FSM    │                │
+│                                      └──────────┬───────────┘                │
+│                                                 ▼                            │
+│                                      ┌──────────────────────┐                │
+│                                      │ Action Executor      │                │
+│                                      └──────────┬───────────┘                │
+└────────────────────────────────────────────────┼──────────────────────────────┘
+                                                 │
+                    ┌────────────────────────────┼───────────────────┐
+                    ▼                            ▼                   ▼
+               PAYMENT TOOLS              CUSTOMER TOOLS       AR / B2B TOOLS
+                    │                            │                   │
+                    └────────────────────────────┼───────────────────┘
+                                                 ▼
+                                      ┌──────────────────────┐
+                                      │   FINANCIAL WORLD    │
+                                      │     SIMULATOR        │
+                                      └──────────┬───────────┘
+                                                 │
+                                                 ▼
+                                            OBSERVATION
+                                                 │
+                                                 ▼
+                                         PREDICTION ERROR
+                                                 │
+                                     ┌───────────┴───────────┐
+                                     ▼                       ▼
+                                   LEARN                   REPLAN
+                                     │                       │
+                                     └───────────────────────┘
+```
+
+---
+
+# PART III — WORLD MODEL
+
+# 5. Canonical data model
+
+We keep the audit-corrected principle:
+
+> **One source of truth per fact.**
+
+The v2 specification correctly removed a separately authored `payment_events` table and uses an event view derived from state. 
+
+For v3, the canonical model is:
+
+```text
+customers
+payments
+revenue_obligations
+checkout_sessions
+missions
+actions
+memory
+audit
+```
+
+Additional production entities can later be split out.
+
+---
+
+# 6. Customer
+
+```text
+customer_id
+segment
+ltv
+timezone
+preferred_language
+communication_preferences
+
+payment_count
+successful_payment_count
+late_payment_count
+average_payment_delay
+email_response_rate
+sms_response_rate
+voice_response_rate
+```
+
+Do not store subjective labels such as:
+
+```text
+hostile
+forgetful
+difficult
+distressed
+```
+
+ULTRON uses observable behavior instead.
+
+---
+
+# 7. Payment
+
+```text
+payment_id
+customer_id
+amount
+currency
+
+rail
+method
+gateway
+
+status
+
+failure_code
+failure_source
+failure_step
+
+attempt_number
+
+created_at
+updated_at
+version
+```
+
+Payment states:
+
+```text
+CREATED
+INITIATED
+AUTHENTICATION_REQUIRED
+AUTHORIZED
+CAPTURED
+SETTLED
+FAILED
+UNKNOWN
+RECONCILING
+```
+
+This is particularly important because real payment platforms can expose asynchronous state changes. Razorpay documents asynchronous webhook delivery and notes that an apparently failed payment can later become authorized/captured; it also documents duplicate and out-of-order webhook delivery. ([Razorpay][1])
+
+---
+
+# 8. Revenue obligation
+
+```text
+obligation_id
+customer_id
+
+type
+    INVOICE
+    SUBSCRIPTION
+    ORDER
+
+amount
+due_at
+status
+reference
+```
+
+Status:
+
+```text
+OPEN
+DUE
+OVERDUE
+DISPUTED
+PAID
+CANCELLED
+```
+
+---
+
+# 9. Checkout
+
+```text
+checkout_id
+customer_id
+amount
+status
+stage_reached
+failure_reason
+started_at
+abandoned_at
+```
+
+Example:
+
+```text
+stage_reached = PAYMENT
+status = ABANDONED
+failure_reason = AUTHENTICATION_TIMEOUT
+```
+
+---
+
+# PART IV — PAYMENT FAILURE INTELLIGENCE
+
+# 10. Payment failure analysis
+
+ULTRON v3 now has a dedicated payment intelligence subsystem.
+
+```text
+PAYMENT_FAILURE
+       │
+       ▼
+STATE RESOLUTION
+       │
+       ├── known
+       │
+       └── unknown → reconciliation
+       │
+       ▼
+FAILURE ANALYSIS
+       │
+       ├── transient
+       ├── liquidity
+       ├── authentication
+       ├── instrument
+       ├── gateway
+       ├── customer-action-required
+       └── unknown
+       │
+       ▼
+RECOVERABILITY
+```
+
+The agent does not equate:
+
+> `FAILED = retry`
+
+---
+
+# 11. The reconciliation path
+
+Because webhooks can be duplicated or arrive out of order, the system must be idempotent and state-aware. Razorpay explicitly documents at-least-once delivery, duplicate event handling, and non-guaranteed webhook order. ([Razorpay][2])
+
+Therefore:
+
+```text
+Webhook:
+payment.failed
+
+          ↓
+
+ULTRON asks:
+
+Is payment actually unresolved?
+
+          ↓
+
+YES
+
+          ↓
+
+RECONCILE
+
+          ↓
+
+ ┌───────────────┬────────────────┐
+ ▼               ▼                ▼
+FAILED        CAPTURED          UNKNOWN
+ ▼               ▼                ▼
+recover        STOP            investigate
+```
+
+### Safety principle
+
+# **Never recover an unresolved financial state.**
+
+---
+
+# 12. Payment intelligence tools
+
+```text
+inspect_payment()
+get_payment_attempts()
+get_payment_events()
+get_webhook_state()
+get_gateway_status()
+reconcile_payment()
+classify_failure()
+```
+
+---
+
+# 13. Payment rail awareness
+
+ULTRON never assumes every rail behaves identically.
+
+```text
+PAYMENT FAILURE
+       ↓
+Which rail?
+       │
+ ┌─────┼────────┐
+ ▼     ▼        ▼
+UPI   CARD    MANDATE
+ │      │        │
+ ▼      ▼        ▼
+customer-   token/     configured
+initiated    issuer     mandate
+action       path       path
+```
+
+This avoids the dangerous generic assumption that every failed transaction can be silently re-debited.
+
+---
+
+# PART V — REVENUE INTERFERENCE
+
+# 14. Revenue graph
+
+Example:
+
+```text
+                  CUSTOMER C1024
+                         │
+           ┌─────────────┼─────────────┐
+           ▼             ▼             ▼
+       Payment         Checkout      Invoice
+        FAILED        ABANDONED      OVERDUE
+           │             │             │
+           └─────────────┼─────────────┘
+                         ▼
+                 REVENUE EXPOSURE
+```
+
+But ULTRON goes further.
+
+---
+
+# 15. Interference discovery
+
+For two event types:
+
+$$
+I(A,B)=P(B|A)-P(B|\neg A)
+$$
+
+Example:
+
+```text
+Payment failure
+      ↓
+Checkout abandonment
+
+P(B|A)    = 31%
+P(B|¬A)   = 12%
+
+Interference = +19 pp
+```
+
+Use the term:
+
+# **Observed Interference**
+
+not "lift."
+
+---
+
+# 16. Temporal interference
+
+ULTRON considers timing:
+
+```text
+Payment failure
+     │
+     └── 38 minutes ──► checkout abandonment
+```
+
+It can therefore discover patterns such as:
+
+```text
+Payment failure
+within 1 hour
+        ↓
+checkout risk ↑
+```
+
+The synthetic environment controls the ground truth, while ULTRON estimates the relationship.
+
+---
+
+# 17. The Revenue Domino
+
+This becomes a major UI:
+
+```text
+PAYMENT FAILURE
+       │
+       ▼
+CUSTOMER FRICTION
+       │
+       ├──────► CHECKOUT ABANDONMENT
+       │
+       └──────► INVOICE DELAY
+                       │
+                       ▼
+               FUTURE REVENUE RISK
+```
+
+ULTRON's mission:
+
+# **Break the domino before it propagates.**
+
+---
+
+# PART VI — CUSTOMER-LEVEL RECOVERY
+
+# 18. Unified customer exposure
+
+ULTRON calculates:
+
+$$
+Exposure_c =
+\sum_i OutstandingRevenue_{c,i}
+$$
+
+Example:
+
+```text
+Subscription       ₹8,200
+Checkout           ₹4,500
+Invoice           ₹12,000
+────────────────────────────
+Exposure          ₹24,700
+```
+
+The customer becomes the recovery unit.
+
+---
+
+# 19. Relationship-adjusted recovery
+
+For an action \(a\):
+
+$$
+NetValue(a)=
+E[IncrementalRecovery(a)]
++
+ProtectedFutureRevenue(a)
+-
+InterventionCost(a)
+-
+RelationshipCost(a)
+-
+RiskCost(a)
+$$
+
+Therefore:
+
+```text
+₹5,000 immediate recovery
+```
+
+may lose to:
+
+```text
+₹4,000 immediate recovery
++
+₹18,000 protected future revenue
+```
+
+when relationship cost is included.
+
+---
+
+# 20. Relationship capital
+
+ULTRON maintains a derived relationship budget from observable behavior.
+
+```text
+email → low friction
+SMS   → medium friction
+voice → higher friction
+repeated contacts → increasing cost
+```
+
+No psychological classification is required.
+
+---
+
+# PART VII — RECOVERY OPPORTUNITY ENGINE
+
+# 21. Recoverability decay
+
+$$
+V(t)=V_0e^{-\lambda t}
+$$
+
+Example:
+
+```text
+Checkout opportunity
+██████████
+rapid decay
+
+Payment opportunity
+██████████████
+medium decay
+
+Invoice opportunity
+██████████████████████
+slow decay
+```
+
+Now ULTRON can reason:
+
+> **"Waiting has a cost."**
+
+---
+
+# 22. Opportunity value
+
+Every candidate has:
+
+```text
+amount
+recoverability
+time decay
+relationship cost
+effort
+risk
+interference value
+```
+
+The result:
+
+```text
+OPPORTUNITY SCORE
+```
+
+This is not a fake probability.
+
+It is an economic calculation.
+
+---
+
+# 23. Shared recovery capacity
+
+Suppose:
+
+```text
+Recovery capacity:
+4 hours
+
+Opportunities:
+
+Invoice A       ₹4.5L
+UPI batch       ₹12L
+Checkout B      ₹2L
+```
+
+ULTRON determines where the limited effort should go.
+
+This is one of the largest differences from a conventional dunning engine.
+
+---
+
+# PART VIII — CONTEXTUAL BANDIT
+
+# 24. Contextual Thompson Sampling
+
+This becomes an **advanced internal optimizer**, not ULTRON itself.
+
+For an action/timing arm \(k\):
+
+$$
+\tilde{\theta}_k
+\sim
+\mathcal N(m_k,\Sigma_k)
+$$
+
+Then:
+
+$$
+p_k =
+\sigma(x^T\tilde{\theta}_k)
+$$
+
+where \(x\) can contain legitimate observable variables:
+
+```text
+failure class
+rail
+time since failure
+day/time
+customer segment
+amount
+previous attempt count
+historical response behavior
+```
+
+The bandit chooses among **already feasible** alternatives.
+
+---
+
+# 25. Bandit architecture
+
+```text
+                   ULTRON
+                      │
+              Candidate actions
+                      │
+              Feasibility engine
+                      │
+              ┌───────┴───────┐
+              ▼               ▼
+          EMAIL/WINDOW    WAIT/WINDOW
+              │               │
+              └──────┬────────┘
+                     ▼
+                 THOMPSON
+                 SAMPLING
+                     │
+                     ▼
+              BEST TIMING/VARIANT
+                     │
+                     ▼
+                  EXECUTE
+                     │
+                     ▼
+                  OBSERVE
+                     │
+                     ▼
+                UPDATE MODEL
+```
+
+---
+
+# 26. Critical bandit boundary
+
+The bandit **cannot** decide:
+
+```text
+Is this legal?
+Is the payment actually failed?
+Can I debit this customer?
+Can I contact this customer?
+```
+
+Those are controlled elsewhere.
+
+The bandit only answers:
+
+> **Among feasible actions, which action/timing appears promising?**
+
+---
+
+# PART IX — CONVERSATIONAL RECOVERY
+
+# 27. B2B dispute resolution
+
+ULTRON v3 adds a dispute-resolution toolchain.
+
+```text
+INVOICE OVERDUE
+       ↓
+BUYER DISPUTES
+       ↓
+"PO mismatch"
+       ↓
+ULTRON INVESTIGATES
+       ↓
+Invoice
++
+PO
++
+contract
+       ↓
+Compare
+       ↓
+Identify mismatch
+       ↓
+Resolution proposal
+       ↓
+PTP
+       ↓
+Payment tracking
+```
+
+This is much more valuable than repeatedly sending reminders.
+
+---
+
+# 28. Promise-to-Pay engine
+
+```text
+PTP_DETECTED
+      ↓
+PTP_PROPOSED
+      ↓
+PTP_ACCEPTED
+      ↓
+PTP_DUE
+      ↓
+ ┌────┴────┐
+ ▼         ▼
+PAID      BROKEN
+            │
+            ▼
+       INVESTIGATE
+            │
+            ▼
+          REPLAN
+```
+
+---
+
+# 29. Voice agent
+
+Voice is an **execution tool**.
+
+Architecture:
+
+```text
+ULTRON
+  │
+  │ selects voice
+  ▼
+VOICE AGENT
+  │
+  ▼
+CUSTOMER
+  │
+  ├── "I can pay Friday."
+  │
+  ▼
+PTP
+  │
+  ▼
+ULTRON
+```
+
+The voice model doesn't own the mission.
+
+ULTRON does.
+
+---
+
+# PART X — FEASIBLE ACTION ENGINE
+
+# 30. Action universe
+
+Possible actions:
+
+```text
+WAIT
+EMAIL
+SMS
+VOICE
+PAYMENT_LINK
+ELIGIBLE_RETRY
+PAYMENT_METHOD_UPDATE
+PTP
+DISPUTE_RESOLUTION
+ESCALATE
+```
+
+Before the planner sees them:
+
+```text
+ALL CANDIDATES
+      ↓
+Financial state
+      ↓
+Merchant policy
+      ↓
+Consent
+      ↓
+Rail capability
+      ↓
+Authority
+      ↓
+Risk
+      ↓
+Capacity
+      ↓
+FEASIBLE ACTION SET
+```
+
+Example:
+
+```text
+WAIT             ✅
+EMAIL            ✅
+SMS              ❌
+VOICE            ❌
+ELIGIBLE_RETRY   ❌
+PAYMENT_LINK     ✅
+ESCALATE         ✅
+```
+
+---
+
+# PART XI — THE AI BOUNDARY
+
+# 31. ULTRON uses Qwen3-4B locally
+
+For your machine:
+
+```text
+RAM:       16 GB
+GPU:        GTX 1650 4 GB
+```
+
+Use:
+
+# **Qwen3-4B Q4_K_M**
+
+via:
+
+# **llama.cpp**
+
+The LLM is responsible for:
+
+```text
+Investigation reasoning
+Hypothesis formation
+Tool selection
+Strategy synthesis
+Customer response interpretation
+Communication generation
+Replanning decisions
+```
+
+---
+
+# 32. Deterministic layer
+
+Python controls:
+
+```text
+Financial state
+Reconciliation
+Arithmetic
+Interference calculation
+Recovery value
+Risk
+Policy
+Authority
+FSM
+Bandit update
+Mission limits
+Idempotency
+Counterfactual evaluation
+```
+
+Therefore:
+
+# **LLM = reasoning**
+
+# **Python = truth/control**
+
+---
+
+# 33. LLM action contract
+
+Example:
+
+```json
+{
+  "intent": "INVESTIGATE",
+  "tool": "reconcile_payment",
+  "arguments": {
+    "payment_id": "P1001"
+  }
+}
+```
+
+or:
+
+```json
+{
+  "intent": "EXECUTE",
+  "action": "PAYMENT_LINK",
+  "customer_id": "C1024",
+  "target_entity": "I500"
+}
+```
+
+No raw SQL.
+
+No direct database write.
+
+---
+
+# 34. Safety pipeline
+
+```text
+LLM
+ ↓
+Structured intent
+ ↓
+Schema validation
+ ↓
+Feasibility
+ ↓
+Policy
+ ↓
+Authority
+ ↓
+Risk
+ ↓
+Financial FSM
+ ↓
+Idempotency
+ ↓
+EXECUTE
+```
+
+---
+
+# PART XII — TWO STATE MACHINES
+
+# 35. Financial FSM
+
+```text
+CREATED
+   ↓
+INITIATED
+   ↓
+AUTHENTICATION_REQUIRED
+   ↓
+AUTHORIZED
+   ↓
+CAPTURED
+   ↓
+SETTLED
+```
+
+Ambiguous:
+
+```text
+UNKNOWN
+   ↓
+RECONCILING
+   ├── SETTLED
+   ├── FAILED
+   └── EXPIRED
+```
+
+---
+
+# 36. Agent FSM
+
+```text
+MISSION_CREATED
+      ↓
+PERCEIVING
+      ↓
+INVESTIGATING
+      ↓
+PLANNING
+      ↓
+VALIDATING
+      ↓
+EXECUTING
+      ↓
+WAITING
+      ↓
+OBSERVING
+      ↓
+LEARNING
+      ↓
+ ┌────┴────┐
+ ▼         ▼
+CONTINUE  REPLAN
+             │
+             ▼
+       INVESTIGATING
+```
+
+Never conflate:
+
+> **Payment state**
+
+with:
+
+> **Agent state.**
+
+---
+
+# PART XIII — CLOSED-LOOP LEARNING
+
+# 37. Prediction before action
+
+ULTRON records:
+
+```json
+{
+  "action_id": "A100",
+  "predicted_recovery": 12000,
+  "predicted_response_minutes": 30
+}
+```
+
+At this stage:
+
+```text
+actual_recovery = null
+```
+
+---
+
+# 38. Outcome appears later
+
+The v2 specification correctly enforces a delayed-resolution rule so the agent cannot immediately see its own outcome. 
+
+After simulated time:
+
+```json
+{
+  "action_id": "A100",
+  "predicted_recovery": 12000,
+  "actual_recovery": 0
+}
+```
+
+Now the result becomes visible.
+
+---
+
+# 39. Prediction error
+
+$$
+E=
+\frac{|Actual-Predicted|}
+{|Predicted|}
+$$
+
+Example:
+
+```text
+Prediction:
+₹12,000
+
+Actual:
+₹0
+
+Error:
+100%
+```
+
+That can trigger:
+
+```text
+PLAN INVALIDATED
+```
+
+---
+
+# 40. Autonomous replanning
+
+```text
+CURRENT PLAN
+     ↓
+Prediction error
+     ↓
+Investigate
+     ↓
+Environment changed?
+     ↓
+Yes
+     ↓
+New feasible actions
+     ↓
+New plan
+     ↓
+Execute
+```
+
+---
+
+# PART XIV — MEMORY
+
+# 41. Memory is emergent
+
+The audit correctly removed pre-seeded fake memory. ULTRON creates memory through actual execution. 
+
+Example:
+
+```json
+{
+  "customer_id": "C1024",
+  "context": "multiple_outstanding_obligations",
+  "action": "INVOICE_LINK",
+  "result": "SUCCESS",
+  "recovered": 12000
+}
+```
+
+---
+
+# 42. Memory lifecycle
+
+```text
+ACTION
+  ↓
+OUTCOME
+  ↓
+EPISODE
+  ↓
+MEMORY
+  ↓
+FUTURE RETRIEVAL
+  ↓
+BEHAVIOR CHANGE
+```
+
+---
+
+# 43. Second-encounter proof
+
+First encounter:
+
+```text
+Email
+ ↓
+No response
+```
+
+Second:
+
+```text
+Memory says:
+Email ineffective
+
+↓
+Try invoice link
+```
+
+This demonstrates actual learning.
+
+---
+
+# PART XV — COUNTERFACTUAL ENGINE
+
+# 44. Genuine incremental measurement
+
+This is one of the strongest parts of v2 and should remain.
+
+At decision point \(S_t\):
+
+```text
+                WORLD STATE
+                    │
+                  fork
+           ┌────────┴────────┐
+           ▼                 ▼
+       NO ACTION           ACTION
+           │                 │
+       same seed          same seed
+           │                 │
+           ▼                 ▼
+          Y₀                Y₁
+           │                 │
+           └────────┬────────┘
+                    ▼
+                Y₁ − Y₀
+```
+
+The existing specification explicitly defines seeded dual-branch replay and keeps those outcomes hidden from ULTRON. 
+
+---
+
+# 45. Why this matters
+
+Suppose:
+
+```text
+ULTRON recovered:
+₹12,000
+```
+
+That doesn't necessarily mean ULTRON caused it.
+
+The counterfactual gives:
+
+```text
+No action:
+₹0
+
+ULTRON action:
+₹12,000
+
+Incremental:
+₹12,000
+```
+
+This is far stronger than simply reporting recovery rate.
+
+---
+
+# 46. Do not call simulator causality real-world causality
+
+The dashboard must say:
+
+> **Computed treatment effect inside the simulated environment.**
+
+Not:
+
+> "ULTRON proved the intervention causes payment."
+
+This distinction protects credibility.
+
+---
+
+# PART XVI — WORLD SIMULATOR
+
+# 47. Simulator architecture
+
+```text
+Seed
+ │
+ ▼
+Customer Generator
+ │
+ ▼
+Payment Generator
+ │
+ ▼
+Checkout Generator
+ │
+ ▼
+Obligation Generator
+ │
+ ▼
+World State
+ │
+ ▼
+Agent
+ │
+ ▼
+Action
+ │
+ ▼
+State Transition
+ │
+ ▼
+New Event
+ │
+ ▼
+Agent
+```
+
+---
+
+# 48. Seeded world
+
+Use:
+
+```python
+random.Random(seed)
+```
+
+Every scenario has a seed.
+
+Example:
+
+```text
+seed = 49281
+```
+
+This gives reproducibility.
+
+---
+
+# 49. Known interference injection
+
+The simulator can intentionally create one known relationship.
+
+Example:
+
+```python
+TRUE_INTERFERENCE_MULTIPLIER = 1.8
+```
+
+The generator uses it.
+
+ULTRON isn't told.
+
+After enough simulated observations:
+
+```text
+TRUE:
+1.8×
+
+ULTRON:
+1.74×
+```
+
+The dashboard can show:
+
+```text
+PATTERN DISCOVERED
+
+Estimated: 1.74×
+Ground truth: 1.80×
+```
+
+This is an excellent technical proof.
+
+---
+
+# 50. Noise
+
+After the clean scenario works, add:
+
+```text
+unrelated failures
+duplicate events
+delayed events
+unknown payments
+random customer responses
+```
+
+The v2 specification correctly places noise injection after the critical loop rather than ahead of it. 
+
+---
+
+# PART XVII — CHAOS
+
+# 51. Chaos Lab
+
+```text
+┌─────────────────────────────┐
+│       ULTRON CHAOS LAB      │
+├─────────────────────────────┤
+│                             │
+│ [ UPI DEGRADATION 80% ]     │
+│                             │
+│ [ CARD DEGRADED ]           │
+│                             │
+│ [ GATEWAY LATENCY ]         │
+│                             │
+│ [ WEBHOOK DELAY ]           │
+│                             │
+│ [ MASS ABANDONMENT ]        │
+│                             │
+│ [ CUSTOMER SILENCE ]        │
+│                             │
+│ [ DUPLICATE PAYMENT ]       │
+│                             │
+└─────────────────────────────┘
+```
+
+---
+
+# 52. UPI chaos scenario
+
+Normal:
+
+```text
+UPI health = 94%
+```
+
+Judge:
+
+> **UPI degradation 80%**
+
+Environment:
+
+```text
+94%
+ ↓
+~38%
+```
+
+ULTRON sees:
+
+```text
+failure rate ↑
+latency ↑
+prediction error ↑
+```
+
+Then:
+
+```text
+OLD PLAN
+INVALIDATED
+```
+
+This is the flagship demo.
+
+---
+
+# 53. Replanning timeline
+
+```text
+00.0 sec
+Chaos injected
+
+00.2 sec
+Environment changes
+
+00.5 sec
+ULTRON observes
+
+01.0 sec
+Diagnosis
+
+01.5 sec
+Current plan invalidated
+
+02.0 sec
+New action selected
+
+02.5 sec
+Execution
+```
+
+The actual benchmark must be measured. Don't claim those numbers until the system produces them.
+
+The v2 specification already recommends a fixed replanning latency budget and identifies this as the highest-risk live-demo path. 
+
+---
+
+# PART XVIII — DURABILITY AND RECOVERY
+
+# 54. Mission checkpointing
+
+After each significant state:
+
+```text
+CHECKPOINT
+```
+
+Store:
+
+```text
+mission state
+agent state
+last action
+pending action
+prediction
+replan count
+```
+
+---
+
+# 55. Crash recovery
+
+If ULTRON crashes:
+
+```text
+RESTART
+  ↓
+LOAD CHECKPOINT
+  ↓
+CHECK LAST ACTION
+  ↓
+CHECK FINANCIAL STATE
+  ↓
+RESUME SAFELY
+```
+
+Never automatically repeat an uncertain financial action.
+
+---
+
+# 56. Idempotency
+
+Every action:
+
+```text
+mission_id
+action_id
+idempotency_key
+```
+
+Duplicate request:
+
+```text
+same key
+ ↓
+already executed?
+ ↓
+return previous result
+```
+
+This is especially important because real webhook systems can use at-least-once delivery. Razorpay explicitly documents that duplicate webhook events can occur and recommends deduplication using the event identifier. ([Razorpay][2])
+
+---
+
+# PART XIX — AUDIT
+
+# 57. Tamper-evident audit chain
+
+```text
+Event 1
+hash
+ ↓
+Event 2 + hash1
+hash
+ ↓
+Event 3 + hash2
+hash
+ ↓
+Event 4 + hash3
+```
+
+Use SHA-256.
+
+No blockchain required.
+
+No zero-knowledge system required for the hackathon.
+
+---
+
+# 58. Audit entry
+
+```json
+{
+  "timestamp": "...",
+  "mission_id": "M100",
+  "customer_id": "C1024",
+  "event": "PAYMENT_FAILED",
+  "action": "PAYMENT_LINK",
+  "authority": "AUTO",
+  "policy_version": "P3",
+  "result": "EXECUTED",
+  "previous_hash": "...",
+  "hash": "..."
+}
+```
+
+---
+
+# PART XX — SAFETY
+
+# 59. Circuit breakers
+
+```text
+MAX_ITERATIONS = 5
+MAX_REPLANS = 2
+MAX_SAME_ACTION_ATTEMPTS = 2
+```
+
+If there is no meaningful state change:
+
+```text
+TRY
+ ↓
+TRY AGAIN
+ ↓
+NO STATE CHANGE
+ ↓
+CIRCUIT BREAKER
+ ↓
+ESCALATE / COOLDOWN
+```
+
+These limits are already part of the audit-corrected build specification. 
+
+---
+
+# 60. Risk-bounded autonomy
+
+Before automatic execution:
+
+```text
+Expected value
++
+Outcome uncertainty
++
+Relationship cost
++
+Authority
++
+Policy
+```
+
+are checked.
+
+High-risk action:
+
+```text
+AUTONOMOUS EXECUTION BLOCKED
+         ↓
+HUMAN REVIEW
+```
+
+---
+
+# PART XXI — WORLD/AGENT INTERFACE
+
+# 61. ULTRON only gets bounded tools
+
+The v2 specification correctly establishes the tool surface before the generator because the tool interface is the actual product boundary. 
+
+For v3:
+
+```text
+inspect_customer()
+inspect_revenue_state()
+inspect_payment()
+inspect_environment()
+inspect_history()
+
+reconcile_payment()
+find_interference()
+get_feasible_actions()
+analyze_invoice_dispute()
+
+execute_recovery_action()
+register_ptp()
+escalate()
+```
+
+Each response is capped and structured.
+
+---
+
+# 62. Tool result principle
+
+No tool should return:
+
+```text
+SELECT * FROM customers
+```
+
+Instead:
+
+```json
+{
+  "customer_id": "C1024",
+  "ltv": 1800000,
+  "open_exposure": 24700,
+  "recent_events": [...],
+  "previous_success": "INVOICE_LINK"
+}
+```
+
+The agent observes a **state representation**, not a database dump.
+
+---
+
+# PART XXII — FRONTEND
+
+# 63. Main dashboard
+
+```text
+┌─────────────────────────────────────────┐
+│                  ULTRON                 │
+├─────────────────────────────────────────┤
+│                                         │
+│ MISSION          ₹10.0L                 │
+│ RECOVERED        ₹6.8L                  │
+│ REMAINING        ₹3.2L                  │
+│                                         │
+│ AGENT STATUS      ● ACTIVE              │
+│ CURRENT PLAN     Invoice Recovery       │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+---
+
+# 64. Revenue graph
+
+```text
+             ANANYA TEXTILES
+                    │
+       ┌────────────┼────────────┐
+       ▼            ▼            ▼
+    PAYMENT      CHECKOUT      INVOICE
+      FAIL         DROP         OVERDUE
+       │            │            │
+       └────────────┼────────────┘
+                    ▼
+             ₹24,700 EXPOSURE
+```
+
+---
+
+# 65. Agent trace
+
+```text
+● PERCEIVE
+Payment failure
+
+● INVESTIGATE
+Payment state
+
+● INVESTIGATE
+Customer exposure
+
+● DISCOVER
+3 related revenue events
+
+● MEMORY
+Previous invoice-first success
+
+● PLAN
+Invoice-first
+
+● AUTHORITY
+AUTO
+
+● EXECUTE
+Payment request
+
+● OBSERVE
+No response
+
+● CHAOS
+UPI degradation detected
+
+● REPLAN
+Current plan invalidated
+
+● EXECUTE
+Alternative recovery
+```
+
+---
+
+# 66. Replanning panel
+
+This should be visually dramatic.
+
+```text
+PLAN 01
+────────────────────
+UPI recovery
+Expected: ₹7.9L
+
+⚠ ENVIRONMENT CHANGED
+
+UPI health:
+94% → 38%
+
+Prediction error:
+84.8%
+
+STATUS:
+❌ INVALIDATED
+```
+
+Then:
+
+```text
+PLAN 02
+────────────────────
+B2B recovery
+
+Expected:
+₹X
+
+Risk:
+LOW
+
+Authority:
+AUTO
+
+STATUS:
+● ACTIVE
+```
+
+---
+
+# 67. Memory panel
+
+```text
+MEMORY RETRIEVED
+
+Customer:
+Ananya Textiles
+
+Previous action:
+Invoice-first
+
+Previous outcome:
+₹12,000 recovered
+
+Current plan changed:
+YES
+```
+
+---
+
+# 68. Chaos panel
+
+The judge must be able to control the world.
+
+Not merely watch.
+
+---
+
+# PART XXIII — DATASET v3
+
+# 69. The dataset hierarchy
+
+We now distinguish four things:
+
+### World data
+
+```text
+customers
+payments
+obligations
+checkout
+```
+
+### Derived events
+
+```text
+read-only projection
+```
+
+### Agent experience
+
+```text
+actions
+memory
+```
+
+### Evaluation truth
+
+```text
+counterfactual branches
+```
+
+These must never be confused.
+
+---
+
+# 70. MVP dataset
+
+Start with:
+
+```text
+200 customers
+
+~2,000 payments
+
+~500 revenue obligations
+
+~800 checkout sessions
+
+~5,000 derived events
+```
+
+This is enough for the hackathon.
+
+The v2 specification deliberately reduced the target from 5,000 customers/50,000 payments to approximately 200/2,000 to keep the build focused. 
+
+---
+
+# 71. Scenario distribution
+
+Make sure the dataset contains:
+
+```text
+25% successful payments
+20% transient failures
+15% liquidity-related
+10% authentication
+10% hard failures
+10% unknown states
+10% mixed/interference scenarios
+```
+
+These are **simulation design targets**, not claims about real-world prevalence.
+
+---
+
+# 72. Ground-truth scenarios
+
+At minimum:
+
+```text
+Soft failure
+Hard failure
+Unknown payment
+Duplicate webhook
+Late resolution
+Checkout interference
+Gateway degradation
+Invoice overdue
+Invoice dispute
+PTP fulfilled
+PTP broken
+Memory reuse
+```
+
+---
+
+# PART XXIV — TESTING
+
+# 73. Unit tests
+
+Test:
+
+```text
+payment FSM
+action validation
+risk
+authority
+interference
+decay
+bandit
+memory
+```
+
+---
+
+# 74. Integration tests
+
+```text
+World
+ ↓
+Tool
+ ↓
+Agent
+ ↓
+Action
+ ↓
+World transition
+ ↓
+Observation
+```
+
+---
+
+# 75. Agent behavior tests
+
+### Test 1
+
+Agent investigates unknown payment.
+
+### Test 2
+
+Agent refuses invalid action.
+
+### Test 3
+
+Agent successfully recovers.
+
+### Test 4
+
+Agent observes failed prediction.
+
+### Test 5
+
+Agent replans.
+
+### Test 6
+
+Memory changes second encounter.
+
+---
+
+# 76. Adversarial tests
+
+```text
+duplicate webhook
+out-of-order webhook
+contradictory status
+tool failure
+LLM malformed JSON
+unauthorized action
+repeated action
+customer pays unexpectedly
+gateway outage
+memory unavailable
+risk threshold exceeded
+```
+
+Expected outcome:
+
+# **Safe failure, not financial corruption.**
+
+---
+
+# PART XXV — BASELINE EVALUATION
+
+# 77. Compare four systems
+
+### Baseline 1
+
+Fixed dunning.
+
+```text
+Day 1
+Day 3
+Day 7
+```
+
+### Baseline 2
+
+Smart single-channel recovery.
+
+### Baseline 3
+
+Advanced recovery engine.
+
+### Baseline 4
+
+# ULTRON
+
+```text
+Mission
+→ investigate
+→ interference
+→ act
+→ observe
+→ learn
+→ replan
+```
+
+Now our claims have context.
+
+---
+
+# 78. Metrics
+
+### Financial
+
+```text
+Gross recovery
+Baseline recovery
+Incremental recovery
+Protected future revenue
+Net recovery
+```
+
+### Agent
+
+```text
+Mission completion
+Average action count
+Replanning count
+Successful replans
+```
+
+### Intelligence
+
+```text
+Interference discoveries
+Prediction error
+Memory-driven adaptations
+```
+
+### Safety
+
+```text
+Unauthorized actions
+Invalid FSM transitions
+Duplicate execution
+Deadlocks
+Risk violations
+```
+
+---
+
+# 79. The most important KPI
+
+# **Incremental Recovered Revenue**
+
+Not:
+
+> "Recovery rate."
+
+Not:
+
+> "AI success rate."
+
+Not:
+
+> "Number of customers contacted."
+
+The key question:
+
+> **How much additional revenue did ULTRON create compared with what would have happened without its intervention?**
+
+---
+
+# PART XXVI — PROJECT STRUCTURE
+
+# 80. Repository
+
+```text
+ultron/
+│
+├── agent/
+│   ├── runtime.py
+│   ├── mission.py
+│   ├── investigator.py
+│   ├── planner.py
+│   ├── replanner.py
+│   ├── memory.py
+│   └── prompts.py
+│
+├── payment_intelligence/
+│   ├── classifier.py
+│   ├── reconciler.py
+│   └── rail_health.py
+│
+├── revenue/
+│   ├── state.py
+│   ├── graph.py
+│   ├── interference.py
+│   ├── decay.py
+│   └── relationship.py
+│
+├── decision/
+│   ├── economics.py
+│   ├── feasible_actions.py
+│   ├── bandit.py
+│   └── risk.py
+│
+├── financial/
+│   ├── fsm.py
+│   ├── authority.py
+│   ├── policy.py
+│   └── idempotency.py
+│
+├── tools/
+│   ├── customer.py
+│   ├── payment.py
+│   ├── checkout.py
+│   ├── invoice.py
+│   ├── ptp.py
+│   └── communication.py
+│
+├── simulator/
+│   ├── world.py
+│   ├── generator.py
+│   ├── clock.py
+│   ├── events.py
+│   ├── scenarios.py
+│   └── chaos.py
+│
+├── evaluation/
+│   ├── counterfactual.py
+│   ├── metrics.py
+│   └── baselines.py
+│
+├── storage/
+│   ├── sqlite.py
+│   └── migrations.py
+│
+├── audit/
+│   └── ledger.py
+│
+├── frontend/
+│   ├── dashboard/
+│   ├── mission/
+│   ├── graph/
+│   ├── trace/
+│   ├── memory/
+│   ├── chaos/
+│   └── metrics/
+│
+└── tests/
+    ├── unit/
+    ├── agent/
+    ├── financial/
+    ├── simulator/
+    ├── evaluation/
+    └── adversarial/
+```
+
+---
+
+# PART XXVII — TECHNOLOGY STACK
+
+## Hackathon
+
+| Layer               | Technology               |
+| ------------------- | ------------------------ |
+| LLM                 | **Qwen3-4B Q4_K_M**      |
+| Local inference     | **llama.cpp**            |
+| Agent runtime       | **Python**               |
+| Agent orchestration | **LangGraph**            |
+| API                 | **FastAPI**              |
+| Validation          | **Pydantic**             |
+| World DB            | **SQLite**               |
+| Graph               | **NetworkX**             |
+| ML                  | **NumPy / scikit-learn** |
+| Bandit              | **NumPy/SciPy**          |
+| UI                  | **Next.js + React**      |
+| Styling             | **Tailwind**             |
+| Graph UI            | **React Flow**           |
+| Realtime            | **WebSocket/SSE**        |
+| Audit               | **SHA-256**              |
+| Simulator           | **Python**               |
+
+---
+
+# 81. Production evolution
+
+Prototype:
+
+```text
+SQLite
+```
+
+Production:
+
+```text
+PostgreSQL
+```
+
+Prototype event loop:
+
+```text
+Python
+```
+
+Production:
+
+```text
+Kafka / event infrastructure
+```
+
+Prototype memory:
+
+```text
+exact customer episodes
+```
+
+Production:
+
+```text
+PostgreSQL + vector retrieval
+```
+
+Prototype durable runtime:
+
+```text
+LangGraph checkpoints
+```
+
+Production:
+
+```text
+Temporal
+```
+
+This keeps the architecture scalable without sacrificing hackathon reliability.
+
+---
+
+# PART XXVIII — IMPLEMENTATION PHASES
+
+# 82. Phase 0 — Contract first
+
+Before generator:
+
+```text
+Tools
+Agent state
+Action schema
+World state
+```
+
+This follows the critical v2 design decision that the tool interface must be defined before the dataset generator. 
+
+---
+
+# 83. Phase 1 — World
+
+Build:
+
+```text
+customer
+payment
+obligation
+checkout
+
+virtual clock
+state transitions
+```
+
+---
+
+# 84. Phase 2 — Agent
+
+Build:
+
+```text
+mission
+observe
+investigate
+plan
+execute
+```
+
+---
+
+# 85. Phase 3 — Counterfactual
+
+Build:
+
+```text
+same state
+same seed
+action branch
+no-action branch
+```
+
+Don't proceed until this works.
+
+---
+
+# 86. Phase 4 — Closed loop
+
+Build:
+
+```text
+prediction
+delay
+observation
+error
+replan
+```
+
+Now ULTRON becomes genuinely adaptive.
+
+---
+
+# 87. Phase 5 — Revenue intelligence
+
+Add:
+
+```text
+revenue graph
+interference
+customer exposure
+```
+
+---
+
+# 88. Phase 6 — Memory
+
+Add:
+
+```text
+episodes
+retrieval
+behavior change
+```
+
+---
+
+# 89. Phase 7 — Advanced recovery
+
+Add:
+
+```text
+contextual bandit
+PTP
+invoice dispute
+checkout recovery
+```
+
+---
+
+# 90. Phase 8 — Chaos
+
+Add:
+
+```text
+UPI degradation
+webhook delay
+duplicate events
+customer silence
+```
+
+---
+
+# 91. Phase 9 — UI
+
+Only now build:
+
+```text
+mission
+graph
+trace
+memory
+chaos
+metrics
+```
+
+---
+
+# 92. Phase 10 — Adversarial hardening
+
+Break the system intentionally.
+
+---
+
+# PART XXIX — THE AGENT'S COMPLETE WORKING EXAMPLE
+
+# 93. Step 1 — Event
+
+```text
+PAYMENT_FAILED
+
+Customer:
+Ananya Textiles
+
+Amount:
+₹8,200
+```
+
+---
+
+# 94. Step 2 — Perception
+
+ULTRON receives only the event.
+
+---
+
+# 95. Step 3 — Investigation
+
+ULTRON calls:
+
+```text
+inspect_payment()
+inspect_customer()
+inspect_revenue_state()
+inspect_environment()
+inspect_history()
+```
+
+Finds:
+
+```text
+₹8,200 payment failure
+₹12,000 overdue invoice
+₹4,500 abandoned checkout
+```
+
+---
+
+# 96. Step 4 — Interference
+
+ULTRON discovers:
+
+```text
+Payment failure
+       ↓
+Checkout abandonment
+
+Observed:
++19 pp
+```
+
+---
+
+# 97. Step 5 — Memory
+
+```text
+Previous:
+Invoice-first recovery
+Outcome:
+₹12,000
+```
+
+---
+
+# 98. Step 6 — Feasible actions
+
+```text
+UPI RETRY       ❌
+EMAIL           ✅
+PAYMENT LINK    ✅
+VOICE           ❌
+WAIT            ✅
+ESCALATE        ✅
+```
+
+---
+
+# 99. Step 7 — Planning
+
+MAB/economic layer calculates the promising timing/variant.
+
+ULTRON creates:
+
+```text
+PLAN 01
+
+Invoice-first payment link
+```
+
+---
+
+# 100. Step 8 — Safety
+
+```text
+Policy:
+PASS
+
+Authority:
+PASS
+
+Risk:
+PASS
+
+FSM:
+PASS
+
+Idempotency:
+PASS
+```
+
+---
+
+# 101. Step 9 — Execute
+
+```text
+PAYMENT_LINK_CREATED
+```
+
+---
+
+# 102. Step 10 — Wait
+
+The simulator advances.
+
+ULTRON does not see the result immediately.
+
+---
+
+# 103. Step 11 — Observe
+
+```text
+No response
+```
+
+ULTRON waits according to the plan.
+
+---
+
+# 104. Step 12 — Chaos
+
+Judge:
+
+> **UPI DEGRADATION 80%**
+
+---
+
+# 105. Step 13 — Detect deviation
+
+ULTRON observes:
+
+```text
+UPI health collapsed
+```
+
+Prediction mismatch:
+
+```text
+84.8%
+```
+
+---
+
+# 106. Step 14 — Replan
+
+```text
+PLAN 01
+INVALIDATED
+```
+
+ULTRON investigates again.
+
+---
+
+# 107. Step 15 — New plan
+
+```text
+B2B invoice recovery
++
+checkout rescue
+```
+
+UPI-heavy recovery is deprioritized.
+
+---
+
+# 108. Step 16 — Observe outcome
+
+```text
+Invoice:
+₹12,000 paid
+```
+
+---
+
+# 109. Step 17 — Learn
+
+```text
+Episode stored.
+
+Action:
+Invoice-first
+
+Outcome:
+₹12,000
+
+Relationship impact:
+positive
+```
+
+---
+
+# 110. Step 18 — Second encounter
+
+Ananya appears again.
+
+ULTRON:
+
+```text
+Memory retrieved.
+Previous successful strategy found.
+```
+
+The plan changes automatically.
+
+---
+
+# PART XXX — JUDGE DEMO
+
+# 111. Minute 0–1 — Problem
+
+Show:
+
+```text
+₹1.24 Cr AT-RISK
+```
+
+Then:
+
+> "The problem isn't that businesses don't detect revenue loss. The problem is that payment, checkout and receivables systems see different fragments of the same customer."
+
+---
+
+# 112. Minute 1–2 — ULTRON
+
+Show Ananya:
+
+```text
+₹24,700
+across three revenue events
+```
+
+ULTRON identifies interference.
+
+---
+
+# 113. Minute 2–3 — Autonomous execution
+
+Show:
+
+```text
+INVESTIGATE
+MEMORY
+PLAN
+AUTHORITY
+EXECUTE
+```
+
+---
+
+# 114. Minute 3 — Break ULTRON
+
+Give judge the control:
+
+# **BREAK PAYMENT RAIL**
+
+Click.
+
+---
+
+# 115. Minute 3–4 — Replan
+
+Show:
+
+```text
+UPI HEALTH
+94% → 38%
+
+PREDICTION ERROR
+84.8%
+
+PLAN INVALIDATED
+```
+
+Then:
+
+```text
+NEW PLAN
+ACTIVE
+```
+
+---
+
+# 116. Minute 4–4:30 — Memory
+
+Second encounter.
+
+```text
+PREVIOUS EPISODE FOUND
+```
+
+Strategy changes.
+
+---
+
+# 117. Minute 4:30–5 — Proof
+
+Show:
+
+```text
+INCREMENTAL RECOVERY
+₹X
+
+BASELINE
+₹Y
+
+INCREMENTAL
+₹X - ₹Y
+
+REPLANS
+2
+
+MEMORY ADAPTATIONS
+3
+
+UNAUTHORIZED ACTIONS
+0
+
+INVALID FSM TRANSITIONS
+0
+
+DEADLOCKS
+0
+```
+
+All generated from the actual run.
+
+---
+
+# PART XXXI — WHAT WE WILL CLAIM
+
+We can safely claim:
+
+> **ULTRON operates as a closed-loop autonomous agent in a controlled financial simulation.**
+
+We can demonstrate:
+
+> **Payment-state investigation**
+
+> **Cross-channel interference discovery**
+
+> **Adaptive action selection**
+
+> **Bounded financial execution**
+
+> **Prediction-error-triggered replanning**
+
+> **Emergent memory**
+
+> **Counterfactual incremental measurement**
+
+> **Judge-controlled environmental disruption**
+
+---
+
+# 118. What we will NOT claim
+
+Do not claim:
+
+> "ULTRON can automatically retry every failed UPI payment."
+
+Do not claim:
+
+> "ULTRON can silently debit any customer."
+
+Do not claim:
+
+> "We proved a causal relationship in the real world."
+
+Do not claim:
+
+> "ULTRON achieves 80% recovery."
+
+Do not claim:
+
+> "100% regulatory compliance."
+
+Do not claim:
+
+> "<300 ms gateway failover."
+
+unless those capabilities have actually been implemented and benchmarked.
+
+This discipline is part of what makes the project credible.
+
+---
+
+# 119. Why simulation is a strength
+
+Razorpay's current documentation demonstrates why payment integrations must deal with asynchronous webhooks, late authorization, duplicate events and out-of-order delivery. ([Razorpay][1])
+
+Therefore our simulator deliberately reproduces these classes of conditions.
+
+That gives us something a static dataset cannot:
+
+```text
+EVENT
+ ↓
+ACTION
+ ↓
+STATE CHANGE
+ ↓
+NEW EVENT
+ ↓
+AGENT RESPONSE
+```
+
+---
+
+# 120. The ultimate ULTRON differentiator
+
+The strongest statement isn't:
+
+> "We use AI."
+
+It isn't:
+
+> "We use Thompson Sampling."
+
+It isn't:
+
+> "We use an LLM."
+
+It is:
+
+# **ULTRON operates on a changing revenue world.**
+
+```text
+WORLD
+ ↓
+ULTRON
+ ↓
+ACTION
+ ↓
+WORLD CHANGES
+ ↓
+ULTRON OBSERVES
+ ↓
+ULTRON LEARNS
+ ↓
+ULTRON CHANGES STRATEGY
+ ↓
+ACTION
+```
+
+That is the core.
+
+---
+
+# 121. Final ULTRON v3 architecture
+
+```text
+                              ┌──────────────────┐
+                              │      ULTRON      │
+                              │  AUTONOMOUS AI   │
+                              │  REVENUE AGENT   │
+                              └────────┬─────────┘
+                                       │
+                                    MISSION
+                                       │
+                                       ▼
+                                  PERCEPTION
+                                       │
+                                       ▼
+                               INVESTIGATION
+                                       │
+                    ┌──────────────────┼──────────────────┐
+                    ▼                  ▼                  ▼
+              PAYMENT INTEL        CUSTOMER STATE       MEMORY
+                    │                  │                  │
+                    └──────────────────┼──────────────────┘
+                                       ▼
+                                REVENUE GRAPH
+                                       │
+                                       ▼
+                             INTERFERENCE ENGINE
+                                       │
+                                       ▼
+                              REVENUE EXPOSURE
+                                       │
+                                       ▼
+                            RECOVERY ECONOMICS
+                         ┌─────────────┼──────────────┐
+                         ▼             ▼              ▼
+                       DECAY           LTV       RELATIONSHIP
+                         │             │              │
+                         └─────────────┼──────────────┘
+                                       ▼
+                              RECOVERY CAPACITY
+                                       │
+                                       ▼
+                              FEASIBLE ACTIONS
+                                       │
+                                       ▼
+                              ADAPTIVE PLANNER
+                         ┌─────────────┼─────────────┐
+                         ▼             ▼             ▼
+                    ECONOMICS        MAB           LLM
+                         │             │             │
+                         └─────────────┼─────────────┘
+                                       ▼
+                                 ACTION PLAN
+                                       │
+                                       ▼
+                              AUTHORITY / POLICY
+                                       │
+                                       ▼
+                                     RISK
+                                       │
+                                       ▼
+                                FINANCIAL FSM
+                                       │
+                                       ▼
+                                  EXECUTOR
+                                       │
+                 ┌─────────────────────┼─────────────────────┐
+                 ▼                     ▼                     ▼
+             PAYMENT                CUSTOMER                 AR
+             ACTIONS              COMMUNICATION             TOOLS
+                 │                     │                     │
+                 └─────────────────────┼─────────────────────┘
+                                       ▼
+                              FINANCIAL WORLD
+                                  SIMULATOR
+                                       │
+                                       ▼
+                                   OBSERVE
+                                       │
+                                       ▼
+                              EXPECTED vs ACTUAL
+                                       │
+                              ┌────────┴────────┐
+                              ▼                 ▼
+                           SUCCESS            ERROR
+                              │                 │
+                              ▼                 ▼
+                            LEARN             REPLAN
+                              │                 │
+                              └─────────────────┘
+
+
+             ┌─────────────────────────────────────────────┐
+             │           HIDDEN EVALUATION WORLD           │
+             │                                             │
+             │ Fork S(t)                                   │
+             │   ├── No Action → Y₀                       │
+             │   └── ULTRON Action → Y₁                   │
+             │                                             │
+             │ Incremental Recovery = Y₁ − Y₀             │
+             │                                             │
+             │ ULTRON NEVER SEES Y₀/Y₁                    │
+             └─────────────────────────────────────────────┘
+```
+
+---
+
+# 122. ULTRON v3 in one formula
+
+$$
+\boxed{
+ULTRON =
+World\ Model
++
+Payment\ Intelligence
++
+Revenue\ Interference
++
+Recovery\ Economics
++
+Adaptive\ Planning
++
+Agentic\ Execution
++
+Observation
++
+Memory
++
+Replanning
++
+Governance
++
+Counterfactual\ Evaluation
+}
+$$
+
+Operationally:
+
+$$
+\boxed{
+Perceive
+\rightarrow
+Investigate
+\rightarrow
+Understand
+\rightarrow
+Plan
+\rightarrow
+Authorize
+\rightarrow
+Act
+\rightarrow
+Observe
+\rightarrow
+Learn
+\rightarrow
+Replan
+}
+$$
+
+---
+
+# 123. Final feature hierarchy
+
+## **Tier 1 — Absolutely must work**
+
+```text
+✓ World simulator
+✓ Payment-state intelligence
+✓ Agent mission
+✓ Bounded tools
+✓ Financial FSM
+✓ Revenue graph
+✓ Interference
+✓ Execute
+✓ Observe
+✓ Prediction error
+✓ Replan
+✓ Counterfactual evaluation
+✓ Chaos injection
+✓ Agent trace
+```
+
+## **Tier 2 — Advanced**
+
+```text
+✓ Episodic memory
+✓ Contextual bandit
+✓ Recovery decay
+✓ Relationship cost
+✓ Recovery capacity
+✓ PTP
+✓ Invoice dispute resolver
+```
+
+## **Tier 3 — Production evolution**
+
+```text
+→ PostgreSQL
+→ Redis
+→ Kafka
+→ Temporal
+→ semantic memory
+→ real gateways
+→ real voice infrastructure
+→ advanced causal models
+→ cross-merchant learning
+```
+
+---
+
+# 124. The final project statement
+
+# **ULTRON**
+
+### Unified Loss Tracking & Recovery Orchestration Network
+
+> **ULTRON is an autonomous AI agent that operates inside a dynamic revenue environment. It understands payment failures at the financial-state level, reconstructs customer-wide revenue exposure, discovers interference between payment, checkout and receivables events, selects feasible recovery strategies using economic and adaptive models, executes them through deterministic financial controls, observes the consequences, learns from its own experiences, and autonomously replans when the environment or its predictions change.**
+
+### The project does not end at:
+
+**"We found the problem."**
+
+It does not end at:
+
+**"We recommend an action."**
+
+It does not even end at:
+
+**"We recovered the payment."**
+
+It ends at:
+
+# **"ULTRON observed what happened, understood whether its action actually created incremental recovery, learned from the episode, and changed what it did next."**
+
+That is the **aggressive ULTRON v3** I would freeze.
+
+The v2 specification already establishes the corrected foundations; v3 adds the strongest advanced ideas while preserving the explicit rule that the MVP is the smallest implementation that makes the **world → agent → action → world → observation → replan** loop genuinely work. 
+
+[1]: https://razorpay.com/docs/webhooks/?utm_source=chatgpt.com "About Webhooks | Razorpay Docs"
+[2]: https://razorpay.com/docs/webhooks/validate-test/?utm_source=chatgpt.com "Validate and Test Webhooks | Razorpay Docs"

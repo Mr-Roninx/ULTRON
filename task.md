@@ -1,0 +1,36 @@
+- [x] Phase 0: Read and Understand
+- [x] Phase 1: Create Build Specification
+- [x] Phase 2: Dataset First
+- [x] Phase 3: Financial World Simulator
+- [x] Phase 4: Virtual Time
+- [x] Phase 5: Event System
+- [x] Phase 6: Financial State Machines
+- [x] Phase 7: Customer State
+- [x] Phase 8: Revenue Graph
+- [x] Phase 9: Revenue Interference
+- [x] Phase 10: Mission System
+- [x] Phase 11: Agent Runtime
+- [x] Phase 12: Investigation Tools
+- [x] Phase 13: Feasible Action Engine
+- [x] Phase 14: Authority Engine
+- [x] Phase 15: Zero-Trust Financial Safety
+- [x] Phase 16: LLM Architecture
+- [x] Phase 17: Prediction
+- [x] Phase 18: Autonomous Replanning
+- [x] Phase 19: Episodic Memory
+- [x] Phase 20: Chaos Engine
+- [x] Phase 21: Idempotency
+- [x] Phase 22: Circuit Breakers
+- [x] Phase 23: Audit System
+- [x] Phase 24: Metrics
+- [x] Phase 25: Baseline Systems
+- [x] Phase 26: Testing
+- [x] Phase 27: Frontend
+- [x] Phase 28: Chaos Lab UI
+- [x] Phase 29: Golden Demo
+- [x] Phase 30: Deployment
+- [x] Phase 31: Implementation Discipline
+- [x] Phase 32: Development Order
+- [x] Phase 33: How You Must Work
+- [x] Phase 34: If Something Is Missing
+- [x] Phase 35: Final Definition of Done

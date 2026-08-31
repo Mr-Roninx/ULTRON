@@ -1,0 +1,59 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { initDatabase } from './db/database.js';
+import { handleRazorpayWebhook } from './webhooks/razorpay.js';
+import { opportunitiesRouter } from './routes/opportunities.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+// Initialize database schema
+initDatabase();
+
+export const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middlewares
+app.use(cors());
+
+// Capture raw body for HMAC signature verification
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf.toString('utf-8');
+    },
+  })
+);
+
+app.use(express.urlencoded({ extended: true }));
+
+// Health Check
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'healthy',
+    system: 'ULTRON Autonomous Economic Control Plane',
+    mode: 'Razorpay Test Mode',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Webhook endpoint
+app.post('/webhooks/razorpay', handleRazorpayWebhook);
+
+// Opportunities endpoints
+app.use('/opportunities', opportunitiesRouter);
+
+// Start server if run directly
+if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
+  app.listen(PORT, () => {
+    console.log(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
+    console.log(`📡 Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
+    console.log(`📊 Opportunities endpoint: GET http://localhost:${PORT}/opportunities`);
+  });
+}

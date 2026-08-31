@@ -1,0 +1,8 @@
+pydantic
+networkx
+fastapi
+uvicorn
+httpx
+huggingface_hub
+python-dotenv
+pytest

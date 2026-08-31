@@ -1,0 +1,12 @@
+from enum import Enum
+
+class RevenueMissionState(str, Enum):
+    DISCOVERED = "DISCOVERED"
+    INVESTIGATING = "INVESTIGATING"
+    PLANNED = "PLANNED"
+    EXECUTING = "EXECUTING"
+    WAITING = "WAITING"
+    REPLANNING = "REPLANNING"
+    RECOVERED = "RECOVERED"
+    ESCALATED = "ESCALATED"
+    CLOSED = "CLOSED"

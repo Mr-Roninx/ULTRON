@@ -1,0 +1,1 @@
+from synthetic_payment_universe.scenarios.golden_scenarios import GOLDEN_SCENARIOS, get_golden_scenario
