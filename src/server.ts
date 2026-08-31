@@ -9,6 +9,7 @@ import { opportunitiesRouter } from './routes/opportunities.js';
 import { marketRouter } from './routes/market.js';
 import { authorityRouter } from './routes/authority.js';
 import { executionRouter } from './routes/execution.js';
+import { dashboardRouter } from './routes/dashboard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +62,9 @@ app.use('/authority', authorityRouter);
 // Execution endpoints (Feature 6)
 app.use('/execution', executionRouter);
 
+// Dashboard endpoints (Feature 7)
+app.use('/dashboard', dashboardRouter);
+
 // Start server if run directly
 if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
   app.listen(PORT, () => {
@@ -70,5 +74,6 @@ if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
     console.log(`🏛️ Recovery Market endpoint: GET/POST http://localhost:${PORT}/market/run`);
     console.log(`🛡️ Action Authority endpoint: GET/POST http://localhost:${PORT}/authority/run`);
     console.log(`⚡ Execution endpoint: POST http://localhost:${PORT}/execution/run`);
+    console.log(`📈 Dashboard summary: GET http://localhost:${PORT}/dashboard/summary`);
   });
 }

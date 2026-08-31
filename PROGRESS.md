@@ -12,38 +12,34 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **Feature 4: Recovery Market** (Completed)
 - [x] **Feature 5: Action Authority** (Completed)
 - [x] **Feature 6: Execution** (Completed)
-- [ ] **Feature 7: Truth Engine + Dashboard**
+- [x] **Feature 7: Truth Engine + Dashboard** (Completed)
 
 ---
 
-## Feature 6: Execution — Summary
+## Feature 7: Truth Engine + Dashboard — Summary
 
 ### What Was Built
-1. **Execution Engine (`src/execution/executor.ts`)**:
-   - Integrated official Razorpay Node SDK in Test Mode.
-   - **Zero-Bypass Compliance Safety**: Code strictly evaluates Action Authority and throws a compliance violation if the opportunity is not `AUTHORIZED`, preventing any API calls for `BLOCKED`, `WAIT`, or `ABSTAIN` records.
-   - **Idempotency Guarantee**: Keyed by `reference_id = opportunity_id`. Checks SQLite `execution_records` before executing; re-invocations return existing records without creating duplicate payment links.
-   - Real payment link generation (`rzp.paymentLink.create`) creating hosted checkout URLs (`https://rzp.io/rzp/...`).
-   - SQLite persistence into `execution_records` (`opportunity_id`, `razorpay_payment_link_id`, `link_url`, `status`, `idempotency_key`, `created_at`).
-   - Automated opportunity status progression to `executing` and audit `LedgerEntry` insertion.
-2. **Batch & Safety Caps**:
-   - Cap of 5 payment links per run (`MAX_LINKS_PER_RUN = 5`).
-   - Per-opportunity error isolation preventing batch crashes.
-3. **Execution API Endpoints (`src/routes/execution.ts`)**:
-   - `POST /execution/run`: Batch execution orchestrator for authorized opportunities.
-   - `POST /execution/opportunity/:id`: Single opportunity execution endpoint.
-   - `GET /execution/records`: List all execution records.
-   - `GET /execution/records/:id`: Retrieve single execution record.
+1. **Truth Engine Dual-Path Reconciliation (`src/reconciliation/poller.ts`, `src/webhooks/razorpay.ts`)**:
+   - **Webhook Outcome Handlers**: Supports `payment_link.paid`, `payment_link.expired`, and `payment_link.cancelled`, automatically updating status to `recovered` / `not_recovered` and inserting immutable audit events to `ledger_entries`.
+   - **Active Fallback Poller (`pollAndReconcile`)**: Proactively queries Razorpay API state via `rzpClient.paymentLink.fetch()` for opportunities in `executing` status to guarantee eventual truth consistency in the presence of dropped/delayed webhooks.
+2. **Dashboard Summary API (`src/routes/dashboard.ts`)**:
+   - `GET /dashboard/summary`: Computes total opportunities, gross amount at risk, **strictly real-only reconciled recovered amount** (never mixing synthetic estimations), shadow price, and capacity utilization metrics.
+3. **Interactive React Single-Page Dashboard (`frontend/src/app/page.tsx`)**:
+   - High-contrast dark-mode interface with glassmorphic styling, live 3-second auto-polling, and real-time status transitions.
+   - **Summary KPI Metric Cards**: Live opportunities count, total amount at risk, real reconciled recovery amount (₹), binding shadow price (₹), and capacity gauge.
+   - **Ranked Opportunity Portfolio Table**: Interactive table with color-coded badges (`recovered`, `executing`, `authorized`, `deferred`, `blocked`, `abstained`), live Razorpay link launchers, and payment simulation helpers.
+   - **Forensic "Why?" Audit Drawer**: Constructed **strictly by reading immutable stored SQLite database records in order**:
+     1. Raw Ingestion Event & Gateway Error Code
+     2. Perception Normalization (Hard/Soft/Unknown taxonomy & Customer Trust Score)
+     3. Economic Reasoning & Costs (labeled **"model-estimated"**)
+     4. Recovery Market Greedy Allocation (decision, rank, marginal shadow price at run)
+     5. Action Authority Compliance Checklist (5 checks with `✓` / `✗` symbols)
+     6. Execution & Truth Engine Ledger Audit Trail (Plink ID, Hosted URL, Chronological Events)
 
 ### What Was Verified
-- **Live Razorpay Payment Link Creation**: Successfully created live test-mode links in Razorpay:
-  - `synth_12_mid_val_retainer` $\to$ `plink_TWLQZW5n3SEP6E` (`https://rzp.io/rzp/vrXJvnl`, Amount: ₹12,000)
-  - `synth_09_high_val_license` $\to$ `plink_TWLQYb7rr044NI` (`https://rzp.io/rzp/jvnK34iY`, Amount: ₹25,000)
-  - `synth_11_high_val_deposit` $\to$ `plink_TWLQXvNjkFVVHs` (`https://rzp.io/rzp/F8WXnuR`, Amount: ₹20,000)
-- **Live Checkout Verification**: Fetched and verified live Razorpay hosted checkout page with exact description and ₹12,000 amount.
-- **Idempotency**: Re-execution returned existing link without generating duplicate Razorpay resources.
-- **Authority Enforcement**: Explicit rejection of `BLOCKED` (hard decline, retry cap) and `WAIT` opportunities with zero API calls.
-- **Regression Suite**: Features 1–6 passing cleanly.
-
-### What Was Deferred (As per Specification)
-- UI Dashboard and Truth Engine reconciliation (Feature 7).
+- **Webhook Payment Settlement**: `payment_link.paid` flips opportunity to `recovered` in real-time.
+- **Active Poller**: Fallback poller inspects live Razorpay state and reconciles statuses without errors.
+- **Strict Financial Metric Boundary**: Summary KPI "Total Recovered (Real)" strictly reflects `source = 'real'` reconciled payments and ignores synthetic recoveries.
+- **"Why?" Forensic Stored Audit**: Complete 6-stage audit trail rendered directly from stored SQLite fields without runtime hallucination.
+- **Full End-to-End Test Suite**: 100% passing across all 7 features.
+- **Live Frontend & Backend**: Backend operational on `http://localhost:3001`, Frontend operational on `http://localhost:3000`.

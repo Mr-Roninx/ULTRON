@@ -75,6 +75,9 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
   // 2. Idempotency Check: reference_id = opportunity_id
   const existingRecord = getExecutionRecordByOpportunityId(opp.id);
   if (existingRecord) {
+    if (opp.status !== 'recovered') {
+      updateOpportunityStatus(opp.id, 'executing');
+    }
     return {
       opportunity_id: opp.id,
       success: true,

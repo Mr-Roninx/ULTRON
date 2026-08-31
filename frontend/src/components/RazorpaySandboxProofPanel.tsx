@@ -30,7 +30,7 @@ export const RazorpaySandboxProofPanel: React.FC = () => {
         </div>
         <div className="flex justify-between border-b border-slate-800 pb-2">
           <span className="text-slate-400">Deterministic Authority:</span>
-          <span className="text-amber-300 font-bold">ActionDecisionAuthority -> SEND_PAYMENT_LINK</span>
+          <span className="text-amber-300 font-bold">{"ActionDecisionAuthority -> SEND_PAYMENT_LINK"}</span>
         </div>
         <div className="flex justify-between border-b border-slate-800 pb-2">
           <span className="text-slate-400">Generated Payment Link:</span>
