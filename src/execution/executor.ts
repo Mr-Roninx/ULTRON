@@ -72,7 +72,7 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     );
   }
 
-  // 2. Idempotency Check: reference_id = opportunity_id
+  // 2. Idempotency Check: Local SQLite lookup by opportunity_id
   const existingRecord = getExecutionRecordByOpportunityId(opp.id);
   if (existingRecord) {
     if (opp.status !== 'recovered') {
@@ -151,6 +151,40 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
       record: executionRecord,
     };
   } catch (error: any) {
+    const errorDesc = error?.error?.description || error?.message || '';
+
+    // Handle remote idempotency conflict if link already exists in Razorpay
+    if (errorDesc.includes('already exists') || errorDesc.includes('reference_id')) {
+      try {
+        const existingList: any = await rzpClient.paymentLink.all({ reference_id: opp.id });
+        const existingPlink = existingList?.payment_links?.[0];
+        if (existingPlink) {
+          const now = new Date().toISOString();
+          const linkUrl = existingPlink.short_url || `https://rzp.io/i/${existingPlink.id}`;
+          const executionRecord: ExecutionRecord = {
+            opportunity_id: opp.id,
+            razorpay_payment_link_id: existingPlink.id,
+            link_url: linkUrl,
+            status: existingPlink.status || 'created',
+            idempotency_key: `ref_${opp.id}`,
+            created_at: now,
+          };
+
+          upsertExecutionRecord(executionRecord);
+          updateOpportunityStatus(opp.id, 'executing');
+
+          return {
+            opportunity_id: opp.id,
+            success: true,
+            created_new: false,
+            record: executionRecord,
+          };
+        }
+      } catch (fetchErr) {
+        console.error(`Failed to fetch existing remote link for ${opp.id}:`, fetchErr);
+      }
+    }
+
     console.error(`Razorpay API execution error for ${opp.id}:`, error);
     return {
       opportunity_id: opp.id,

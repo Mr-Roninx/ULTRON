@@ -8,6 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "tsx src/server.ts",
+    "db:reset": "tsx scripts/reset_db.ts",
     "seed": "tsx scripts/seed_synthetic.ts",
     "test:webhook": "tsx scripts/test_webhook.ts",
     "test:spike": "tsx scripts/real_razorpay_spike.ts",
@@ -15,8 +16,11 @@
     "test:economics": "tsx scripts/test_economics.ts",
     "test:market": "tsx scripts/test_market.ts",
     "test:authority": "tsx scripts/test_authority.ts",
+    "test:bypass": "tsx scripts/test_authority_bypass.ts",
     "test:execution": "tsx scripts/test_execution.ts",
-    "test:truth": "tsx scripts/test_truth_engine.ts"
+    "test:truth": "tsx scripts/test_truth_engine.ts",
+    "verify:no-fake-webhooks": "tsx scripts/verify_no_fake_webhooks.ts",
+    "demo:real-recovery": "tsx scripts/demo_real_recovery_verification.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -28,6 +32,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.5",
+    "puppeteer-core": "^25.9.0",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"
   }

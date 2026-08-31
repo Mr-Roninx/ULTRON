@@ -23,8 +23,8 @@ function signPayload(body: string, secret: string): string {
 async function runTruthEngineAcceptanceTests() {
   console.log('🧪 Starting Truth Engine & Dashboard Acceptance Tests...\n');
 
-  // --- Test 1: Webhook Payment Settlement (payment_link.paid) ---
-  console.log('--- Test 1: Webhook Settlement (payment_link.paid) ---');
+  // --- Test 1: Simulation Webhook Settlement (payment_link.paid) ---
+  console.log('--- Test 1: Simulation Settlement (/internal/simulate-webhook) ---');
   
   // Pick an executed opportunity
   const records = getAllExecutionRecords();
@@ -69,7 +69,7 @@ async function runTruthEngineAcceptanceTests() {
   const payloadStr = JSON.stringify(paidEventPayload);
   const sig = signPayload(payloadStr, WEBHOOK_SECRET);
 
-  const whRes = await fetch(`${BASE_URL}/webhooks/razorpay`, {
+  const whRes = await fetch(`${BASE_URL}/internal/simulate-webhook`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -79,7 +79,7 @@ async function runTruthEngineAcceptanceTests() {
   });
 
   const whData = await whRes.json();
-  console.log('Webhook Response:', whData);
+  console.log('Simulation Webhook Response:', whData);
 
   if (whRes.status === 200 && whData.reconciled === true && whData.status === 'recovered') {
     console.log(`✅ PASS: payment_link.paid successfully reconciled ${targetOppId} to 'recovered'.`);
@@ -117,7 +117,7 @@ async function runTruthEngineAcceptanceTests() {
     process.exit(1);
   }
 
-  // --- Test 3: Dashboard Summary Financial Metric Contract ---
+  // --- Test 3: Dashboard Summary KPI Financial Boundary Contract ---
   console.log('\n--- Test 3: Dashboard Summary KPI Financial Boundary Contract ---');
   const sumRes = await fetch(`${BASE_URL}/dashboard/summary`);
   const summary = await sumRes.json();
@@ -135,26 +135,6 @@ async function runTruthEngineAcceptanceTests() {
     console.error('❌ FAIL: Summary financial boundary verification failed:', summary);
     process.exit(1);
   }
-
-  // --- Summary Table ---
-  console.log('\n📊 Truth Engine Portfolio Status Reconciled:');
-  console.log('-------------------------------------------------------------------------------------------------------------');
-  console.log('| Opportunity ID                 | Amount (₹) | Source    | Final Status | Reconciled Ledger Events        |');
-  console.log('-------------------------------------------------------------------------------------------------------------');
-  
-  const allOpps = [targetOppId, 'synth_09_high_val_license', 'synth_01_stolen_card', 'synth_03_retry_cap_exceeded'];
-  for (const id of allOpps) {
-    const opp = getOpportunityById(id);
-    if (!opp) continue;
-    const oppLedger = getLedgerEntriesByOpportunity(id);
-    const events = oppLedger.map((l) => l.event_type).join(' -> ');
-    const idPad = opp.id.padEnd(30, ' ');
-    const amtPad = (`₹` + (opp.amount_paise / 100).toLocaleString()).padStart(10, ' ');
-    const srcPad = opp.source.toUpperCase().padEnd(9, ' ');
-    const statPad = opp.status.toUpperCase().padEnd(12, ' ');
-    console.log(`| ${idPad} | ${amtPad} | ${srcPad} | ${statPad} | ${events.padEnd(31, ' ')} |`);
-  }
-  console.log('-------------------------------------------------------------------------------------------------------------');
 
   console.log('\n🎉 ALL TRUTH ENGINE ACCEPTANCE TESTS PASSED!');
 }

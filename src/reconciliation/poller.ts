@@ -8,7 +8,7 @@ import { rzpClient } from '../execution/executor.js';
 
 /**
  * RECONCILIATION DESIGN NOTE:
- * Webhooks are not guaranteed to arrive in production or test environments due to potential
+ * Webhooks are not guaranteed to arrive across distributed networks due to potential
  * network drops, intermediate gateway retry timeouts, or server cold starts.
  * The active reconciliation poller provides a deterministic secondary verification loop
  * by querying Razorpay's API directly for any opportunity in 'executing' status, ensuring

@@ -308,8 +308,8 @@ export default function UltronDashboard() {
         created_at: Math.floor(Date.now() / 1000),
       };
 
-      // Direct local simulation via webhook logic
-      await fetch(`${API_BASE}/webhooks/razorpay`, {
+      // Direct local simulation via isolated simulation webhook route
+      await fetch(`${API_BASE}/internal/simulate-webhook`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

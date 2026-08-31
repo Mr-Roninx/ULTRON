@@ -2,7 +2,7 @@
 
 **System Architecture, Economic Foundations & Technical Specification**  
 *Repository*: [ULTRON (GitHub: Mr-Roninx/ULTRON)](https://github.com/Mr-Roninx/ULTRON.git)  
-*Version*: 1.0.0 (Production Blueprint / Razorpay Test Mode)  
+*Version*: 1.0.0 (Technical Specification v1.0 / Razorpay Test Mode Prototype)  
 *Target Stack*: Node.js (v24 / `node:sqlite`) + TypeScript + Express + React/Next.js + Tailwind CSS + Razorpay Node SDK
 
 ---
@@ -363,24 +363,26 @@ CREATE TABLE ledger_entries (
 
 ### Stage 5: Action Authority (Deterministic Compliance Gate)
 - **File**: `src/authority/gate.ts`
+- **Evaluation Scope (Portfolio-Wide)**: Action Authority evaluates **every opportunity** in the database across all 5 checks regardless of the Market's economic ranking or decision (`ACT`, `WAIT`, or `ABSTAIN`). This guarantees a durable, auditable compliance record for 100% of pipeline items.
 - **The Two-Stage Architectural Gate**: Economic ranking cannot authorize payment links. Action Authority evaluates 5 discrete, independent checks:
 
 ```mermaid
 flowchart TD
-    OPP[Opportunity + Decision + Score] --> C1{1. hard_decline_check\ndecline_type != 'hard'}
+    OPP[Every Opportunity in DB + Decision + Score] --> C1{1. hard_decline_check\ndecline_type != 'hard'}
     C1 -->|Fail| V_BLOCK1[Verdict: BLOCKED\n'no auto-contact on fraud/stolen']
     C1 -->|Pass| C2{2. retry_cap_check\nattempt_count < 3}
     C2 -->|Fail| V_BLOCK2[Verdict: BLOCKED\n'retry cap reached -> manual fallback']
     C2 -->|Pass| C3{3. kill_switch_check\nkill_switch == false}
     C3 -->|Fail| V_BLOCK3[Verdict: BLOCKED\n'manual kill switch engaged']
     C3 -->|Pass| C4{4. confidence_recheck\nconfidence != 'low'}
-    C4 -->|Fail| V_ABS[Verdict: ABSTAIN\n'low confidence requires human review']
+    C4 -->|Fail| V_ABS[Verdict: ABSTAIN\n'market-bypass guard: low confidence requires human review']
     C4 -->|Pass| C5{5. capacity_recheck\ndecision == 'ACT'}
     C5 -->|Fail| V_WAIT[Verdict: WAIT\n'deferred past capacity limit']
     C5 -->|Pass| V_AUTH[Verdict: AUTHORIZED\n'all compliance checks passed']
 ```
 
-- **Global Kill Switch**: When engaged via `POST /authority/kill-switch { enabled: true }`, fails `kill_switch_check` on 100% of opportunities, instantly revoking authorization.
+- **Role of `confidence_recheck` (Market-Bypass Safeguard)**: In normal operations, the Market stage pre-filters low-confidence opportunities to `ABSTAIN` before ranking. Check 4 (`confidence_recheck`) serves as an independent fail-closed defense against **market-bypass** scenarios (e.g. unallocated execution attempts or forged `ACT` records reaching Authority directly), ensuring low-confidence opportunities can never be executed even if the market stage is skipped.
+- **Global Kill Switch**: When engaged via `POST /authority/kill-switch { enabled: true }`, fails `kill_switch_check` on 100% of opportunities, instantly revoking authorization across the entire portfolio.
 
 ---
 

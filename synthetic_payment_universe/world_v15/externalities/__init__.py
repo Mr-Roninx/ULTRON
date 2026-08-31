@@ -1,2 +1,0 @@
-from synthetic_payment_universe.world_v15.externalities.gateway_externalities import GatewayExternalityEngine, GatewayExternalityState
-from synthetic_payment_universe.world_v15.externalities.merchant_externalities import MerchantExternalityEngine

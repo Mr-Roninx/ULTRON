@@ -7,8 +7,12 @@
 *.db
 *.db-wal
 *.db-shm
+*.contaminated-backup*
 
-# Python
+# Screenshots & Local Dumps
+*.png
+
+# Python (Legacy)
 __pycache__/
 *.py[cod]
 *$py.class

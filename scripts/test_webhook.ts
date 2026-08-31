@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import dotenv from 'dotenv';
 import path from 'node:path';
+import { seedSyntheticData } from './seed_synthetic.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -13,7 +14,10 @@ function signPayload(body: string, secret: string): string {
 }
 
 async function runTests() {
-  console.log('🧪 Starting Event Fabric Webhook Acceptance Tests...');
+  console.log('🧪 Starting Event Fabric Webhook Acceptance Tests (Isolated Simulation Path)...');
+
+  // Seed synthetic portfolio
+  seedSyntheticData();
 
   // 1. Test Health endpoint
   try {
@@ -25,7 +29,7 @@ async function runTests() {
     process.exit(1);
   }
 
-  // 2. Test Invalid HMAC Signature rejection (400)
+  // 2. Test Invalid HMAC Signature rejection (400) on simulation route
   const sampleFailedEvent = {
     entity: 'event',
     account_id: 'acc_ultron_test',
@@ -34,7 +38,7 @@ async function runTests() {
     payload: {
       payment: {
         entity: {
-          id: 'pay_test_failed_001',
+          id: 'pay_test_sim_failed_001',
           entity: 'payment',
           amount: 349900, // ₹3,499.00
           currency: 'INR',
@@ -46,7 +50,7 @@ async function runTests() {
           error_source: 'gateway',
           error_step: 'payment_authorization',
           error_reason: 'card_expired',
-          customer_id: 'cust_live_spike_01',
+          customer_id: 'cust_sim_spike_01',
           email: 'customer01@example.com',
           contact: '+919876543210',
           attempts: 1,
@@ -58,8 +62,8 @@ async function runTests() {
 
   const payloadString = JSON.stringify(sampleFailedEvent);
 
-  console.log('\n--- Test 1: Invalid HMAC Signature ---');
-  const invalidSigRes = await fetch(`${BASE_URL}/webhooks/razorpay`, {
+  console.log('\n--- Test 1: Invalid HMAC Signature on /internal/simulate-webhook ---');
+  const invalidSigRes = await fetch(`${BASE_URL}/internal/simulate-webhook`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -76,11 +80,11 @@ async function runTests() {
     process.exit(1);
   }
 
-  // 3. Test Valid Signature Ingestion (200)
-  console.log('\n--- Test 2: Valid HMAC Signature & payment.failed Ingestion ---');
+  // 3. Test Valid Signature Ingestion (200) on simulation route
+  console.log('\n--- Test 2: Valid HMAC Signature & payment.failed Ingestion (Synthetic Label) ---');
   const validSignature = signPayload(payloadString, WEBHOOK_SECRET);
 
-  const validRes = await fetch(`${BASE_URL}/webhooks/razorpay`, {
+  const validRes = await fetch(`${BASE_URL}/internal/simulate-webhook`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -91,16 +95,16 @@ async function runTests() {
 
   const validJson = await validRes.json();
   console.log(`Response status: ${validRes.status}, Body:`, validJson);
-  if (validRes.status === 200 && validJson.received) {
-    console.log('✅ PASS: Valid webhook ingested successfully into RecoveryOpportunity table.');
+  if (validRes.status === 200 && validJson.received && validJson.simulated === true) {
+    console.log('✅ PASS: Valid simulation webhook ingested successfully into RecoveryOpportunity table with source=synthetic.');
   } else {
-    console.error('❌ FAIL: Failed to ingest valid webhook:', validJson);
+    console.error('❌ FAIL: Failed to ingest simulation webhook:', validJson);
     process.exit(1);
   }
 
   // 4. Test Deduplication / Replay (200 & deduplicated: true, no extra row)
   console.log('\n--- Test 3: Idempotent Webhook Replay Deduplication ---');
-  const replayRes = await fetch(`${BASE_URL}/webhooks/razorpay`, {
+  const replayRes = await fetch(`${BASE_URL}/internal/simulate-webhook`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -118,7 +122,7 @@ async function runTests() {
     process.exit(1);
   }
 
-  // 5. Query GET /opportunities to verify both real and synthetic rows exist
+  // 5. Query GET /opportunities to verify data isolation
   console.log('\n--- Test 4: Verify GET /opportunities ---');
   const oppsRes = await fetch(`${BASE_URL}/opportunities`);
   const oppsData = await oppsRes.json();
@@ -128,10 +132,10 @@ async function runTests() {
   const synthOpps = oppsData.opportunities.filter((o: any) => o.source === 'synthetic');
 
   console.log(`Real rows: ${realOpps.length}, Synthetic rows: ${synthOpps.length}`);
-  if (realOpps.length >= 1 && synthOpps.length >= 15) {
-    console.log('✅ PASS: GET /opportunities returned both real and synthetic rows conforming to contract.');
+  if (realOpps.length === 0 && synthOpps.length >= 16) {
+    console.log('✅ PASS: Test suite produces ZERO real rows. Complete separation between real and simulated ingestion achieved.');
   } else {
-    console.error('❌ FAIL: Opportunities count check failed.');
+    console.error(`❌ FAIL: Expected 0 real rows from test suite, found ${realOpps.length}`);
     process.exit(1);
   }
 

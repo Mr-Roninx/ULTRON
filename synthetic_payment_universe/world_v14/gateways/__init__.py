@@ -1,2 +1,0 @@
-from synthetic_payment_universe.world_v14.gateways.competitive_gateways import CompetitiveGatewayEngine, CompetitiveGateway
-from synthetic_payment_universe.world_v14.gateways.dynamic_routing import DynamicRoutingEngine

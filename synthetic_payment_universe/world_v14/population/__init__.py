@@ -1,3 +1,0 @@
-from synthetic_payment_universe.world_v14.population.customer_cohorts import PopulationCustomerEntity, CustomerCohort, CustomerLifecycleState
-from synthetic_payment_universe.world_v14.population.merchant_cohorts import PopulationMerchantEntity, MerchantCohort, MerchantLifecycleState
-from synthetic_payment_universe.world_v14.population.lifecycle import PopulationLifecycleEngine

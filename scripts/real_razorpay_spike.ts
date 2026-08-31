@@ -95,9 +95,9 @@ async function runRealSpike() {
     .update(payloadString)
     .digest('hex');
 
-  // Step 3: Send the webhook to the ULTRON Event Fabric endpoint
-  console.log('📡 Dispatching webhook to POST http://localhost:' + PORT + '/webhooks/razorpay...');
-  const res = await fetch(`http://localhost:${PORT}/webhooks/razorpay`, {
+  // Step 3: Send the webhook to the ULTRON Event Fabric simulation endpoint
+  console.log('📡 Dispatching webhook to POST http://localhost:' + PORT + '/internal/simulate-webhook...');
+  const res = await fetch(`http://localhost:${PORT}/internal/simulate-webhook`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -116,7 +116,8 @@ export interface RawPaymentPayload {
  */
 export function normalizeOpportunity(
   paymentEntity: RawPaymentPayload,
-  eventId?: string | null
+  eventId?: string | null,
+  options: { source?: 'real' | 'synthetic' } = {}
 ): RecoveryOpportunity {
   const paymentId = paymentEntity.id || `pay_${Date.now()}`;
   const amountPaise = Number(paymentEntity.amount) || 0;
@@ -149,9 +150,12 @@ export function normalizeOpportunity(
 
   const now = new Date().toISOString();
 
+  // NOTE: This 'real' label is only as trustworthy as who has access to the webhook secret in .env — it is not cryptographic proof of Razorpay origin.
+  const source = options.source || 'real';
+
   return {
     id: paymentId,
-    source: 'real',
+    source,
     amount_paise: amountPaise,
     currency,
     reason_code: errorCode,

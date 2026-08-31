@@ -1,2 +1,0 @@
-from synthetic_payment_universe.observation.firewall import UniverseObservationFirewall
-from synthetic_payment_universe.observation.observation_builder import UniverseObservationAPI

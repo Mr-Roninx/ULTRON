@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initDatabase } from './db/database.js';
-import { handleRazorpayWebhook } from './webhooks/razorpay.js';
+import { handleRazorpayWebhook, handleSimulatedWebhook } from './webhooks/razorpay.js';
 import { opportunitiesRouter } from './routes/opportunities.js';
 import { marketRouter } from './routes/market.js';
 import { authorityRouter } from './routes/authority.js';
@@ -47,8 +47,13 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Webhook endpoint
+// Real Webhook endpoint (verified against secret, labels records source='real')
 app.post('/webhooks/razorpay', handleRazorpayWebhook);
+
+// Simulation Webhook endpoint (for tests/demo simulation, labels records source='synthetic' unconditionally)
+if (process.env.ALLOW_TEST_INGESTION !== 'false') {
+  app.post('/internal/simulate-webhook', handleSimulatedWebhook);
+}
 
 // Opportunities endpoints
 app.use('/opportunities', opportunitiesRouter);
@@ -69,7 +74,8 @@ app.use('/dashboard', dashboardRouter);
 if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
   app.listen(PORT, () => {
     console.log(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
-    console.log(`📡 Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
+    console.log(`📡 Real Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
+    console.log(`🧪 Simulation Webhook endpoint: POST http://localhost:${PORT}/internal/simulate-webhook`);
     console.log(`📊 Opportunities endpoint: GET http://localhost:${PORT}/opportunities`);
     console.log(`🏛️ Recovery Market endpoint: GET/POST http://localhost:${PORT}/market/run`);
     console.log(`🛡️ Action Authority endpoint: GET/POST http://localhost:${PORT}/authority/run`);
