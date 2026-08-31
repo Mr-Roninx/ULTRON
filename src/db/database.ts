@@ -295,6 +295,39 @@ export function getAllScores(): (Score & { opportunity_id: string })[] {
   return stmt.all() as unknown as (Score & { opportunity_id: string })[];
 }
 
+// Allocation Decisions queries
+export function getAllocationDecisionByOpportunityId(oppId: string): AllocationDecision | undefined {
+  const stmt = db.prepare('SELECT * FROM allocation_decisions WHERE opportunity_id = ?');
+  return stmt.get(oppId) as unknown as AllocationDecision | undefined;
+}
+
+export function upsertAllocationDecision(decision: AllocationDecision): void {
+  const stmt = db.prepare(`
+    INSERT INTO allocation_decisions (
+      opportunity_id, decision, rank_in_batch, shadow_price_paise_at_decision, reason
+    ) VALUES (
+      ?, ?, ?, ?, ?
+    )
+    ON CONFLICT(opportunity_id) DO UPDATE SET
+      decision = excluded.decision,
+      rank_in_batch = excluded.rank_in_batch,
+      shadow_price_paise_at_decision = excluded.shadow_price_paise_at_decision,
+      reason = excluded.reason
+  `);
+  stmt.run(
+    decision.opportunity_id,
+    decision.decision,
+    decision.rank_in_batch,
+    decision.shadow_price_paise_at_decision,
+    decision.reason
+  );
+}
+
+export function getAllAllocationDecisions(): AllocationDecision[] {
+  const stmt = db.prepare('SELECT * FROM allocation_decisions ORDER BY rank_in_batch ASC');
+  return stmt.all() as unknown as AllocationDecision[];
+}
+
 // Ledger queries
 export function insertLedgerEntry(entry: LedgerEntry): void {
   const stmt = db.prepare(`

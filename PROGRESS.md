@@ -9,49 +9,41 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **Feature 1: Event Fabric** (Completed)
 - [x] **Feature 2: Perception** (Completed)
 - [x] **Feature 3: Economic Reasoning** (Completed)
-- [ ] **Feature 4: Recovery Market**
+- [x] **Feature 4: Recovery Market** (Completed)
 - [ ] **Feature 5: Action Authority**
 - [ ] **Feature 6: Execution**
 - [ ] **Feature 7: Truth Engine + Dashboard**
 
 ---
 
-## Feature 3: Economic Reasoning — Summary
+## Feature 4: Recovery Market (Allocation) — Summary
 
 ### What Was Built
-1. **Mathematical Scoring Engine (`src/economics/scorer.ts`)**:
-   - Implemented starter probability counterfactual tables:
-     - `hard`: natural 0.02, intervention 0.02 ($\Delta = 0.00$)
-     - `insufficient_funds`: natural 0.35, intervention 0.55 ($\Delta = 0.20$)
-     - `expired_card`: natural 0.05, intervention 0.60 ($\Delta = 0.55$)
-     - `generic_decline` / `do_not_honor`: natural 0.25, intervention 0.45 ($\Delta = 0.20$)
-     - `bank_timeout`-type: natural 0.60, intervention 0.70 ($\Delta = 0.10$)
-     - `unknown`: natural 0.10, intervention 0.10 ($\Delta = 0.00$)
-   - Incremental probability computation: $\text{incremental\_prob} = \max(0, \text{intervention} - \text{natural})$.
-   - Operational & Fatigue cost model:
-     - Fixed delivery cost: 400 paise (₹4.00).
-     - Non-linear customer fatigue penalty: 0 paise (attempt 1), 250 paise (attempt 2), 750 paise (attempt 3), $1500 + 500 \times (\text{attempt} - 4)$ paise (attempt 4+).
-   - Expected Incremental Value Calculation:
-     $$\text{IVEN} = \text{incremental\_prob} \times \text{amount\_paise} - \text{operational\_cost\_paise} - \text{fatigue\_cost\_paise}$$
-   - Confidence evaluation:
-     - `'low'`: `decline_type === 'unknown'` OR `attempt_count >= 3`
-     - `'high'`: `decline_type === 'hard'` OR `bank_timeout`-type
-     - `'medium'`: standard recoverable attempts 1-2.
-2. **Persistence & Database Integration (`src/db/database.ts`)**:
-   - `scores` table populated with exact schema fields.
-   - Dynamic opportunity status updating (`pending` $\to$ `scored`).
-3. **API & Data Access (`src/routes/opportunities.ts`)**:
-   - `GET /opportunities/:id/score`: Returns complete mathematical breakdown with `_labels` metadata marking estimated probabilities.
-   - `POST /opportunities/score-all`: Batch scoring endpoint for pipeline processing.
+1. **Recovery Market Allocator (`src/market/allocator.ts`)**:
+   - Greedy portfolio capacity allocator enforcing configurable limits (`MAX_LINKS_PER_RUN`, default 5).
+   - Pre-ranking filter: Opportunities with `confidence === 'low'` or non-positive IVEN ($\le 0$) route immediately to `decision = 'ABSTAIN'` (`rank_in_batch = 0`) without consuming recovery capacity.
+   - IVEN Ranking: Eligible opportunities sorted strictly by expected incremental value descending.
+   - Capacity Cutoff & Shadow Price:
+     - Top $K$ items receive `decision = 'ACT'`.
+     - Remaining items receive `decision = 'WAIT'`.
+     - $\text{Shadow Price} = \text{IVEN of the marginal } (K\text{-th}) \text{ accepted opportunity}$.
+     - Stamped onto all decisions in the run with detailed human-readable rationales.
+2. **Database Integration (`src/db/database.ts`)**:
+   - `allocation_decisions` table storing `opportunity_id, decision [ACT|WAIT|ABSTAIN], rank_in_batch, shadow_price_paise_at_decision, reason`.
+   - Opportunity status transitions (`allocated`, `deferred`, `abstained`).
+3. **Market API Endpoints (`src/routes/market.ts`)**:
+   - `GET /market/run?capacity=N` and `POST /market/run`: Runs portfolio allocation with dynamic capacity and returns structured rankings and shadow prices.
+   - `GET /market/decisions`: Returns current allocation decisions.
 
 ### What Was Verified
-- **Hard Decline**: Incremental probability = 0.00, IVEN = -400 paise ($\le 0$).
-- **Bank Timeout (High Natural Recovery)**: High natural recovery (0.60) yields small incremental lift (0.10) even for large ticket sizes (₹48,000 / ₹62,000), preventing wasteful capacity expenditure on payments that recover naturally.
-- **Insufficient Funds Attempt 1**: Produces clear positive IVEN (+49,600 paise / ₹496.00).
-- **Insufficient Funds Attempt 3**: Policy retry limit forces confidence to `'low'`.
-- **API Endpoint Verification**: `GET /opportunities/:id/score` returns exact contract fields with model-estimated metadata tags.
-- **Clean Typecheck**: `npx tsc --noEmit` passing with 0 errors.
+- **Cap = 5 Allocation**: Exactly 5 opportunities allocated `ACT`. Hard declines and low-confidence retry-cap cases excluded to `ABSTAIN`. Shadow price computed at ₹2,396.00.
+- **Cap = 3 Shift (Core Demo Moment)**:
+  - Exactly 3 opportunities allocated `ACT`.
+  - Opportunities ranked #4 (`synth_07_high_val_enterprise`) and #5 (`synth_12_mid_val_retainer`) shifted from `ACT` to `WAIT`.
+  - Reasons on deferred items explicitly cite the higher marginal cutoff: `"deferred — below this run's marginal value of ₹6,196.00 (rank #4 vs cap 3)"`.
+  - Shadow price rose from ₹2,396.00 to ₹6,196.00.
+- **TypeScript Integrity**: `npx tsc --noEmit` passing with 0 errors.
 
 ### What Was Deferred (As per Specification)
-- Greedy capacity allocation and shadow pricing (Feature 4: Recovery Market).
 - Deterministic compliance veto gate (Feature 5: Action Authority).
+- Real payment link generation (Feature 6: Execution).
