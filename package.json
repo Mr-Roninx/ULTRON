@@ -14,7 +14,8 @@
     "test:perception": "tsx scripts/test_perception.ts",
     "test:economics": "tsx scripts/test_economics.ts",
     "test:market": "tsx scripts/test_market.ts",
-    "test:authority": "tsx scripts/test_authority.ts"
+    "test:authority": "tsx scripts/test_authority.ts",
+    "test:execution": "tsx scripts/test_execution.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

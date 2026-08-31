@@ -102,7 +102,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
   {
     id: 'synth_07_high_val_enterprise',
     source: 'synthetic',
-    amount_paise: 4800000, // ₹48,000
+    amount_paise: 1500000, // ₹15,000
     currency: 'INR',
     reason_code: 'bank_gateway_timeout',
     decline_type: classifyDeclineTaxonomy('bank_gateway_timeout', 'timeout'), // soft
@@ -130,7 +130,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
   {
     id: 'synth_09_high_val_license',
     source: 'synthetic',
-    amount_paise: 9500000, // ₹95,000
+    amount_paise: 2500000, // ₹25,000
     currency: 'INR',
     reason_code: 'network_timeout',
     decline_type: classifyDeclineTaxonomy('network_timeout', 'network error'), // soft
@@ -158,7 +158,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
   {
     id: 'synth_11_high_val_deposit',
     source: 'synthetic',
-    amount_paise: 7500000, // ₹75,000
+    amount_paise: 2000000, // ₹20,000
     currency: 'INR',
     reason_code: 'payment_authentication_failed',
     decline_type: classifyDeclineTaxonomy('payment_authentication_failed', 'authentication failed'), // soft
@@ -200,7 +200,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
   {
     id: 'synth_14_high_val_cloud_infra',
     source: 'synthetic',
-    amount_paise: 6200000, // ₹62,000
+    amount_paise: 1800000, // ₹18,000
     currency: 'INR',
     reason_code: 'bank_gateway_timeout',
     decline_type: classifyDeclineTaxonomy('bank_gateway_timeout', 'timeout'), // soft

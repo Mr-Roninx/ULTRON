@@ -368,6 +368,41 @@ export function clearAllAuthorityChecks(): void {
   db.exec('DELETE FROM authority_checks;');
 }
 
+// Execution Records queries
+export function upsertExecutionRecord(record: ExecutionRecord): void {
+  const stmt = db.prepare(`
+    INSERT INTO execution_records (
+      opportunity_id, razorpay_payment_link_id, link_url, status, idempotency_key, created_at
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?
+    )
+    ON CONFLICT(opportunity_id) DO UPDATE SET
+      razorpay_payment_link_id = excluded.razorpay_payment_link_id,
+      link_url = excluded.link_url,
+      status = excluded.status,
+      idempotency_key = excluded.idempotency_key,
+      created_at = excluded.created_at
+  `);
+  stmt.run(
+    record.opportunity_id,
+    record.razorpay_payment_link_id,
+    record.link_url,
+    record.status,
+    record.idempotency_key,
+    record.created_at || new Date().toISOString()
+  );
+}
+
+export function getExecutionRecordByOpportunityId(oppId: string): ExecutionRecord | undefined {
+  const stmt = db.prepare('SELECT * FROM execution_records WHERE opportunity_id = ?');
+  return stmt.get(oppId) as unknown as ExecutionRecord | undefined;
+}
+
+export function getAllExecutionRecords(): ExecutionRecord[] {
+  const stmt = db.prepare('SELECT * FROM execution_records ORDER BY created_at DESC');
+  return stmt.all() as unknown as ExecutionRecord[];
+}
+
 // Ledger queries
 export function insertLedgerEntry(entry: LedgerEntry): void {
   const stmt = db.prepare(`

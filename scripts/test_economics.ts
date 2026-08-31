@@ -5,12 +5,6 @@ import {
   getOpportunityById,
   getScoreByOpportunityId,
 } from '../src/db/database.js';
-import {
-  estimateProbabilities,
-  calculateCosts,
-  calculateScore,
-  determineConfidence,
-} from '../src/economics/scorer.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 initDatabase();
@@ -39,7 +33,7 @@ async function runEconomicReasoningTests() {
 
   // --- Scenario 2: Bank Timeout (High Natural Recovery) ---
   console.log('\n--- Scenario 2: Bank-Timeout / High-Natural-Recovery Case ---');
-  const timeoutOpp = getOpportunityById('synth_07_high_val_enterprise')!; // ₹48,000
+  const timeoutOpp = getOpportunityById('synth_07_high_val_enterprise')!; // ₹15,000
   const timeoutScore = getScoreByOpportunityId('synth_07_high_val_enterprise')!;
   
   console.log(`Opportunity: ${timeoutOpp.id} | High Amount: ₹${timeoutOpp.amount_paise / 100}`);
@@ -47,7 +41,7 @@ async function runEconomicReasoningTests() {
   console.log(`Confidence: ${timeoutScore.confidence}`);
 
   if (timeoutScore.natural_recovery_prob === 0.60 && timeoutScore.incremental_prob === 0.10) {
-    console.log('✅ PASS: Bank timeout has high natural recovery (0.60) and small incremental probability (0.10) even for large ₹48,000 volume.');
+    console.log('✅ PASS: Bank timeout has high natural recovery (0.60) and small incremental probability (0.10) even for large volume.');
   } else {
     console.error('❌ FAIL: Bank timeout criteria failed:', timeoutScore);
     process.exit(1);
@@ -84,7 +78,7 @@ async function runEconomicReasoningTests() {
     process.exit(1);
   }
 
-  // --- Scenario 5: API Verification GET /opportunities/:id/score ---
+  // --- Scenario 5: API Verification (GET /opportunities/:id/score) ---
   console.log('\n--- Scenario 5: API Verification (GET /opportunities/:id/score) ---');
   try {
     const res = await fetch(`${BASE_URL}/opportunities/synth_02_insufficient_funds_att1/score`);
@@ -119,47 +113,6 @@ async function runEconomicReasoningTests() {
     console.error('❌ API test error:', err);
     process.exit(1);
   }
-
-  // --- Summary Score Table ---
-  console.log('\n📊 Economic Reasoning Portfolio Scoring Breakdown:');
-  console.log('-------------------------------------------------------------------------------------------------------------');
-  console.log('| Opportunity ID                 | Amount (₹) | Nat. Prob | Interv. | Incr. | Fatigue |   IVEN (₹) | Conf.  |');
-  console.log('-------------------------------------------------------------------------------------------------------------');
-  
-  const allOpps = [
-    'synth_01_stolen_card',
-    'synth_02_insufficient_funds_att1',
-    'synth_03_retry_cap_exceeded',
-    'synth_04_expired_card',
-    'synth_05_ambiguous_soft_att2',
-    'synth_06_bank_timeout_high_nat',
-    'synth_07_high_val_enterprise',
-    'synth_08_mid_val_saas',
-    'synth_09_high_val_license',
-    'synth_10_mid_val_ecom',
-    'synth_11_high_val_deposit',
-    'synth_12_mid_val_retainer',
-    'synth_13_low_mid_utility',
-    'synth_14_high_val_cloud_infra',
-    'synth_15_mid_val_training',
-    'synth_unmapped_reason_test',
-  ];
-
-  for (const id of allOpps) {
-    const o = getOpportunityById(id);
-    const s = getScoreByOpportunityId(id);
-    if (!o || !s) continue;
-    const idPad = o.id.padEnd(30, ' ');
-    const amtPad = (`₹` + (o.amount_paise / 100).toLocaleString()).padStart(10, ' ');
-    const natPad = s.natural_recovery_prob.toFixed(2).padStart(9, ' ');
-    const intPad = s.intervention_recovery_prob.toFixed(2).padStart(7, ' ');
-    const incPad = s.incremental_prob.toFixed(2).padStart(5, ' ');
-    const fatPad = (`₹` + (s.fatigue_cost_paise / 100).toFixed(2)).padStart(7, ' ');
-    const ivenPad = (`₹` + (s.expected_incremental_value_paise / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })).padStart(10, ' ');
-    const confPad = s.confidence.toUpperCase().padEnd(6, ' ');
-    console.log(`| ${idPad} | ${amtPad} | ${natPad} | ${intPad} | ${incPad} | ${fatPad} | ${ivenPad} | ${confPad} |`);
-  }
-  console.log('-------------------------------------------------------------------------------------------------------------');
 
   console.log('\n🎉 ALL ECONOMIC REASONING ACCEPTANCE TESTS PASSED!');
 }
