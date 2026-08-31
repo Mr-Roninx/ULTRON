@@ -10,7 +10,8 @@
     "start": "tsx src/server.ts",
     "seed": "tsx scripts/seed_synthetic.ts",
     "test:webhook": "tsx scripts/test_webhook.ts",
-    "test:spike": "tsx scripts/real_razorpay_spike.ts"
+    "test:spike": "tsx scripts/real_razorpay_spike.ts",
+    "test:perception": "tsx scripts/test_perception.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

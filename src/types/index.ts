@@ -23,6 +23,13 @@ export type LedgerEventType =
   | 'recovered'
   | 'not_recovered';
 
+export interface Customer {
+  id: string;
+  trust_score: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface RecoveryOpportunity {
   id: string;
   source: OpportunitySource;

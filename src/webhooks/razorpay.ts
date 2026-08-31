@@ -6,7 +6,7 @@ import {
   insertOpportunity,
   insertLedgerEntry,
 } from '../db/database.js';
-import { DeclineType, RecoveryOpportunity } from '../types/index.js';
+import { normalizeOpportunity } from '../perception/normalizer.js';
 
 export function verifyWebhookSignature(
   rawBody: string | Buffer,
@@ -34,46 +34,6 @@ export function verifyWebhookSignature(
   } catch {
     return false;
   }
-}
-
-export function classifyDeclineType(errorCode?: string, errorReason?: string): DeclineType {
-  const code = (errorCode || '').toLowerCase();
-  const reason = (errorReason || '').toLowerCase();
-
-  // Hard declines: irreversible account / card issues
-  if (
-    code.includes('stolen') ||
-    code.includes('lost') ||
-    code.includes('expired') ||
-    code.includes('card_invalid') ||
-    code.includes('fraud') ||
-    reason.includes('stolen') ||
-    reason.includes('lost') ||
-    reason.includes('expired') ||
-    reason.includes('fraud')
-  ) {
-    return 'hard';
-  }
-
-  // Soft declines: transient or fund-related issues
-  if (
-    code.includes('insufficient_funds') ||
-    code.includes('gateway_error') ||
-    code.includes('timeout') ||
-    code.includes('network') ||
-    code.includes('authentication_failed') ||
-    code.includes('otp') ||
-    code.includes('limit_exceeded') ||
-    reason.includes('insufficient') ||
-    reason.includes('timeout') ||
-    reason.includes('network') ||
-    reason.includes('authentication') ||
-    reason.includes('otp')
-  ) {
-    return 'soft';
-  }
-
-  return 'unknown';
 }
 
 export function handleRazorpayWebhook(req: Request, res: Response): void {
@@ -120,16 +80,6 @@ export function handleRazorpayWebhook(req: Request, res: Response): void {
     }
 
     const paymentId: string = paymentEntity.id || `pay_${Date.now()}`;
-    const amountPaise: number = Number(paymentEntity.amount) || 0;
-    const currency: string = paymentEntity.currency || 'INR';
-
-    // Error details
-    const errorCode: string = paymentEntity.error_code || paymentEntity.error?.code || 'UNKNOWN_ERROR';
-    const errorReason: string = paymentEntity.error_reason || paymentEntity.error?.reason || paymentEntity.error_description || 'Payment failed';
-    const errorSource: string = paymentEntity.error_source || paymentEntity.error?.source || 'gateway';
-    const errorStep: string = paymentEntity.error_step || paymentEntity.error?.step || 'payment_authorization';
-
-    const declineType = classifyDeclineType(errorCode, errorReason);
 
     // Check if opportunity already exists for this payment_id
     const existingByPaymentId = getOpportunityById(paymentId);
@@ -142,58 +92,34 @@ export function handleRazorpayWebhook(req: Request, res: Response): void {
       return;
     }
 
-    const customerId: string =
-      paymentEntity.customer_id ||
-      paymentEntity.email ||
-      paymentEntity.contact ||
-      `cust_${paymentId.slice(-8)}`;
+    // Run Perception Normalization
+    const opportunity = normalizeOpportunity(paymentEntity, eventId);
 
-    const oppId = paymentId;
-    const now = new Date().toISOString();
-
-    const opportunity: RecoveryOpportunity = {
-      id: oppId,
-      source: 'real',
-      amount_paise: amountPaise,
-      currency,
-      reason_code: errorCode,
-      decline_type: declineType,
-      attempt_count: paymentEntity.attempts || 1,
-      customer_id: customerId,
-      customer_trust_score: 0.5,
-      created_at: now,
-      status: 'pending',
-      razorpay_event_id: eventId || null,
-      raw_payload_ref: JSON.stringify({
-        error_source: errorSource,
-        error_step: errorStep,
-        error_reason: errorReason,
-        error_code: errorCode,
-        notes: paymentEntity.notes,
-      }),
-    };
-
+    // Insert normalized opportunity
     insertOpportunity(opportunity);
 
     // Audit trail in ledger
     insertLedgerEntry({
       id: `led_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      opportunity_id: oppId,
+      opportunity_id: opportunity.id,
       event_type: 'webhook_received',
-      amount_paise: amountPaise,
-      timestamp: now,
+      amount_paise: opportunity.amount_paise,
+      timestamp: opportunity.created_at,
       raw_payload_ref: JSON.stringify({
         event: eventName,
         event_id: eventId,
-        payment_id: paymentId,
-        error_code: errorCode,
-        error_reason: errorReason,
+        payment_id: opportunity.id,
+        reason_code: opportunity.reason_code,
+        decline_type: opportunity.decline_type,
+        customer_trust_score: opportunity.customer_trust_score,
       }),
     });
 
     res.status(200).json({
       received: true,
-      opportunity_id: oppId,
+      opportunity_id: opportunity.id,
+      decline_type: opportunity.decline_type,
+      customer_trust_score: opportunity.customer_trust_score,
       status: 'pending',
     });
   } catch (error) {

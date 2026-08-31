@@ -1,5 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { getAllOpportunities, getOpportunityById, getLedgerEntriesByOpportunity } from '../db/database.js';
+import {
+  getAllOpportunities,
+  getOpportunityById,
+  getLedgerEntriesByOpportunity,
+  getCustomerById,
+} from '../db/database.js';
 
 export const opportunitiesRouter = Router();
 
@@ -29,9 +34,13 @@ opportunitiesRouter.get('/:id', (req: Request, res: Response) => {
       res.status(404).json({ error: 'Opportunity not found' });
       return;
     }
+
+    const customer = opp.customer_id ? getCustomerById(opp.customer_id) : undefined;
     const ledger = getLedgerEntriesByOpportunity(oppId);
+
     res.json({
       opportunity: opp,
+      customer,
       ledger,
     });
   } catch (error) {

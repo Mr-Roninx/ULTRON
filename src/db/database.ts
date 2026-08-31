@@ -7,6 +7,7 @@ import {
   AuthorityCheck,
   ExecutionRecord,
   LedgerEntry,
+  Customer,
 } from '../types/index.js';
 
 const DB_PATH = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'ultron.db');
@@ -18,6 +19,13 @@ db.exec(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
 
+  CREATE TABLE IF NOT EXISTS customers (
+    id TEXT PRIMARY KEY,
+    trust_score REAL NOT NULL DEFAULT 0.65,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS recovery_opportunities (
     id TEXT PRIMARY KEY,
     source TEXT NOT NULL CHECK(source IN ('real', 'synthetic')),
@@ -27,7 +35,7 @@ db.exec(`
     decline_type TEXT NOT NULL CHECK(decline_type IN ('hard', 'soft', 'unknown')),
     attempt_count INTEGER NOT NULL DEFAULT 1,
     customer_id TEXT NOT NULL,
-    customer_trust_score REAL NOT NULL DEFAULT 0.5,
+    customer_trust_score REAL NOT NULL DEFAULT 0.65,
     created_at TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN (
       'pending', 'scored', 'allocated', 'deferred', 'blocked', 'abstained', 'executing', 'recovered', 'not_recovered'
@@ -38,6 +46,7 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_opportunities_source ON recovery_opportunities(source);
   CREATE INDEX IF NOT EXISTS idx_opportunities_status ON recovery_opportunities(status);
+  CREATE INDEX IF NOT EXISTS idx_opportunities_customer ON recovery_opportunities(customer_id);
   CREATE INDEX IF NOT EXISTS idx_opportunities_rzp_event ON recovery_opportunities(razorpay_event_id);
 
   CREATE TABLE IF NOT EXISTS scores (
@@ -99,6 +108,61 @@ export function initDatabase(): void {
   // DB schema is verified and tables created above
 }
 
+// Queries for Customers
+export function getCustomerById(id: string): Customer | undefined {
+  const stmt = db.prepare('SELECT * FROM customers WHERE id = ?');
+  return stmt.get(id) as unknown as Customer | undefined;
+}
+
+export function getOrCreateCustomer(id: string, defaultTrustScore: number = 0.65): Customer {
+  const existing = getCustomerById(id);
+  if (existing) {
+    return existing;
+  }
+
+  const now = new Date().toISOString();
+  const insertStmt = db.prepare(`
+    INSERT INTO customers (id, trust_score, created_at, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at
+  `);
+  insertStmt.run(id, defaultTrustScore, now, now);
+
+  return {
+    id,
+    trust_score: defaultTrustScore,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+export function upsertCustomer(customer: Customer): void {
+  const stmt = db.prepare(`
+    INSERT INTO customers (id, trust_score, created_at, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      trust_score = excluded.trust_score,
+      updated_at = excluded.updated_at
+  `);
+  stmt.run(customer.id, customer.trust_score, customer.created_at, customer.updated_at);
+}
+
+export function countPriorAttempts(customerId: string, rawPayloadSubstring?: string): number {
+  if (rawPayloadSubstring) {
+    const stmt = db.prepare(`
+      SELECT COUNT(*) as count FROM recovery_opportunities 
+      WHERE customer_id = ? OR raw_payload_ref LIKE ?
+    `);
+    const res = stmt.get(customerId, `%${rawPayloadSubstring}%`) as { count: number };
+    return res?.count || 0;
+  }
+
+  const stmt = db.prepare('SELECT COUNT(*) as count FROM recovery_opportunities WHERE customer_id = ?');
+  const res = stmt.get(customerId) as { count: number };
+  return res?.count || 0;
+}
+
+// Queries for RecoveryOpportunity
 export function getOpportunityById(id: string): RecoveryOpportunity | undefined {
   const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE id = ?');
   return stmt.get(id) as unknown as RecoveryOpportunity | undefined;
@@ -135,7 +199,7 @@ export function insertOpportunity(opp: RecoveryOpportunity): void {
     opp.decline_type,
     opp.attempt_count ?? 1,
     opp.customer_id,
-    opp.customer_trust_score ?? 0.5,
+    opp.customer_trust_score ?? 0.65,
     opp.created_at || new Date().toISOString(),
     opp.status || 'pending',
     opp.razorpay_event_id || null,
@@ -176,7 +240,7 @@ export function upsertOpportunity(opp: RecoveryOpportunity): void {
     opp.decline_type,
     opp.attempt_count ?? 1,
     opp.customer_id,
-    opp.customer_trust_score ?? 0.5,
+    opp.customer_trust_score ?? 0.65,
     opp.created_at || new Date().toISOString(),
     opp.status || 'pending',
     opp.razorpay_event_id || null,

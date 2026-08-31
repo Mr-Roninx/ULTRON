@@ -1,7 +1,14 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
-import { initDatabase, upsertOpportunity, insertLedgerEntry, db } from '../src/db/database.js';
+import {
+  initDatabase,
+  upsertOpportunity,
+  insertLedgerEntry,
+  upsertCustomer,
+  db,
+} from '../src/db/database.js';
 import { RecoveryOpportunity } from '../src/types/index.js';
+import { classifyDeclineTaxonomy } from '../src/perception/normalizer.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 initDatabase();
@@ -12,8 +19,8 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     source: 'synthetic',
     amount_paise: 450000, // ₹4,500
     currency: 'INR',
-    reason_code: 'card_stolen_lost',
-    decline_type: 'hard',
+    reason_code: 'stolen_card',
+    decline_type: classifyDeclineTaxonomy('stolen_card', 'card stolen or lost'), // hard
     attempt_count: 1,
     customer_id: 'cust_synth_stolen_01',
     customer_trust_score: 0.1,
@@ -27,7 +34,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 250000, // ₹2,500
     currency: 'INR',
     reason_code: 'insufficient_funds',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('insufficient_funds', 'insufficient account funds'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_funds_02',
     customer_trust_score: 0.8,
@@ -41,7 +48,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 180000, // ₹1,800
     currency: 'INR',
     reason_code: 'insufficient_funds',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('insufficient_funds', 'insufficient funds retry cap'), // soft
     attempt_count: 3, // At retry cap
     customer_id: 'cust_synth_retrycap_03',
     customer_trust_score: 0.4,
@@ -54,14 +61,14 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     source: 'synthetic',
     amount_paise: 320000, // ₹3,200
     currency: 'INR',
-    reason_code: 'card_expired',
-    decline_type: 'hard',
+    reason_code: 'expired_card',
+    decline_type: classifyDeclineTaxonomy('expired_card', 'card has expired'), // soft per Feature 2 taxonomy
     attempt_count: 1,
     customer_id: 'cust_synth_expired_04',
     customer_trust_score: 0.5,
     created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
     status: 'pending',
-    raw_payload_ref: JSON.stringify({ scenario: 'Hard decline: Expired card on file' }),
+    raw_payload_ref: JSON.stringify({ scenario: 'Soft decline: Expired card on file (renewable)' }),
   },
   {
     id: 'synth_05_ambiguous_soft_att2',
@@ -69,7 +76,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 500000, // ₹5,000
     currency: 'INR',
     reason_code: 'transaction_not_permitted',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('transaction_not_permitted', 'bank generic decline'), // soft
     attempt_count: 2,
     customer_id: 'cust_synth_ambig_05',
     customer_trust_score: 0.6,
@@ -83,7 +90,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 120000, // ₹1,200
     currency: 'INR',
     reason_code: 'bank_gateway_timeout',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('bank_gateway_timeout', 'timeout'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_timeout_06',
     customer_trust_score: 0.9,
@@ -97,7 +104,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 4800000, // ₹48,000
     currency: 'INR',
     reason_code: 'bank_gateway_timeout',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('bank_gateway_timeout', 'timeout'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_ent_07',
     customer_trust_score: 0.95,
@@ -111,7 +118,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 850000, // ₹8,500
     currency: 'INR',
     reason_code: 'insufficient_funds',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('insufficient_funds', 'insufficient funds'), // soft
     attempt_count: 2,
     customer_id: 'cust_synth_saas_08',
     customer_trust_score: 0.7,
@@ -125,7 +132,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 9500000, // ₹95,000
     currency: 'INR',
     reason_code: 'network_timeout',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('network_timeout', 'network error'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_corp_09',
     customer_trust_score: 0.92,
@@ -139,7 +146,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 350000, // ₹3,500
     currency: 'INR',
     reason_code: 'insufficient_funds',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('insufficient_funds', 'insufficient funds'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_ecom_10',
     customer_trust_score: 0.65,
@@ -153,7 +160,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 7500000, // ₹75,000
     currency: 'INR',
     reason_code: 'payment_authentication_failed',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('payment_authentication_failed', 'authentication failed'), // soft
     attempt_count: 2,
     customer_id: 'cust_synth_hardware_11',
     customer_trust_score: 0.85,
@@ -167,7 +174,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 1200000, // ₹12,000
     currency: 'INR',
     reason_code: 'insufficient_funds',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('insufficient_funds', 'insufficient funds'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_retainer_12',
     customer_trust_score: 0.78,
@@ -181,7 +188,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 150000, // ₹1,500
     currency: 'INR',
     reason_code: 'insufficient_funds',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('insufficient_funds', 'insufficient funds'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_util_13',
     customer_trust_score: 0.55,
@@ -195,7 +202,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 6200000, // ₹62,000
     currency: 'INR',
     reason_code: 'bank_gateway_timeout',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('bank_gateway_timeout', 'timeout'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_infra_14',
     customer_trust_score: 0.9,
@@ -209,7 +216,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 600000, // ₹6,000
     currency: 'INR',
     reason_code: 'insufficient_funds',
-    decline_type: 'soft',
+    decline_type: classifyDeclineTaxonomy('insufficient_funds', 'insufficient funds'), // soft
     attempt_count: 2,
     customer_id: 'cust_synth_training_15',
     customer_trust_score: 0.7,
@@ -219,11 +226,38 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
   },
 ];
 
+// Additional unmapped test opportunity to verify unknown handling without throwing
+export const UNMAPPED_TEST_SCENARIO: RecoveryOpportunity = {
+  id: 'synth_unmapped_reason_test',
+  source: 'synthetic',
+  amount_paise: 299900,
+  currency: 'INR',
+  reason_code: 'unmapped_custom_issuer_code_999',
+  decline_type: classifyDeclineTaxonomy('unmapped_custom_issuer_code_999', 'unrecognized message'), // unknown
+  attempt_count: 1,
+  customer_id: 'cust_synth_unmapped_99',
+  customer_trust_score: 0.65,
+  created_at: new Date().toISOString(),
+  status: 'pending',
+  raw_payload_ref: JSON.stringify({ scenario: 'Unmapped exotic decline code for unknown classification test' }),
+};
+
 export function seedSyntheticData(): void {
-  console.log('🌱 Seeding 15 synthetic recovery opportunities into SQLite...');
+  console.log('🌱 Seeding synthetic recovery opportunities & customers into SQLite...');
   
-  for (const opp of SYNTHETIC_SCENARIOS) {
+  for (const opp of [...SYNTHETIC_SCENARIOS, UNMAPPED_TEST_SCENARIO]) {
+    // Seed customer profile
+    upsertCustomer({
+      id: opp.customer_id,
+      trust_score: opp.customer_trust_score,
+      created_at: opp.created_at,
+      updated_at: opp.created_at,
+    });
+
+    // Seed opportunity
     upsertOpportunity(opp);
+
+    // Seed ledger entry
     insertLedgerEntry({
       id: `led_seed_${opp.id}`,
       opportunity_id: opp.id,
@@ -234,8 +268,9 @@ export function seedSyntheticData(): void {
     });
   }
 
-  const count = db.prepare("SELECT COUNT(*) as c FROM recovery_opportunities WHERE source = 'synthetic'").get() as { c: number };
-  console.log(`✅ Successfully seeded ${count.c} synthetic opportunities.`);
+  const countOpps = db.prepare("SELECT COUNT(*) as c FROM recovery_opportunities WHERE source = 'synthetic'").get() as { c: number };
+  const countCust = db.prepare("SELECT COUNT(*) as c FROM customers").get() as { c: number };
+  console.log(`✅ Successfully seeded ${countOpps.c} synthetic opportunities and ${countCust.c} customer profiles.`);
 }
 
 // Run if called as script
