@@ -9,6 +9,7 @@ import {
 } from '../src/db/database.js';
 import { RecoveryOpportunity } from '../src/types/index.js';
 import { classifyDeclineTaxonomy } from '../src/perception/normalizer.js';
+import { scoreOpportunity } from '../src/economics/scorer.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 initDatabase();
@@ -62,7 +63,7 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
     amount_paise: 320000, // ₹3,200
     currency: 'INR',
     reason_code: 'expired_card',
-    decline_type: classifyDeclineTaxonomy('expired_card', 'card has expired'), // soft per Feature 2 taxonomy
+    decline_type: classifyDeclineTaxonomy('expired_card', 'card has expired'), // soft
     attempt_count: 1,
     customer_id: 'cust_synth_expired_04',
     customer_trust_score: 0.5,
@@ -226,14 +227,13 @@ export const SYNTHETIC_SCENARIOS: RecoveryOpportunity[] = [
   },
 ];
 
-// Additional unmapped test opportunity to verify unknown handling without throwing
 export const UNMAPPED_TEST_SCENARIO: RecoveryOpportunity = {
   id: 'synth_unmapped_reason_test',
   source: 'synthetic',
   amount_paise: 299900,
   currency: 'INR',
   reason_code: 'unmapped_custom_issuer_code_999',
-  decline_type: classifyDeclineTaxonomy('unmapped_custom_issuer_code_999', 'unrecognized message'), // unknown
+  decline_type: classifyDeclineTaxonomy('unmapped_custom_issuer_code_999', 'unrecognized message'),
   attempt_count: 1,
   customer_id: 'cust_synth_unmapped_99',
   customer_trust_score: 0.65,
@@ -243,9 +243,11 @@ export const UNMAPPED_TEST_SCENARIO: RecoveryOpportunity = {
 };
 
 export function seedSyntheticData(): void {
-  console.log('🌱 Seeding synthetic recovery opportunities & customers into SQLite...');
+  console.log('🌱 Seeding synthetic recovery opportunities, customer profiles & economic scores...');
   
-  for (const opp of [...SYNTHETIC_SCENARIOS, UNMAPPED_TEST_SCENARIO]) {
+  const allScenarios = [...SYNTHETIC_SCENARIOS, UNMAPPED_TEST_SCENARIO];
+
+  for (const opp of allScenarios) {
     // Seed customer profile
     upsertCustomer({
       id: opp.customer_id,
@@ -266,11 +268,14 @@ export function seedSyntheticData(): void {
       timestamp: opp.created_at,
       raw_payload_ref: JSON.stringify({ source: 'synthetic_seed', scenario: opp.id }),
     });
+
+    // Compute and store economic score
+    scoreOpportunity(opp);
   }
 
   const countOpps = db.prepare("SELECT COUNT(*) as c FROM recovery_opportunities WHERE source = 'synthetic'").get() as { c: number };
-  const countCust = db.prepare("SELECT COUNT(*) as c FROM customers").get() as { c: number };
-  console.log(`✅ Successfully seeded ${countOpps.c} synthetic opportunities and ${countCust.c} customer profiles.`);
+  const countScores = db.prepare("SELECT COUNT(*) as c FROM scores").get() as { c: number };
+  console.log(`✅ Successfully seeded ${countOpps.c} opportunities and generated ${countScores.c} economic scores.`);
 }
 
 // Run if called as script

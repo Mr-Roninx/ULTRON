@@ -8,6 +8,7 @@ import {
   ExecutionRecord,
   LedgerEntry,
   Customer,
+  OpportunityStatus,
 } from '../types/index.js';
 
 const DB_PATH = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'ultron.db');
@@ -105,10 +106,10 @@ db.exec(`
 `);
 
 export function initDatabase(): void {
-  // DB schema is verified and tables created above
+  // Schema initialized above
 }
 
-// Queries for Customers
+// Customers queries
 export function getCustomerById(id: string): Customer | undefined {
   const stmt = db.prepare('SELECT * FROM customers WHERE id = ?');
   return stmt.get(id) as unknown as Customer | undefined;
@@ -162,7 +163,7 @@ export function countPriorAttempts(customerId: string, rawPayloadSubstring?: str
   return res?.count || 0;
 }
 
-// Queries for RecoveryOpportunity
+// Opportunity queries
 export function getOpportunityById(id: string): RecoveryOpportunity | undefined {
   const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE id = ?');
   return stmt.get(id) as unknown as RecoveryOpportunity | undefined;
@@ -248,6 +249,53 @@ export function upsertOpportunity(opp: RecoveryOpportunity): void {
   );
 }
 
+export function updateOpportunityStatus(id: string, status: OpportunityStatus): void {
+  const stmt = db.prepare('UPDATE recovery_opportunities SET status = ? WHERE id = ?');
+  stmt.run(status, id);
+}
+
+// Scores queries
+export function getScoreByOpportunityId(opportunityId: string): Score | undefined {
+  const stmt = db.prepare('SELECT * FROM scores WHERE opportunity_id = ?');
+  return stmt.get(opportunityId) as unknown as Score | undefined;
+}
+
+export function upsertScore(score: Score): void {
+  const stmt = db.prepare(`
+    INSERT INTO scores (
+      opportunity_id, natural_recovery_prob, intervention_recovery_prob, incremental_prob,
+      operational_cost_paise, fatigue_cost_paise, expected_incremental_value_paise, confidence
+    ) VALUES (
+      ?, ?, ?, ?,
+      ?, ?, ?, ?
+    )
+    ON CONFLICT(opportunity_id) DO UPDATE SET
+      natural_recovery_prob = excluded.natural_recovery_prob,
+      intervention_recovery_prob = excluded.intervention_recovery_prob,
+      incremental_prob = excluded.incremental_prob,
+      operational_cost_paise = excluded.operational_cost_paise,
+      fatigue_cost_paise = excluded.fatigue_cost_paise,
+      expected_incremental_value_paise = excluded.expected_incremental_value_paise,
+      confidence = excluded.confidence
+  `);
+  stmt.run(
+    score.opportunity_id,
+    score.natural_recovery_prob,
+    score.intervention_recovery_prob,
+    score.incremental_prob,
+    score.operational_cost_paise,
+    score.fatigue_cost_paise,
+    score.expected_incremental_value_paise,
+    score.confidence
+  );
+}
+
+export function getAllScores(): (Score & { opportunity_id: string })[] {
+  const stmt = db.prepare('SELECT * FROM scores');
+  return stmt.all() as unknown as (Score & { opportunity_id: string })[];
+}
+
+// Ledger queries
 export function insertLedgerEntry(entry: LedgerEntry): void {
   const stmt = db.prepare(`
     INSERT INTO ledger_entries (

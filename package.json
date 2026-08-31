@@ -11,7 +11,8 @@
     "seed": "tsx scripts/seed_synthetic.ts",
     "test:webhook": "tsx scripts/test_webhook.ts",
     "test:spike": "tsx scripts/real_razorpay_spike.ts",
-    "test:perception": "tsx scripts/test_perception.ts"
+    "test:perception": "tsx scripts/test_perception.ts",
+    "test:economics": "tsx scripts/test_economics.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

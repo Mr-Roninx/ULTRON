@@ -8,7 +8,7 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 
 - [x] **Feature 1: Event Fabric** (Completed)
 - [x] **Feature 2: Perception** (Completed)
-- [ ] **Feature 3: Economic Reasoning**
+- [x] **Feature 3: Economic Reasoning** (Completed)
 - [ ] **Feature 4: Recovery Market**
 - [ ] **Feature 5: Action Authority**
 - [ ] **Feature 6: Execution**
@@ -16,33 +16,42 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 
 ---
 
-## Feature 2: Perception — Summary
+## Feature 3: Economic Reasoning — Summary
 
 ### What Was Built
-1. **Perception Normalization Engine (`src/perception/normalizer.ts`)**:
-   - Deterministic taxonomy classification (`classifyDeclineTaxonomy`):
-     - **Hard**: `stolen_card`, `lost_card`, `pickup_card`, `restricted_card`, `card_stolen_lost`, `BAD_REQUEST_PAYMENT_CARD_STOLEN_OR_LOST`
-     - **Soft**: `insufficient_funds`, `expired_card`, `generic_decline`, `do_not_honor`, `bank_gateway_timeout`, `network_timeout`, `payment_authentication_failed`, `transaction_not_permitted`, `limit_exceeded`, `BAD_REQUEST_PAYMENT_INSUFFICIENT_FUNDS`, `BAD_REQUEST_PAYMENT_CARD_EXPIRED`
-     - **Unknown**: Fallback for any unmapped code without throwing errors.
-   - Normalization pipeline (`normalizeOpportunity`):
-     - Maps raw payment entities into clean fields (`reason_code`, `decline_type`, `attempt_count`, `customer_id`, `customer_trust_score`, `amount_paise`, `currency`, `raw_payload_ref`).
-2. **Customers Table & Trust Scoring (`src/db/database.ts`)**:
-   - `customers` table (`id`, `trust_score`, `created_at`, `updated_at`).
-   - Default trust score of `0.65` automatically assigned for unseen customers upon ingestion.
-   - Dynamic attempt count computation (`countPriorAttempts`) calculating sequential failures per customer/order context.
-3. **Pipeline Ingestion Integration (`src/webhooks/razorpay.ts`)**:
-   - Automatic execution of Perception normalization directly inside the webhook ingestion path.
-4. **Enhanced Opportunities API (`src/routes/opportunities.ts`)**:
-   - `GET /opportunities/:id` returns normalized opportunity, customer profile with trust score, and ledger audit trail.
+1. **Mathematical Scoring Engine (`src/economics/scorer.ts`)**:
+   - Implemented starter probability counterfactual tables:
+     - `hard`: natural 0.02, intervention 0.02 ($\Delta = 0.00$)
+     - `insufficient_funds`: natural 0.35, intervention 0.55 ($\Delta = 0.20$)
+     - `expired_card`: natural 0.05, intervention 0.60 ($\Delta = 0.55$)
+     - `generic_decline` / `do_not_honor`: natural 0.25, intervention 0.45 ($\Delta = 0.20$)
+     - `bank_timeout`-type: natural 0.60, intervention 0.70 ($\Delta = 0.10$)
+     - `unknown`: natural 0.10, intervention 0.10 ($\Delta = 0.00$)
+   - Incremental probability computation: $\text{incremental\_prob} = \max(0, \text{intervention} - \text{natural})$.
+   - Operational & Fatigue cost model:
+     - Fixed delivery cost: 400 paise (₹4.00).
+     - Non-linear customer fatigue penalty: 0 paise (attempt 1), 250 paise (attempt 2), 750 paise (attempt 3), $1500 + 500 \times (\text{attempt} - 4)$ paise (attempt 4+).
+   - Expected Incremental Value Calculation:
+     $$\text{IVEN} = \text{incremental\_prob} \times \text{amount\_paise} - \text{operational\_cost\_paise} - \text{fatigue\_cost\_paise}$$
+   - Confidence evaluation:
+     - `'low'`: `decline_type === 'unknown'` OR `attempt_count >= 3`
+     - `'high'`: `decline_type === 'hard'` OR `bank_timeout`-type
+     - `'medium'`: standard recoverable attempts 1-2.
+2. **Persistence & Database Integration (`src/db/database.ts`)**:
+   - `scores` table populated with exact schema fields.
+   - Dynamic opportunity status updating (`pending` $\to$ `scored`).
+3. **API & Data Access (`src/routes/opportunities.ts`)**:
+   - `GET /opportunities/:id/score`: Returns complete mathematical breakdown with `_labels` metadata marking estimated probabilities.
+   - `POST /opportunities/score-all`: Batch scoring endpoint for pipeline processing.
 
 ### What Was Verified
-- **Taxonomy Unit Rules**: All hard decline codes classified as `hard`, all soft codes classified as `soft`, and unmapped codes classified as `unknown`.
-- **15 Seeded Opportunities**: 100% classification accuracy against the taxonomy contract.
-- **Unmapped Error Code Resiliency**: Unmapped exotic code (`unmapped_custom_issuer_code_999`) safely stored as `decline_type=unknown` without exceptions.
-- **Default Trust Score**: Unseen customer automatically receives `0.65` trust score.
-- **API Inspection**: `GET /opportunities/:id` verified with structured JSON return.
-- **TypeScript Integrity**: `npx tsc --noEmit` clean with 0 errors.
+- **Hard Decline**: Incremental probability = 0.00, IVEN = -400 paise ($\le 0$).
+- **Bank Timeout (High Natural Recovery)**: High natural recovery (0.60) yields small incremental lift (0.10) even for large ticket sizes (₹48,000 / ₹62,000), preventing wasteful capacity expenditure on payments that recover naturally.
+- **Insufficient Funds Attempt 1**: Produces clear positive IVEN (+49,600 paise / ₹496.00).
+- **Insufficient Funds Attempt 3**: Policy retry limit forces confidence to `'low'`.
+- **API Endpoint Verification**: `GET /opportunities/:id/score` returns exact contract fields with model-estimated metadata tags.
+- **Clean Typecheck**: `npx tsc --noEmit` passing with 0 errors.
 
 ### What Was Deferred (As per Specification)
-- Probability scoring (Feature 3: Economic Reasoning).
-- Portfolio market allocation (Feature 4: Recovery Market).
+- Greedy capacity allocation and shadow pricing (Feature 4: Recovery Market).
+- Deterministic compliance veto gate (Feature 5: Action Authority).
