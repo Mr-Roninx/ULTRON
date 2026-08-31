@@ -5,8 +5,11 @@ import {
   getLedgerEntriesByOpportunity,
   getCustomerById,
   getScoreByOpportunityId,
+  getAllocationDecisionByOpportunityId,
+  getAuthorityChecksByOpportunityId,
 } from '../db/database.js';
 import { scoreOpportunity } from '../economics/scorer.js';
+import { evaluateOpportunity } from '../authority/gate.js';
 
 export const opportunitiesRouter = Router();
 
@@ -55,7 +58,6 @@ opportunitiesRouter.get('/:id/score', (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch existing or compute on-the-fly
     let score = getScoreByOpportunityId(oppId);
     if (!score) {
       score = scoreOpportunity(opp);
@@ -88,6 +90,90 @@ opportunitiesRouter.get('/:id/score', (req: Request, res: Response) => {
   }
 });
 
+// GET single opportunity authority checklist (Feature 5 & 7 "Why?" screen data source)
+opportunitiesRouter.get('/:id/authority', (req: Request, res: Response) => {
+  try {
+    const oppId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!oppId) {
+      res.status(400).json({ error: 'Missing opportunity ID' });
+      return;
+    }
+
+    const opp = getOpportunityById(oppId);
+    if (!opp) {
+      res.status(404).json({ error: 'Opportunity not found' });
+      return;
+    }
+
+    let checks = getAuthorityChecksByOpportunityId(oppId);
+    let evalVerdict = 'AUTHORIZED';
+    let summaryReason = 'all deterministic authority and compliance checks passed';
+
+    if (checks.length === 0) {
+      // Evaluate on the fly
+      let score = getScoreByOpportunityId(oppId);
+      if (!score) score = scoreOpportunity(opp);
+      let decision = getAllocationDecisionByOpportunityId(oppId);
+      if (!decision) {
+        decision = {
+          opportunity_id: oppId,
+          decision: 'WAIT',
+          rank_in_batch: 999,
+          shadow_price_paise_at_decision: 0,
+          reason: 'Initial unallocated evaluation',
+        };
+      }
+      const evalResult = evaluateOpportunity(opp, decision, score);
+      checks = evalResult.checks;
+      evalVerdict = evalResult.verdict;
+      summaryReason = evalResult.summary_reason;
+    } else {
+      const hardFail = checks.find((c) => c.check_name === 'hard_decline_check' && !c.passed);
+      const retryCapFail = checks.find((c) => c.check_name === 'retry_cap_check' && !c.passed);
+      const killSwitchFail = checks.find((c) => c.check_name === 'kill_switch_check' && !c.passed);
+      const confidenceFail = checks.find((c) => c.check_name === 'confidence_recheck' && !c.passed);
+      const capacityFail = checks.find((c) => c.check_name === 'capacity_recheck' && !c.passed);
+
+      if (hardFail || retryCapFail || killSwitchFail) {
+        evalVerdict = 'BLOCKED';
+        summaryReason = (hardFail || retryCapFail || killSwitchFail)!.reason;
+      } else if (confidenceFail) {
+        evalVerdict = 'ABSTAIN';
+        summaryReason = confidenceFail.reason;
+      } else if (capacityFail) {
+        evalVerdict = 'WAIT';
+        summaryReason = capacityFail.reason;
+      } else {
+        evalVerdict = 'AUTHORIZED';
+      }
+    }
+
+    const allPassed = checks.every((c) => c.passed);
+
+    res.json({
+      opportunity_id: opp.id,
+      amount_paise: opp.amount_paise,
+      currency: opp.currency,
+      decline_type: opp.decline_type,
+      reason_code: opp.reason_code,
+      attempt_count: opp.attempt_count,
+      verdict: evalVerdict,
+      status: opp.status,
+      summary_reason: summaryReason,
+      all_passed: allPassed,
+      checklist: checks.map((c) => ({
+        check_name: c.check_name,
+        passed: c.passed,
+        symbol: c.passed ? '✓' : '✗',
+        reason: c.reason,
+      })),
+    });
+  } catch (error) {
+    console.error('Failed to fetch authority checklist:', error);
+    res.status(500).json({ error: 'Failed to fetch authority checklist' });
+  }
+});
+
 // GET single opportunity with full details
 opportunitiesRouter.get('/:id', (req: Request, res: Response) => {
   try {
@@ -104,12 +190,16 @@ opportunitiesRouter.get('/:id', (req: Request, res: Response) => {
     }
 
     const score = getScoreByOpportunityId(oppId);
+    const decision = getAllocationDecisionByOpportunityId(oppId);
+    const authority_checks = getAuthorityChecksByOpportunityId(oppId);
     const customer = opp.customer_id ? getCustomerById(opp.customer_id) : undefined;
     const ledger = getLedgerEntriesByOpportunity(oppId);
 
     res.json({
       opportunity: opp,
       score,
+      decision,
+      authority_checks,
       customer,
       ledger,
     });

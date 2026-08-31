@@ -6,6 +6,7 @@ export type OpportunityStatus =
   | 'pending'
   | 'scored'
   | 'allocated'
+  | 'authorized'
   | 'deferred'
   | 'blocked'
   | 'abstained'
@@ -16,6 +17,8 @@ export type OpportunityStatus =
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
 
 export type DecisionType = 'ACT' | 'WAIT' | 'ABSTAIN';
+
+export type AuthorityVerdict = 'AUTHORIZED' | 'BLOCKED' | 'ABSTAIN' | 'WAIT';
 
 export type LedgerEventType =
   | 'webhook_received'

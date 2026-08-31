@@ -7,6 +7,7 @@ import { initDatabase } from './db/database.js';
 import { handleRazorpayWebhook } from './webhooks/razorpay.js';
 import { opportunitiesRouter } from './routes/opportunities.js';
 import { marketRouter } from './routes/market.js';
+import { authorityRouter } from './routes/authority.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +54,9 @@ app.use('/opportunities', opportunitiesRouter);
 // Recovery Market endpoints (Feature 4)
 app.use('/market', marketRouter);
 
+// Action Authority endpoints (Feature 5)
+app.use('/authority', authorityRouter);
+
 // Start server if run directly
 if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
   app.listen(PORT, () => {
@@ -60,5 +64,6 @@ if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
     console.log(`📡 Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
     console.log(`📊 Opportunities endpoint: GET http://localhost:${PORT}/opportunities`);
     console.log(`🏛️ Recovery Market endpoint: GET/POST http://localhost:${PORT}/market/run`);
+    console.log(`🛡️ Action Authority endpoint: GET/POST http://localhost:${PORT}/authority/run`);
   });
 }

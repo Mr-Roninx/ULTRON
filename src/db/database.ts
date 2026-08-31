@@ -39,7 +39,7 @@ db.exec(`
     customer_trust_score REAL NOT NULL DEFAULT 0.65,
     created_at TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN (
-      'pending', 'scored', 'allocated', 'deferred', 'blocked', 'abstained', 'executing', 'recovered', 'not_recovered'
+      'pending', 'scored', 'allocated', 'authorized', 'deferred', 'blocked', 'abstained', 'executing', 'recovered', 'not_recovered'
     )),
     razorpay_event_id TEXT UNIQUE,
     raw_payload_ref TEXT
@@ -79,6 +79,8 @@ db.exec(`
     reason TEXT NOT NULL,
     FOREIGN KEY (opportunity_id) REFERENCES recovery_opportunities(id) ON DELETE CASCADE
   );
+
+  CREATE INDEX IF NOT EXISTS idx_authority_opp_id ON authority_checks(opportunity_id);
 
   CREATE TABLE IF NOT EXISTS execution_records (
     opportunity_id TEXT PRIMARY KEY,
@@ -326,6 +328,44 @@ export function upsertAllocationDecision(decision: AllocationDecision): void {
 export function getAllAllocationDecisions(): AllocationDecision[] {
   const stmt = db.prepare('SELECT * FROM allocation_decisions ORDER BY rank_in_batch ASC');
   return stmt.all() as unknown as AllocationDecision[];
+}
+
+// Authority Checks queries
+export function insertAuthorityCheck(check: AuthorityCheck): void {
+  const stmt = db.prepare(`
+    INSERT INTO authority_checks (
+      opportunity_id, check_name, passed, reason
+    ) VALUES (
+      ?, ?, ?, ?
+    )
+  `);
+  stmt.run(
+    check.opportunity_id,
+    check.check_name,
+    check.passed ? 1 : 0,
+    check.reason
+  );
+}
+
+export function getAuthorityChecksByOpportunityId(oppId: string): AuthorityCheck[] {
+  const stmt = db.prepare('SELECT * FROM authority_checks WHERE opportunity_id = ? ORDER BY id ASC');
+  const rows = stmt.all(oppId) as any[];
+  return rows.map((r) => ({
+    id: r.id,
+    opportunity_id: r.opportunity_id,
+    check_name: r.check_name,
+    passed: Boolean(r.passed),
+    reason: r.reason,
+  }));
+}
+
+export function clearAuthorityChecksForOpportunity(oppId: string): void {
+  const stmt = db.prepare('DELETE FROM authority_checks WHERE opportunity_id = ?');
+  stmt.run(oppId);
+}
+
+export function clearAllAuthorityChecks(): void {
+  db.exec('DELETE FROM authority_checks;');
 }
 
 // Ledger queries
