@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { ApiKeyService, ApiKeyScope } from './api_keys.js';
 import { SessionAuthService, SessionUser } from './session_auth.js';
 import { verifySupabaseToken } from './supabase.js';
