@@ -23,47 +23,71 @@ export class DatabaseAdapter {
   private engine: 'PostgreSQL' | 'SQLite' = 'SQLite';
   private dbName: string = 'ultron.db';
 
-  private constructor() {
-    const dbUrl = process.env.DATABASE_URL || 'sqlite:///ultron.db';
+  private initSqlite(cleanUrl: string): void {
+    this.engine = 'SQLite';
+    const cleanPath = cleanUrl.replace(/^sqlite:\/\/\/?/, '');
+    const dbPath = process.env.DATABASE_PATH || (path.isAbsolute(cleanPath)
+      ? cleanPath
+      : path.resolve(process.cwd(), cleanPath || 'ultron.db'));
 
-    if (dbUrl.startsWith('postgres://') || dbUrl.startsWith('postgresql://')) {
-      this.engine = 'PostgreSQL';
-      const poolSize = Number(process.env.DATABASE_POOL_SIZE) || 10;
-      this.pgPool = new pg.Pool({
-        connectionString: dbUrl,
-        max: poolSize,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
-      });
-      this.dbName = new URL(dbUrl).pathname.replace(/^\//, '') || 'ultron';
-      console.log(`🔌 DatabaseAdapter: Initialized PostgreSQL connection pool (max: ${poolSize}, db: ${this.dbName})`);
-    } else {
-      this.engine = 'SQLite';
-      const cleanPath = dbUrl.replace(/^sqlite:\/\/\/?/, '');
-      const dbPath = process.env.DATABASE_PATH || (path.isAbsolute(cleanPath)
-        ? cleanPath
-        : path.resolve(process.cwd(), cleanPath || 'ultron.db'));
-
-      try {
-        const dir = path.dirname(dbPath);
-        if (dir && !fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        this.sqliteDb = new DatabaseSync(dbPath);
-      } catch (err: any) {
-        console.warn(`⚠️ DatabaseAdapter: SQLite file '${dbPath}' could not be opened (${err.message}). Falling back to /tmp/ultron.db...`);
-        try {
-          this.sqliteDb = new DatabaseSync('/tmp/ultron.db');
-        } catch {
-          this.sqliteDb = new DatabaseSync(':memory:');
-        }
+    try {
+      const dir = path.dirname(dbPath);
+      if (dir && !fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
+      this.sqliteDb = new DatabaseSync(dbPath);
+    } catch (err: any) {
+      console.warn(`⚠️ DatabaseAdapter: SQLite file '${dbPath}' could not be opened (${err.message}). Falling back to /tmp/ultron.db...`);
+      try {
+        this.sqliteDb = new DatabaseSync('/tmp/ultron.db');
+      } catch {
+        this.sqliteDb = new DatabaseSync(':memory:');
+      }
+    }
 
+    try {
       this.sqliteDb.exec('PRAGMA journal_mode = WAL;');
       this.sqliteDb.exec('PRAGMA busy_timeout = 5000;');
       this.sqliteDb.exec('PRAGMA foreign_keys = ON;');
-      this.dbName = path.basename(dbPath);
-      console.log(`🔌 DatabaseAdapter: Initialized SQLite engine (WAL mode, foreign_keys: ON, file: ${this.dbName})`);
+    } catch {}
+    this.dbName = path.basename(dbPath);
+    console.log(`🔌 DatabaseAdapter: Initialized SQLite engine (WAL mode, foreign_keys: ON, file: ${this.dbName})`);
+  }
+
+  private constructor() {
+    let dbUrl = process.env.DATABASE_URL || '';
+
+    // If DATABASE_URL is docker internal placeholder, fallback to SQLite
+    if (dbUrl.includes('@postgres:5432') || !dbUrl) {
+      this.initSqlite('sqlite:///ultron.db');
+      return;
+    }
+
+    if (dbUrl.startsWith('postgres://') || dbUrl.startsWith('postgresql://')) {
+      try {
+        this.engine = 'PostgreSQL';
+        const poolSize = Number(process.env.DATABASE_POOL_SIZE) || 10;
+        this.pgPool = new pg.Pool({
+          connectionString: dbUrl,
+          max: poolSize,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 5000,
+          ssl: dbUrl.includes('supabase') || dbUrl.includes('pooler') ? { rejectUnauthorized: false } : undefined,
+        });
+        
+        try {
+          const parsed = new URL(dbUrl);
+          this.dbName = parsed.pathname.replace(/^\//, '') || 'ultron';
+        } catch {
+          this.dbName = 'ultron_pg';
+        }
+        console.log(`🔌 DatabaseAdapter: Initialized PostgreSQL connection pool (max: ${poolSize}, db: ${this.dbName})`);
+      } catch (err: any) {
+        console.warn('⚠️ Failed to initialize PostgreSQL pool, falling back to SQLite:', err.message);
+        this.initSqlite('sqlite:///ultron.db');
+      }
+    } else {
+      this.initSqlite(dbUrl);
     }
   }
 

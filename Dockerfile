@@ -27,8 +27,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV DATABASE_URL=postgres://ultron:ultron_secure_password@postgres:5432/ultron_db
-ENV REDIS_URL=redis://redis:6379
 
 # Create non-root system user and group and writable data directory
 RUN addgroup -S -g 1001 ultron && \

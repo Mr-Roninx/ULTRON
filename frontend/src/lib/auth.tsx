@@ -189,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (email: string, business_name: string, password: string) => {
     try {
-      // 1. Attempt Supabase Auth signup
+      // 1. Attempt Supabase Auth signup (non-blocking)
       const { data: sbData } = await supabase.auth.signUp({
         email,
         password,
@@ -199,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: "Owner",
           },
         },
-      });
+      }).catch(() => ({ data: null }));
 
       // 2. Register tenant with ULTRON backend
       const res = await fetch(`${API_BASE}/v1/auth/signup`, {
@@ -207,13 +207,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, business_name, password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok && !sbData?.session) {
-        return { success: false, error: data.message || "Signup failed" };
+      if (!res.ok) {
+        return { success: false, error: data.message || data.error || data.details || `Signup failed (${res.status})` };
       }
 
-      const token = sbData?.session?.access_token || data?.session?.token;
+      const token = data?.session?.token || sbData?.session?.access_token;
       if (token) {
         localStorage.setItem(TOKEN_KEY, token);
         const me = await fetchMe(token);
@@ -222,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message || "Network error" };
+      return { success: false, error: err.message || "Network error connecting to backend API" };
     }
   };
 

@@ -23,8 +23,17 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-// Initialize database schema
+import { MigrationRunner } from './db/migrations/runner.js';
+
+// Initialize database schema & run auto-migrations
 initDatabase();
+MigrationRunner.migrateUp().then(({ applied }) => {
+  if (applied.length > 0) {
+    console.log(`🚀 DatabaseAdapter: Applied ${applied.length} schema migrations successfully.`);
+  }
+}).catch((err) => {
+  console.warn('⚠️ Migration warning:', err.message);
+});
 
 export const app = express();
 const PORT = process.env.PORT || 3001;
