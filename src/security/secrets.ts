@@ -6,16 +6,16 @@ import { DatabaseAdapter } from '../db/adapter.js';
  * Implements AES-256-GCM authenticated envelope encryption with tenant-scoped salt.
  */
 export class SecretsManager {
-  private static masterKey: Buffer = Buffer.from(
-    process.env.ENCRYPTION_MASTER_KEY || 'ultron_v6_secure_master_encryption_key_32bytes!',
-    'utf-8'
-  ).subarray(0, 32);
+  private static getMasterKey(): Buffer {
+    const raw = process.env.ENCRYPTION_MASTER_KEY || process.env.AES_MASTER_KEY || 'ultron_v6_secure_master_encryption_key_32bytes!';
+    return Buffer.from(raw, 'utf-8').subarray(0, 32);
+  }
 
   /**
    * Derives a tenant-specific encryption key using PBKDF2/Scrypt.
    */
   private static deriveTenantKey(tenantId: string): Buffer {
-    return crypto.scryptSync(this.masterKey, `tenant_salt:${tenantId}`, 32);
+    return crypto.scryptSync(this.getMasterKey(), `tenant_salt:${tenantId}`, 32);
   }
 
   /**
@@ -76,6 +76,19 @@ export class SecretsManager {
     const db = DatabaseAdapter.getInstance();
     const now = new Date().toISOString();
     const id = `cred_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+
+    // Ensure tenant record exists to satisfy foreign key constraint
+    await db.execute(
+      `INSERT OR IGNORE INTO tenants (id, name, slug, environment, status, created_at)
+       VALUES (?, ?, ?, ?, 'ACTIVE', ?);`,
+      [
+        params.tenantId,
+        `Merchant ${params.tenantId.slice(0, 8)}`,
+        `merchant_${params.tenantId}`,
+        params.environment,
+        now,
+      ]
+    ).catch(() => {});
 
     await db.execute(
       `INSERT INTO tenant_credentials (id, tenant_id, provider, environment, credential_reference, encrypted_data, iv, auth_tag, created_at, updated_at)

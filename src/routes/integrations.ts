@@ -171,7 +171,11 @@ integrationsRouter.post(
         connection_id: result.connectionId,
       });
     } catch (err: any) {
-      res.status(500).json({ error: 'Internal Server Error', details: err.message });
+      res.status(500).json({
+        error: 'Failed to connect Razorpay account',
+        message: err.message || 'Unknown database or encryption error',
+        details: err.message,
+      });
     }
   }
 );
