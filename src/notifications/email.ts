@@ -71,3 +71,82 @@ export async function sendTeamInviteEmail(recipientEmail: string, role: string, 
     html,
   });
 }
+
+/**
+ * Sends a Magic Link sign-in / verification email.
+ */
+export async function sendMagicLinkEmail(recipientEmail: string, magicLinkUrl: string, businessName: string = 'ULTRON') {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sign in to ULTRON</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #060b18; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f1f5f9;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #060b18; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background: linear-gradient(135deg, #0d1527 0%, #111a33 100%); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <!-- Header / Logo -->
+                <tr>
+                  <td style="padding: 36px 36px 20px 36px; text-align: center;">
+                    <div style="display: inline-block; padding: 12px 16px; background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; margin-bottom: 12px;">
+                      <span style="font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #38bdf8;">🛡️ ULTRON</span>
+                    </div>
+                    <h1 style="margin: 12px 0 6px 0; font-size: 22px; font-weight: 700; color: #ffffff;">Sign in with Magic Link</h1>
+                    <p style="margin: 0; font-size: 14px; color: #94a3b8;">Access your autonomous recovery control plane</p>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 10px 36px 30px 36px; text-align: center;">
+                    <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin-bottom: 28px;">
+                      Click the button below to securely sign in to your <strong>${businessName}</strong> merchant workspace. This link expires in 15 minutes.
+                    </p>
+
+                    <!-- CTA Button -->
+                    <table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto;">
+                      <tr>
+                        <td align="center" style="border-radius: 10px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
+                          <a href="${magicLinkUrl}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px; letter-spacing: 0.3px;">
+                            Sign in to Control Plane →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="font-size: 12px; line-height: 1.5; color: #64748b; margin-top: 28px; word-break: break-all;">
+                      Or copy and paste this link into your browser:<br>
+                      <a href="${magicLinkUrl}" style="color: #38bdf8; text-decoration: underline;">${magicLinkUrl}</a>
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Security Note / Footer -->
+                <tr>
+                  <td style="padding: 20px 36px; background: rgba(15, 23, 42, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">
+                      If you did not request this link, you can safely ignore this email.
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #475569;">
+                      ULTRON Control Plane • Razorpay Failed-Payment Autonomous Recovery
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: recipientEmail,
+    subject: `Sign in to ULTRON Control Plane`,
+    html,
+  });
+}
