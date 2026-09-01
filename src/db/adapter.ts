@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
 
 export interface PoolMetrics {
   engine: 'PostgreSQL' | 'SQLite';
@@ -39,11 +40,25 @@ export class DatabaseAdapter {
     } else {
       this.engine = 'SQLite';
       const cleanPath = dbUrl.replace(/^sqlite:\/\/\/?/, '');
-      const dbPath = path.isAbsolute(cleanPath)
+      const dbPath = process.env.DATABASE_PATH || (path.isAbsolute(cleanPath)
         ? cleanPath
-        : path.resolve(process.cwd(), cleanPath || 'ultron.db');
+        : path.resolve(process.cwd(), cleanPath || 'ultron.db'));
 
-      this.sqliteDb = new DatabaseSync(dbPath);
+      try {
+        const dir = path.dirname(dbPath);
+        if (dir && !fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        this.sqliteDb = new DatabaseSync(dbPath);
+      } catch (err: any) {
+        console.warn(`⚠️ DatabaseAdapter: SQLite file '${dbPath}' could not be opened (${err.message}). Falling back to /tmp/ultron.db...`);
+        try {
+          this.sqliteDb = new DatabaseSync('/tmp/ultron.db');
+        } catch {
+          this.sqliteDb = new DatabaseSync(':memory:');
+        }
+      }
+
       this.sqliteDb.exec('PRAGMA journal_mode = WAL;');
       this.sqliteDb.exec('PRAGMA busy_timeout = 5000;');
       this.sqliteDb.exec('PRAGMA foreign_keys = ON;');

@@ -133,18 +133,28 @@ app.get('/', (_req, res) => {
 
 // Health Check with Connection Pool Metrics & Cache Telemetry
 app.get('/health', (_req, res) => {
-  const dbAdapter = DatabaseAdapter.getInstance();
-  const cacheManager = CacheManager.getInstance();
+  try {
+    const dbAdapter = DatabaseAdapter.getInstance();
+    const cacheManager = CacheManager.getInstance();
 
-  res.json({
-    status: 'healthy',
-    system: 'ULTRON Autonomous Economic Control Plane',
-    mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development / Test Mode',
-    kill_switch_active: isKillSwitchActive(),
-    database: dbAdapter.getPoolMetrics(),
-    cache: cacheManager.getStatus(),
-    timestamp: new Date().toISOString(),
-  });
+    res.json({
+      status: 'healthy',
+      system: 'ULTRON Autonomous Economic Control Plane',
+      mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development / Test Mode',
+      kill_switch_active: isKillSwitchActive(),
+      database: dbAdapter.getPoolMetrics(),
+      cache: cacheManager.getStatus(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.json({
+      status: 'degraded',
+      system: 'ULTRON Autonomous Economic Control Plane',
+      mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development',
+      error: err.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Real Webhook endpoint (verified against tenant-specific secret, labels records source='real')
