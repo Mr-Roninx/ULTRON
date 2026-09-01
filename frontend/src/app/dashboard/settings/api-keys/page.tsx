@@ -26,8 +26,8 @@ export default function ApiKeysPage() {
   const fetchKeys = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<{ keys: ApiKey[] }>("/v1/api-keys");
-      setKeys(data.keys || []);
+      const data = await api<{ keys?: ApiKey[]; api_keys?: ApiKey[] }>("/v1/api-keys");
+      setKeys(data.api_keys || data.keys || []);
     } catch {
       setKeys([]);
     } finally {

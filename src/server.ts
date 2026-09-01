@@ -328,7 +328,13 @@ app.use('/v1/api-keys', apiKeysRouter);
 app.use('/audit', authenticateJWT, auditRouter);
 
 // Start server if run directly
-if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
+const isDirectRun = process.argv[1] && (
+  process.argv[1].endsWith('server.ts') || 
+  process.argv[1].endsWith('server.js') ||
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+);
+
+if (isDirectRun && process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
   app.listen(PORT, () => {
     console.log(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
     console.log(`📡 Real Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);

@@ -65,20 +65,23 @@ apiKeysRouter.get(
       const tenantContext = req.tenantContext!;
       const keys = await ApiKeyService.listApiKeys(tenantContext.tenantId);
 
+      const keyList = keys.map((k) => ({
+        id: k.id,
+        name: k.name,
+        key_prefix: k.key_prefix,
+        key_id: k.key_id,
+        environment: k.environment,
+        scopes: k.scopes,
+        created_at: k.created_at,
+        last_used_at: k.last_used_at,
+        expires_at: k.expires_at,
+        revoked: Boolean(k.revoked_at),
+      }));
+
       res.json({
         tenant_id: tenantContext.tenantId,
-        api_keys: keys.map((k) => ({
-          id: k.id,
-          name: k.name,
-          key_prefix: k.key_prefix,
-          key_id: k.key_id,
-          environment: k.environment,
-          scopes: k.scopes,
-          created_at: k.created_at,
-          last_used_at: k.last_used_at,
-          expires_at: k.expires_at,
-          revoked: Boolean(k.revoked_at),
-        })),
+        api_keys: keyList,
+        keys: keyList,
       });
     } catch (err: any) {
       res.status(500).json({ error: 'Internal Server Error', details: err.message });

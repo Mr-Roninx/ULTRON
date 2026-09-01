@@ -20,7 +20,7 @@ export default function IntegrationsPage() {
     keyId: "", 
     keySecret: "", 
     webhookSecret: "",
-    environment: "live" as "test" | "live"
+    environment: "test" as "test" | "live"
   });
   const [showSecret, setShowSecret] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -69,7 +69,7 @@ export default function IntegrationsPage() {
         }),
       });
       setSuccess(`Razorpay ${form.environment === "live" ? "Live" : "Test"} connection verified and saved successfully.`);
-      setForm({ keyId: "", keySecret: "", webhookSecret: "", environment: "live" });
+      setForm({ keyId: "", keySecret: "", webhookSecret: "", environment: "test" });
       setShowForm(false);
       fetchConnections();
     } catch (err: any) {

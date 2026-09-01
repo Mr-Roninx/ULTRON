@@ -2,6 +2,7 @@ import { DatabaseAdapter } from '../../db/adapter.js';
 import { SecretsManager } from '../../security/secrets.js';
 import { RazorpayClientFactory } from './client_factory.js';
 import { RazorpayProviderAdapter } from './adapter.js';
+import { RazorpayClientPool } from './client_pool.js';
 import {
   ProviderConnectionRecord,
   ProviderType,
@@ -34,6 +35,9 @@ export class RazorpayConnectionService {
         webhook_secret: params.webhookSecret,
       }),
     });
+
+    // Invalidate client pool cache for immediate update
+    RazorpayClientPool.invalidate(params.tenantId, params.environment);
 
     return {
       connectionId: `conn_${params.tenantId}_razorpay_${params.environment}`,

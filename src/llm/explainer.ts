@@ -91,8 +91,12 @@ Keep the tone highly professional, precise, and analytical.
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
@@ -109,70 +113,32 @@ Keep the tone highly professional, precise, and analytical.
             content: promptContent,
           },
         ],
-        temperature: 1,
-        top_p: 0.95,
-        max_tokens: 8192,
-        chat_template_kwargs: { enable_thinking: true },
-        reasoning_budget: reasoningBudget,
-        stream: true,
+        temperature: 0.3,
+        top_p: 0.9,
+        max_tokens: 768,
+        chat_template_kwargs: { enable_thinking: false },
+        stream: false,
       }),
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(`NVIDIA NIM API responded with HTTP ${response.status}: ${errText}`);
     }
 
-    if (!response.body) {
-      throw new Error('NVIDIA NIM API response body is empty');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let fullReasoning = '';
-    let fullContent = '';
-    let returnedModel = model;
-
-    let streamDone = false;
-
-    while (!streamDone) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        if (trimmed === 'data: [DONE]') {
-          streamDone = true;
-          break;
-        }
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const json = JSON.parse(trimmed.slice(6));
-            if (json?.model) returnedModel = json.model;
-            const delta = json?.choices?.[0]?.delta;
-            if (delta) {
-              const reasoning = delta.reasoning_content || (delta as any).reasoning;
-              if (reasoning) fullReasoning += reasoning;
-              if (delta.content) fullContent += delta.content;
-            }
-          } catch (e) {
-            // ignore partial JSON parse errors
-          }
-        }
-      }
-    }
+    const data = await response.json();
+    const choice = data?.choices?.[0];
+    const reasoning = choice?.message?.reasoning_content || choice?.reasoning || null;
+    const content = choice?.message?.content || '';
 
     return {
       opportunity_id: opp.id,
-      model: returnedModel,
+      model: data?.model || model,
       provider: 'NVIDIA NIM',
-      reasoning_content: fullReasoning.trim() || null,
-      explanation: fullContent.trim() || 'No explanation generated.',
+      reasoning_content: reasoning ? String(reasoning).trim() : null,
+      explanation: String(content).trim() || 'No explanation generated.',
       created_at: new Date().toISOString(),
     };
   } catch (error: any) {

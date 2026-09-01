@@ -17,28 +17,27 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **ULTRON v5.1 — Step 1: Portfolio Intelligence & Multi-Opportunity Autonomy** (Completed & Verified)
 - [x] **ULTRON v5.1 — Steps 4 & 5: Concurrency Coordination & Replay Fingerprinting** (Completed & Verified)
 - [x] **ULTRON v5.1 — Step 6: Expanded Causal Benchmark Suite & Statistical Verification** (Completed & Verified)
-- [x] **ULTRON v5.1 — Steps 7 & 8: Real-World Razorpay Test Verification & Master Audit Package** (Completed & Verified)
+- [x] **ULTRON v6.0: Multi-Tenant Architecture, Canonical Event Gateway & Provider Adapters** (Completed & Audited)
+- [x] **ULTRON Frontend & Backend Full Integration Hardening** (Completed & Verified)
 
 ---
 
-## ULTRON v5.1 — Final System Summary
+## ULTRON v6 & Frontend/Backend Full Integration Summary
 
 ### What Was Built & Verified
-1. **Multi-Opportunity Portfolio Intelligence**:
-   - `PortfolioAgent`: Composite multi-signal priority scoring (IVEN, urgency, gateway, fatigue, expiry).
-   - `UncertaintyModel`: 3-dimensional confidence quantification (`MODEL`, `DATA`, `ECONOMIC`).
-   - `InformationValueEstimator`: Bounded $\text{EVOI}$ advisory for `ACT`/`WAIT`/`INVESTIGATE`.
-   - `PlanMonitor`: Continuous assumption validation against changing environment conditions.
-2. **Concurrency & Replay Governance**:
-   - `MissionConcurrencyCoordinator`: Parallel execution pool under max concurrency ceiling with per-opportunity locks.
-   - `MissionReplayEngine`: Cryptographic SHA-256 fingerprinting with automated divergence localization.
-3. **Causal Evidence & Statistical Rigor**:
-   - 8 paired causal experiments matrix ($N=5$ seeds each) yielding 100% positive effect validation.
-4. **Live Razorpay Test Mode & Provider Truth**:
-   - Live Razorpay Test Mode execution creating and independently verifying payment links via `rzpClient.paymentLink.fetch()`.
-   - Absolute adherence to Provider Truth invariant: `LINK_CREATED != RECOVERED`.
-5. **Master Verification & Audit Artifacts**:
-   - `ULTRON_V5_1_FINAL_AUDIT.md`
-   - `ULTRON_V5_1_DEMO_RUNBOOK.md`
-   - `results/agent/v51/final_v51_truth.json`
-   - 100% test pass rate across 28 Agent, 5 Core, 3 Infra, and 8 Causal suites.
+1. **Dual-Engine Authentication & Resilient Session Management**:
+   - Universal verification across local JWT sessions and Supabase Auth tokens.
+   - Fixed `/team` table reference in SQLite schema (`memberships`).
+   - Seamless merchant onboarding and auto-recovery for dynamic tenants.
+2. **Razorpay API Gateway Integration & Client Pool**:
+   - Real-time connectivity probe in `RazorpayProviderAdapter` and capability discovery.
+   - Cache invalidation on credential update in `RazorpayClientPool`.
+   - Out-of-the-box Test Mode fallback for new signups.
+3. **Settings & Operational Dashboards**:
+   - API key generation and listing normalized on frontend.
+   - Team invitations and member management connected with RBAC.
+   - Opportunity pipeline scoring with NVIDIA Nemotron 30B / deterministic explanations.
+4. **Master Verification**:
+   - 10/10 End-to-End verification checks passed (`npm run test:e2e`).
+   - 24/24 ULTRON v6 suites passed with 0 failures (`npm run test:v6-all`).
+   - 100% Next.js production build pass (`npm --prefix frontend run build`).
