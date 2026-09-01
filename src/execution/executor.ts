@@ -168,7 +168,7 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     // Handle remote idempotency conflict if link already exists in Razorpay
     if (errorDesc.includes('already exists') || errorDesc.includes('reference_id')) {
       try {
-        const existingList: any = await rzpClient.paymentLink.all({ reference_id: opp.id });
+        const existingList: any = await (rzpClient.paymentLink as any).all({ reference_id: opp.id });
         const existingPlink = existingList?.payment_links?.[0];
         if (existingPlink) {
           const now = new Date().toISOString();

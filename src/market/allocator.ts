@@ -1,4 +1,5 @@
 import {
+  db,
   getAllOpportunities,
   getScoreByOpportunityId,
   upsertAllocationDecision,
@@ -51,12 +52,9 @@ export function runMarketAllocation(options: { capacity?: number; opportunities?
   let capacity = options.capacity;
   if (capacity === undefined && options.tenantId) {
     try {
-      const db = DatabaseAdapter.getInstance();
-      const rows = db.querySync<{ capacity_limit: number }>(
-        `SELECT capacity_limit FROM tenants WHERE id = ? LIMIT 1;`,
-        [options.tenantId]
-      );
-      if (rows.length > 0) capacity = rows[0].capacity_limit;
+      const stmt = db.prepare('SELECT capacity_limit FROM tenants WHERE id = ? LIMIT 1;');
+      const row = stmt.get(options.tenantId) as { capacity_limit: number } | undefined;
+      if (row?.capacity_limit) capacity = row.capacity_limit;
     } catch { /* fallthrough to env var */ }
   }
   if (capacity === undefined) {

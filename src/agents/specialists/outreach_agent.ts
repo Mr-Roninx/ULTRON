@@ -43,7 +43,7 @@ export class OutreachAgent {
     });
 
     return {
-      id: toolRes.proposal_id || `draft_${Date.now()}`,
+      id: (toolRes as any).proposal_id || (toolRes.data as any)?.proposal_id || `draft_${Date.now()}`,
       run_id: params.runId,
       opportunity_id: params.opportunity.id,
       channel: params.channel,

@@ -148,7 +148,8 @@ eventsRouter.get(
   '/:id',
   TenancyEnforcer.authenticateTenant('events:read'),
   async (req: TenantScopedRequest, res: Response): Promise<void> => {
-    const eventId = req.params.id;
+    const rawEventId = req.params.id;
+    const eventId = Array.isArray(rawEventId) ? rawEventId[0] : rawEventId;
     const opp = getOpportunityByRazorpayEventId(eventId) || getOpportunityById(eventId);
 
     if (!opp) {

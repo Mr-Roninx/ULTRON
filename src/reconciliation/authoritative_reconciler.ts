@@ -3,7 +3,7 @@ import { rzpClient } from '../execution/executor.js';
 import { ProviderTruthEvaluator, ProviderTruthEvaluation } from '../truth/provider_truth.js';
 import { CanonicalStateMachine, CanonicalPaymentState } from '../truth/canonical_state_machine.js';
 import { DoubleEntryLedger } from '../truth/double_entry_ledger.js';
-import { RecoveryOpportunity, ExecutionRecord } from '../types/index.js';
+import { RecoveryOpportunity, ExecutionRecord, OpportunityStatus } from '../types/index.js';
 
 export interface ReconciliationResult {
   opportunity_id: string;
@@ -123,7 +123,7 @@ export class AuthoritativeReconciler {
     }
 
     // 4. Determine Target Status
-    let targetOpportunityStatus = opp.status;
+    let targetOpportunityStatus: OpportunityStatus = opp.status;
     let targetExecStatus = execRecord?.status || 'created';
     let reconciliationOutcome: 'MATCHED' | 'TRANSITION' | 'PENDING' | 'MISMATCH' | 'UNKNOWN' | 'ESCALATE' = 'MATCHED';
 
@@ -366,7 +366,7 @@ export class AuthoritativeReconciler {
     pending_count: number;
     results: ReconciliationResult[];
   }> {
-    const execRecords = db.prepare('SELECT * FROM execution_records;').all() as ExecutionRecord[];
+    const execRecords = db.prepare('SELECT * FROM execution_records;').all() as unknown as ExecutionRecord[];
     const results: ReconciliationResult[] = [];
     let recovered_count = 0;
     let pending_count = 0;

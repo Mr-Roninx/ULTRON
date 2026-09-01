@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { EventEmitter } from 'node:events';
 
 export interface CacheStatus {
@@ -9,8 +9,8 @@ export interface CacheStatus {
 
 export class CacheManager {
   private static instance: CacheManager | null = null;
-  private redisClient: Redis | null = null;
-  private redisSubscriber: Redis | null = null;
+  private redisClient: any = null;
+  private redisSubscriber: any = null;
   private isRedisConnected: boolean = false;
   private fallbackStore: Map<string, { value: any; expiresAt: number }> = new Map();
   private eventBus: EventEmitter = new EventEmitter();
@@ -20,13 +20,14 @@ export class CacheManager {
 
     if (redisUrl) {
       try {
-        this.redisClient = new Redis(redisUrl, {
+        const RedisClass = (Redis as any).default || Redis;
+        this.redisClient = new RedisClass(redisUrl, {
           maxRetriesPerRequest: 2,
           connectTimeout: 4000,
-          retryStrategy: (times) => (times > 3 ? null : Math.min(times * 100, 2000)),
+          retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 2000)),
         });
 
-        this.redisSubscriber = new Redis(redisUrl, {
+        this.redisSubscriber = new RedisClass(redisUrl, {
           maxRetriesPerRequest: 2,
           connectTimeout: 4000,
         });
@@ -36,19 +37,19 @@ export class CacheManager {
           console.log('⚡ CacheManager: Connected to Redis 7+ message broker');
         });
 
-        this.redisClient.on('error', (err) => {
+        this.redisClient.on('error', (err: any) => {
           this.isRedisConnected = false;
           console.warn('⚠️ CacheManager: Redis error, operating in resilient memory fallback mode:', err.message);
         });
 
         // Setup Pub/Sub subscriber
-        this.redisSubscriber.subscribe('ultron:kill_switch', (err) => {
+        this.redisSubscriber.subscribe('ultron:kill_switch', (err: any) => {
           if (!err) {
             console.log('📡 CacheManager: Subscribed to ultron:kill_switch pub/sub channel');
           }
         });
 
-        this.redisSubscriber.on('message', (channel, message) => {
+        this.redisSubscriber.on('message', (channel: string, message: string) => {
           if (channel === 'ultron:kill_switch') {
             const active = message === 'true';
             this.eventBus.emit('kill_switch_update', active);
@@ -77,7 +78,7 @@ export class CacheManager {
     };
   }
 
-  public getRedisClient(): Redis | null {
+  public getRedisClient(): any {
     return this.isRedisConnected ? this.redisClient : null;
   }
 

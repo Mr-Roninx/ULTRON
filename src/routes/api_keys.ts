@@ -96,7 +96,8 @@ apiKeysRouter.delete(
   async (req: TenantScopedRequest, res: Response): Promise<void> => {
     try {
       const tenantContext = req.tenantContext!;
-      const keyId = req.params.id;
+      const rawKeyId = req.params.id;
+      const keyId = Array.isArray(rawKeyId) ? rawKeyId[0] : rawKeyId;
 
       const revoked = await ApiKeyService.revokeApiKey(keyId, tenantContext.tenantId);
       if (!revoked) {

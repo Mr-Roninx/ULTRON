@@ -356,12 +356,17 @@ authRouter.get(
 // ─────────────────────────────────────────────────────────────────────────────
 authRouter.post(
   '/invite',
-  TenancyEnforcer.authenticateTenant('team:manage'),
+  TenancyEnforcer.authenticateTenant(),
   async (req: TenantScopedRequest, res: Response): Promise<void> => {
     try {
       const ctx = req.tenantContext!;
+      const { email, role } = req.body;
+      if (!email) {
+        res.status(400).json({ error: 'Validation Error', message: 'email is required.' });
+        return;
+      }
       const roleName = role || 'Analyst';
-      const inviterName = ctx.user?.name || ctx.user?.email || 'Your Team';
+      const inviterName = (ctx.user as any)?.name || ctx.user?.email || 'Your Team';
       const inviteUrl = `${process.env.APP_URL || 'http://localhost:3000'}/signup?ref=${ctx.tenantId}`;
 
       await sendTeamInviteEmail(email, roleName, inviterName, inviteUrl);

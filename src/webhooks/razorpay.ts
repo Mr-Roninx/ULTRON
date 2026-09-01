@@ -48,7 +48,8 @@ import { RazorpayConnectionService } from '../providers/razorpay/connection_serv
 
 export async function handleRazorpayWebhook(req: Request, res: Response): Promise<void> {
   try {
-    const tenantId = req.params.tenant_id;
+    const rawTenantId = req.params.tenant_id;
+    const tenantId = Array.isArray(rawTenantId) ? rawTenantId[0] : rawTenantId;
     if (!tenantId) {
       res.status(400).json({ error: 'Missing tenant_id in webhook URL' });
       return;
@@ -259,7 +260,8 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
     const signature = req.headers['x-razorpay-signature'] as string | undefined;
 
     // Extract tenant_id from simulated request params or fallback to system default
-    const tenantId = req.params.tenant_id || 'tenant_system_default';
+    const rawTenantId = req.params.tenant_id;
+    const tenantId = Array.isArray(rawTenantId) ? rawTenantId[0] : (rawTenantId || 'tenant_system_default');
     const webhookSecrets = await RazorpayConnectionService.getWebhookSecrets(tenantId, 'test');
     
     // In simulated test routes without explicit webhook setup, we use the fallback
