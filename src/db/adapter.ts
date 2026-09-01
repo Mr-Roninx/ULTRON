@@ -121,8 +121,12 @@ export class DatabaseAdapter {
    */
   private normalizeSql(sql: string): string {
     if (this.engine === 'PostgreSQL') {
+      let pgSql = sql
+        .replace(/INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/gi, 'BIGSERIAL PRIMARY KEY')
+        .replace(/PRAGMA\s+[^;]+;?/gi, '');
+      
       let index = 1;
-      return sql.replace(/\?/g, () => `$${index++}`);
+      return pgSql.replace(/\?/g, () => `$${index++}`);
     } else {
       // Normalize PostgreSQL $1, $2 to SQLite ?
       return sql.replace(/\$\d+/g, '?');
