@@ -102,7 +102,7 @@ apiKeysRouter.delete(
       const rawKeyId = req.params.id;
       const keyId = Array.isArray(rawKeyId) ? rawKeyId[0] : rawKeyId;
 
-      const revoked = await ApiKeyService.revokeApiKey(keyId, tenantContext.tenantId);
+      const revoked = await ApiKeyService.revokeApiKey(tenantContext.tenantId, keyId);
       if (!revoked) {
         res.status(404).json({ error: 'Not Found', message: 'API key not found or already revoked.' });
         return;

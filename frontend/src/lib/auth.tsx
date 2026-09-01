@@ -93,80 +93,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Restore session from Supabase or localStorage on mount
+  // Restore session from localStorage or Supabase on mount
   useEffect(() => {
     let mounted = true;
 
-    // 1. Check Supabase Auth session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.access_token) {
-        const token = session.access_token;
-        fetchMe(token).then((data) => {
-          if (!mounted) return;
-          const userMeta = session.user.user_metadata || {};
-          const user: AuthUser = data?.user || {
-            userId: session.user.id,
-            email: session.user.email || "",
-            name: userMeta.business_name || session.user.email?.split("@")[0] || "Merchant",
-            role: userMeta.role || "Owner",
-            tenantId: userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`,
-          };
-          const tenant = data?.tenant || null;
-          saveToStorage(token, user, tenant);
-          setState({
-            token,
-            user,
-            tenant,
-            loading: false,
-          });
-        });
-        return;
-      }
-
-      // 2. Fallback to local storage token
-      const stored = localStorage.getItem(TOKEN_KEY);
-      if (!stored) {
-        setState((s) => ({ ...s, loading: false }));
-        return;
-      }
-
-      fetchMe(stored).then((data) => {
+    const restoreSession = async () => {
+      // 1. Primary: Check stored backend session token
+      const stored = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+      if (stored) {
+        const data = await fetchMe(stored);
         if (!mounted) return;
-        if (data) {
+        if (data?.user) {
           saveToStorage(stored, data.user, data.tenant);
           setState({ token: stored, user: data.user, tenant: data.tenant, loading: false });
-        } else {
-          saveToStorage(null, null, null);
-          setState({ token: null, user: null, tenant: null, loading: false });
+          return;
         }
-      });
-    });
+      }
 
-    // 3. Listen to Supabase Auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      if (session?.access_token) {
-        const token = session.access_token;
-        fetchMe(token).then((data) => {
+      // 2. Fallback: Check Supabase Auth session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (session?.access_token) {
+          const token = session.access_token;
+          const data = await fetchMe(token);
           if (!mounted) return;
           const userMeta = session.user.user_metadata || {};
+          const tenantId = data?.user?.tenantId || data?.tenant?.id || userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`;
           const user: AuthUser = data?.user || {
             userId: session.user.id,
             email: session.user.email || "",
             name: userMeta.business_name || session.user.email?.split("@")[0] || "Merchant",
             role: userMeta.role || "Owner",
-            tenantId: userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`,
+            tenantId,
           };
-          const tenant = data?.tenant || null;
+          const tenant = data?.tenant || (tenantId ? {
+            id: tenantId,
+            name: userMeta.business_name || user.name || "Merchant",
+            slug: `merchant_${tenantId}`,
+            environment: "test",
+            status: "ACTIVE",
+            capacity_limit: 5,
+            kill_switch_active: false,
+          } : null);
           saveToStorage(token, user, tenant);
-          setState({
-            token,
-            user,
-            tenant,
-            loading: false,
-          });
-        });
+          setState({ token, user, tenant, loading: false });
+          return;
+        }
+      } catch {}
+
+      if (mounted) {
+        saveToStorage(null, null, null);
+        setState({ token: null, user: null, tenant: null, loading: false });
+      }
+    };
+
+    restoreSession();
+
+    // 3. Listen to Supabase Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      if (session?.access_token) {
+        const token = session.access_token;
+        const data = await fetchMe(token);
+        if (!mounted) return;
+        const userMeta = session.user.user_metadata || {};
+        const tenantId = data?.user?.tenantId || data?.tenant?.id || userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`;
+        const user: AuthUser = data?.user || {
+          userId: session.user.id,
+          email: session.user.email || "",
+          name: userMeta.business_name || session.user.email?.split("@")[0] || "Merchant",
+          role: userMeta.role || "Owner",
+          tenantId,
+        };
+        const tenant = data?.tenant || (tenantId ? {
+          id: tenantId,
+          name: userMeta.business_name || user.name || "Merchant",
+          slug: `merchant_${tenantId}`,
+          environment: "test",
+          status: "ACTIVE",
+          capacity_limit: 5,
+          kill_switch_active: false,
+        } : null);
+        saveToStorage(token, user, tenant);
+        setState({ token, user, tenant, loading: false });
       }
     });
 
@@ -189,21 +199,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok && data?.session?.token) {
         const token = data.session.token;
         const me = await fetchMe(token);
+        const merchantTenantId = data.merchant?.tenant_id || data.merchant?.id;
 
         const user: AuthUser = me?.user || (data.user ? {
           userId: data.user.id,
           email: data.user.email,
           name: data.user.name,
           role: data.user.role,
-          tenantId: data.merchant?.id || `tnt_${data.user.id.slice(0, 8)}`,
-        } : data.merchant);
-
-        const tenant: AuthTenant | null = me?.tenant || (data.merchant ? {
-          id: data.merchant.id,
+          tenantId: merchantTenantId || `tnt_${data.user.id.slice(0, 8)}`,
+        } : (data.merchant ? {
+          userId: data.merchant.user_id || data.merchant.id,
+          email: data.merchant.email,
           name: data.merchant.name,
-          slug: data.merchant.slug,
-          environment: data.merchant.environment || "test",
-          status: data.merchant.status || "ACTIVE",
+          role: data.merchant.role,
+          tenantId: merchantTenantId,
+        } : {
+          userId: "usr_merchant",
+          email,
+          role: "Owner",
+          tenantId: merchantTenantId || "tenant_default",
+        }));
+
+        const tenant: AuthTenant | null = me?.tenant || (merchantTenantId ? {
+          id: merchantTenantId,
+          name: data.merchant?.name || data.merchant?.business_name || "Merchant",
+          slug: `merchant_${merchantTenantId}`,
+          environment: data.merchant?.environment || "test",
+          status: data.merchant?.status || "ACTIVE",
           capacity_limit: 5,
           kill_switch_active: false,
         } : null);
@@ -233,16 +255,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const token = sbData.session.access_token;
         const me = await fetchMe(token);
         const userMeta = sbData.user.user_metadata || {};
+        const tenantId = me?.user?.tenantId || me?.tenant?.id || userMeta.tenant_id || `tnt_${sbData.user.id.slice(0, 8)}`;
 
         const user: AuthUser = me?.user || {
           userId: sbData.user.id,
           email: sbData.user.email || "",
           name: userMeta.business_name || email.split("@")[0],
           role: userMeta.role || "Owner",
-          tenantId: userMeta.tenant_id || `tnt_${sbData.user.id.slice(0, 8)}`,
+          tenantId,
         };
 
-        const tenant = me?.tenant || null;
+        const tenant = me?.tenant || {
+          id: tenantId,
+          name: userMeta.business_name || user.name || "Merchant",
+          slug: `merchant_${tenantId}`,
+          environment: "test",
+          status: "ACTIVE",
+          capacity_limit: 5,
+          kill_switch_active: false,
+        };
         saveToStorage(token, user, tenant);
 
         setState({
@@ -283,20 +314,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = data?.session?.token;
       if (token) {
         const me = await fetchMe(token);
+        const merchantTenantId = data.merchant?.tenant_id || data.merchant?.id;
+
         const user: AuthUser = me?.user || (data.user ? {
           userId: data.user.id,
           email: data.user.email,
           name: data.user.name,
           role: data.user.role,
-          tenantId: data.merchant?.id || `tnt_${data.user.id.slice(0, 8)}`,
-        } : data.merchant);
+          tenantId: merchantTenantId || `tnt_${data.user.id.slice(0, 8)}`,
+        } : (data.merchant ? {
+          userId: data.merchant.user_id || data.merchant.id,
+          email: data.merchant.email,
+          name: data.merchant.business_name || data.merchant.name,
+          role: data.merchant.role,
+          tenantId: merchantTenantId,
+        } : {
+          userId: "usr_merchant",
+          email,
+          role: "Owner",
+          tenantId: merchantTenantId || "tenant_default",
+        }));
 
-        const tenant: AuthTenant | null = me?.tenant || (data.merchant ? {
-          id: data.merchant.id,
-          name: data.merchant.name,
-          slug: data.merchant.slug,
-          environment: data.merchant.environment || "test",
-          status: data.merchant.status || "ACTIVE",
+        const tenant: AuthTenant | null = me?.tenant || (merchantTenantId ? {
+          id: merchantTenantId,
+          name: data.merchant?.business_name || data.merchant?.name || business_name,
+          slug: `merchant_${merchantTenantId}`,
+          environment: data.merchant?.environment || "test",
+          status: data.merchant?.status || "ACTIVE",
           capacity_limit: 5,
           kill_switch_active: false,
         } : null);
@@ -319,7 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             business_name,
             role: "Owner",
-            tenant_id: data?.merchant?.id,
+            tenant_id: data?.merchant?.tenant_id || data?.merchant?.id,
           },
         },
       }).catch(() => {});

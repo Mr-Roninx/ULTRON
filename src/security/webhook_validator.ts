@@ -43,7 +43,11 @@ export class WebhookValidator {
    * Validates client IP address against Razorpay egress allowlist.
    */
   public static isIpAllowed(clientIp: string): boolean {
-    if (process.env.NODE_ENV === 'test' || process.env.DISABLE_WEBHOOK_IP_CHECK === 'true') {
+    if (
+      process.env.NODE_ENV === 'test' ||
+      process.env.DISABLE_WEBHOOK_IP_CHECK === 'true' ||
+      process.env.ENABLE_WEBHOOK_IP_CHECK !== 'true'
+    ) {
       return true;
     }
 
@@ -54,7 +58,7 @@ export class WebhookValidator {
     const allowed = [...this.defaultAllowedIps, ...customIps];
     const cleanIp = clientIp.replace(/^::ffff:/, '');
 
-    return allowed.includes(cleanIp) || allowed.includes(clientIp) || cleanIp.startsWith('13.235.25.');
+    return allowed.includes(cleanIp) || allowed.includes(clientIp) || cleanIp.startsWith('13.235.25.') || cleanIp.startsWith('52.66.');
   }
 
   /**

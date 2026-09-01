@@ -190,12 +190,12 @@ export class ApiKeyService {
   /**
    * Revokes an existing API key.
    */
-  public static async revokeApiKey(tenantId: string, keyId: string): Promise<boolean> {
+  public static async revokeApiKey(tenantId: string, keyIdentifier: string): Promise<boolean> {
     const db = DatabaseAdapter.getInstance();
     const now = new Date().toISOString();
     const result = await db.execute(
-      `UPDATE api_keys SET revoked_at = ? WHERE tenant_id = ? AND key_id = ? AND revoked_at IS NULL;`,
-      [now, tenantId, keyId]
+      `UPDATE api_keys SET revoked_at = ? WHERE tenant_id = ? AND (key_id = ? OR id = ?) AND revoked_at IS NULL;`,
+      [now, tenantId, keyIdentifier, keyIdentifier]
     );
     return (result?.rowCount ?? 0) > 0;
   }

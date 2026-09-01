@@ -98,7 +98,10 @@ eventsRouter.post(
             notes: event.metadata,
           },
           event.event_id,
-          { source: event.environment === 'live' ? 'real' : 'synthetic' }
+          {
+            source: event.environment === 'live' ? 'real' : 'synthetic',
+            tenantId: tenantContext.tenantId,
+          }
         );
 
         insertOpportunity(opportunity);

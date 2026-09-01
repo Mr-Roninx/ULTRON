@@ -65,7 +65,8 @@ export function initDatabase(): void {
 
     CREATE TABLE IF NOT EXISTS recovery_opportunities (
       id TEXT PRIMARY KEY,
-      merchant_id TEXT NOT NULL DEFAULT 'merchant_default',
+      tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+      merchant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
       source TEXT NOT NULL CHECK(source IN ('real', 'synthetic')),
       amount_paise INTEGER NOT NULL,
       currency TEXT NOT NULL DEFAULT 'INR',
@@ -84,16 +85,20 @@ export function initDatabase(): void {
   `);
 
   try {
-    db.exec(`ALTER TABLE customers ADD COLUMN merchant_id TEXT NOT NULL DEFAULT 'merchant_default';`);
-  } catch (e) {
-    // column exists
-  }
+    db.exec(`ALTER TABLE customers ADD COLUMN merchant_id TEXT NOT NULL DEFAULT 'tenant_system_default';`);
+  } catch (e) {}
 
   try {
-    db.exec(`ALTER TABLE recovery_opportunities ADD COLUMN merchant_id TEXT NOT NULL DEFAULT 'merchant_default';`);
-  } catch (e) {
-    // column exists
-  }
+    db.exec(`ALTER TABLE customers ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';`);
+  } catch (e) {}
+
+  try {
+    db.exec(`ALTER TABLE recovery_opportunities ADD COLUMN merchant_id TEXT NOT NULL DEFAULT 'tenant_system_default';`);
+  } catch (e) {}
+
+  try {
+    db.exec(`ALTER TABLE recovery_opportunities ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';`);
+  } catch (e) {}
 
   db.exec(`
 
@@ -460,45 +465,16 @@ export function getAllOpportunities(tenantId?: string): RecoveryOpportunity[] {
 }
 
 export function insertOpportunity(opp: RecoveryOpportunity): void {
+  const tenantId = opp.tenant_id || 'tenant_system_default';
   const stmt = db.prepare(`
     INSERT INTO recovery_opportunities (
       id, source, amount_paise, currency, reason_code, decline_type,
       attempt_count, customer_id, customer_trust_score, created_at, status,
-      tenant_id, razorpay_event_id, raw_payload_ref
+      tenant_id, merchant_id, razorpay_event_id, raw_payload_ref
     ) VALUES (
       ?, ?, ?, ?, ?, ?,
       ?, ?, ?, ?, ?,
-      ?, ?, ?
-    )
-  `);
-  stmt.run(
-    opp.id,
-    opp.source,
-    opp.amount_paise,
-    opp.currency || 'INR',
-    opp.reason_code,
-    opp.decline_type,
-    opp.attempt_count ?? 1,
-    opp.customer_id,
-    opp.customer_trust_score ?? 0.65,
-    opp.created_at || new Date().toISOString(),
-    opp.status || 'pending',
-    opp.tenant_id || 'tenant_default',
-    opp.razorpay_event_id || null,
-    opp.raw_payload_ref || null
-  );
-}
-
-export function upsertOpportunity(opp: RecoveryOpportunity): void {
-  const stmt = db.prepare(`
-    INSERT INTO recovery_opportunities (
-      id, source, amount_paise, currency, reason_code, decline_type,
-      attempt_count, customer_id, customer_trust_score, created_at, status,
-      razorpay_event_id, raw_payload_ref
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?,
-      ?, ?
+      ?, ?, ?, ?
     )
     ON CONFLICT(id) DO UPDATE SET
       source = excluded.source,
@@ -510,6 +486,8 @@ export function upsertOpportunity(opp: RecoveryOpportunity): void {
       customer_id = excluded.customer_id,
       customer_trust_score = excluded.customer_trust_score,
       status = excluded.status,
+      tenant_id = excluded.tenant_id,
+      merchant_id = excluded.merchant_id,
       razorpay_event_id = excluded.razorpay_event_id,
       raw_payload_ref = excluded.raw_payload_ref
   `);
@@ -525,6 +503,54 @@ export function upsertOpportunity(opp: RecoveryOpportunity): void {
     opp.customer_trust_score ?? 0.65,
     opp.created_at || new Date().toISOString(),
     opp.status || 'pending',
+    tenantId,
+    tenantId,
+    opp.razorpay_event_id || null,
+    opp.raw_payload_ref || null
+  );
+}
+
+export function upsertOpportunity(opp: RecoveryOpportunity): void {
+  const tenantId = opp.tenant_id || 'tenant_system_default';
+  const stmt = db.prepare(`
+    INSERT INTO recovery_opportunities (
+      id, source, amount_paise, currency, reason_code, decline_type,
+      attempt_count, customer_id, customer_trust_score, created_at, status,
+      tenant_id, merchant_id, razorpay_event_id, raw_payload_ref
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?,
+      ?, ?, ?, ?
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      source = excluded.source,
+      amount_paise = excluded.amount_paise,
+      currency = excluded.currency,
+      reason_code = excluded.reason_code,
+      decline_type = excluded.decline_type,
+      attempt_count = excluded.attempt_count,
+      customer_id = excluded.customer_id,
+      customer_trust_score = excluded.customer_trust_score,
+      status = excluded.status,
+      tenant_id = excluded.tenant_id,
+      merchant_id = excluded.merchant_id,
+      razorpay_event_id = excluded.razorpay_event_id,
+      raw_payload_ref = excluded.raw_payload_ref
+  `);
+  stmt.run(
+    opp.id,
+    opp.source,
+    opp.amount_paise,
+    opp.currency || 'INR',
+    opp.reason_code,
+    opp.decline_type,
+    opp.attempt_count ?? 1,
+    opp.customer_id,
+    opp.customer_trust_score ?? 0.65,
+    opp.created_at || new Date().toISOString(),
+    opp.status || 'pending',
+    tenantId,
+    tenantId,
     opp.razorpay_event_id || null,
     opp.raw_payload_ref || null
   );
