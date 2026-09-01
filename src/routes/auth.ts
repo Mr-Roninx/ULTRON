@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'node:crypto';
 import { DatabaseAdapter } from '../db/adapter.js';
+import { sendTeamInviteEmail } from '../notifications/email.js';
 import { SessionAuthService } from '../security/session_auth.js';
 import { PasswordService } from '../security/password.js';
 import { TenancyEnforcer, TenantScopedRequest } from '../security/tenancy.js';
@@ -359,15 +360,15 @@ authRouter.post(
   async (req: TenantScopedRequest, res: Response): Promise<void> => {
     try {
       const ctx = req.tenantContext!;
-      const { email, role } = req.body;
-      if (!email) {
-        res.status(400).json({ error: 'Validation Error', message: 'email is required.' });
-        return;
-      }
+      const roleName = role || 'Analyst';
+      const inviterName = ctx.user?.name || ctx.user?.email || 'Your Team';
+      const inviteUrl = `${process.env.APP_URL || 'http://localhost:3000'}/signup?ref=${ctx.tenantId}`;
+
+      await sendTeamInviteEmail(email, roleName, inviterName, inviteUrl);
 
       res.status(200).json({
         success: true,
-        message: `Invitation successfully queued for ${email} as ${role || 'Analyst'}.`,
+        message: `Invitation successfully sent to ${email} as ${roleName}.`,
       });
     } catch (err: any) {
       res.status(500).json({ error: 'Failed to send invite', details: err.message });
