@@ -65,23 +65,17 @@ export class DatabaseAdapter {
 
     if (dbUrl.startsWith('postgres://') || dbUrl.startsWith('postgresql://')) {
       try {
-        this.engine = 'PostgreSQL';
         const poolSize = Number(process.env.DATABASE_POOL_SIZE) || 10;
         this.pgPool = new pg.Pool({
           connectionString: dbUrl,
           max: poolSize,
           idleTimeoutMillis: 30000,
           connectionTimeoutMillis: 5000,
-          ssl: dbUrl.includes('supabase') || dbUrl.includes('pooler') ? { rejectUnauthorized: false } : undefined,
+          ssl: (dbUrl.includes('supabase') || dbUrl.includes('pooler')) ? { rejectUnauthorized: false } : undefined,
         });
-        
-        try {
-          const parsed = new URL(dbUrl);
-          this.dbName = parsed.pathname.replace(/^\//, '') || 'ultron';
-        } catch {
-          this.dbName = 'ultron_pg';
-        }
-        console.log(`🔌 DatabaseAdapter: Initialized PostgreSQL connection pool (max: ${poolSize}, db: ${this.dbName})`);
+        this.engine = 'PostgreSQL';
+        this.dbName = 'postgres_db';
+        console.log(`🔌 DatabaseAdapter: Initialized PostgreSQL connection pool (max: ${poolSize})`);
       } catch (err: any) {
         console.warn('⚠️ Failed to initialize PostgreSQL pool, falling back to SQLite:', err.message);
         this.initSqlite('sqlite:///ultron.db');
@@ -142,16 +136,19 @@ export class DatabaseAdapter {
     const normalizedSql = this.normalizeSql(sql);
 
     if (this.engine === 'PostgreSQL' && this.pgPool) {
-      const res = await this.pgPool.query(normalizedSql, params);
-      return res.rows as T[];
+      try {
+        const res = await this.pgPool.query(normalizedSql, params);
+        return res.rows as T[];
+      } catch (pgErr: any) {
+        console.warn('⚠️ PostgreSQL query failed, attempting SQLite fallback:', pgErr.message);
+        if (!this.sqliteDb) this.initSqlite('sqlite:///ultron.db');
+        this.engine = 'SQLite';
+      }
     }
 
-    if (this.sqliteDb) {
-      const stmt = this.sqliteDb.prepare(normalizedSql);
-      return stmt.all(...params) as unknown as T[];
-    }
-
-    throw new Error('DatabaseAdapter: No active database connection');
+    if (!this.sqliteDb) this.initSqlite('sqlite:///ultron.db');
+    const stmt = this.sqliteDb!.prepare(this.normalizeSql(sql));
+    return stmt.all(...params) as unknown as T[];
   }
 
   /**
@@ -161,17 +158,20 @@ export class DatabaseAdapter {
     const normalizedSql = this.normalizeSql(sql);
 
     if (this.engine === 'PostgreSQL' && this.pgPool) {
-      const res = await this.pgPool.query(normalizedSql, params);
-      return { rowCount: res.rowCount || 0 };
+      try {
+        const res = await this.pgPool.query(normalizedSql, params);
+        return { rowCount: res.rowCount || 0 };
+      } catch (pgErr: any) {
+        console.warn('⚠️ PostgreSQL execute failed, attempting SQLite fallback:', pgErr.message);
+        if (!this.sqliteDb) this.initSqlite('sqlite:///ultron.db');
+        this.engine = 'SQLite';
+      }
     }
 
-    if (this.sqliteDb) {
-      const stmt = this.sqliteDb.prepare(normalizedSql);
-      const res = stmt.run(...params);
-      return { rowCount: Number(res.changes || 0) };
-    }
-
-    throw new Error('DatabaseAdapter: No active database connection');
+    if (!this.sqliteDb) this.initSqlite('sqlite:///ultron.db');
+    const stmt = this.sqliteDb!.prepare(this.normalizeSql(sql));
+    const res = stmt.run(...params);
+    return { rowCount: Number(res.changes || 0) };
   }
 
   /**
@@ -180,58 +180,61 @@ export class DatabaseAdapter {
    */
   public async withTransaction<T>(callback: (client: TransactionClient) => Promise<T>): Promise<T> {
     if (this.engine === 'PostgreSQL' && this.pgPool) {
-      const client = await this.pgPool.connect();
       try {
-        await client.query('BEGIN');
-        const txClient: TransactionClient = {
-          query: async (sql, params = []) => {
-            const normalized = this.normalizeSql(sql);
-            const res = await client.query(normalized, params);
-            return res.rows;
-          },
-          execute: async (sql, params = []) => {
-            const normalized = this.normalizeSql(sql);
-            const res = await client.query(normalized, params);
-            return { rowCount: res.rowCount || 0 };
-          },
-        };
-        const result = await callback(txClient);
-        await client.query('COMMIT');
-        return result;
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
+        const client = await this.pgPool.connect();
+        try {
+          await client.query('BEGIN');
+          const txClient: TransactionClient = {
+            query: async (sql, params = []) => {
+              const normalized = this.normalizeSql(sql);
+              const res = await client.query(normalized, params);
+              return res.rows;
+            },
+            execute: async (sql, params = []) => {
+              const normalized = this.normalizeSql(sql);
+              const res = await client.query(normalized, params);
+              return { rowCount: res.rowCount || 0 };
+            },
+          };
+          const result = await callback(txClient);
+          await client.query('COMMIT');
+          return result;
+        } catch (err) {
+          await client.query('ROLLBACK');
+          throw err;
+        } finally {
+          client.release();
+        }
+      } catch (poolErr: any) {
+        console.warn('⚠️ PostgreSQL transaction connection failed, falling back to SQLite:', poolErr.message);
+        if (!this.sqliteDb) this.initSqlite('sqlite:///ultron.db');
+        this.engine = 'SQLite';
       }
     }
 
-    if (this.sqliteDb) {
-      this.sqliteDb.exec('BEGIN TRANSACTION;');
-      try {
-        const txClient: TransactionClient = {
-          query: async (sql, params = []) => {
-            const normalized = this.normalizeSql(sql);
-            const stmt = this.sqliteDb!.prepare(normalized);
-            return stmt.all(...params) as any;
-          },
-          execute: async (sql, params = []) => {
-            const normalized = this.normalizeSql(sql);
-            const stmt = this.sqliteDb!.prepare(normalized);
-            const res = stmt.run(...params);
-            return { rowCount: Number(res.changes || 0) };
-          },
-        };
-        const result = await callback(txClient);
-        this.sqliteDb.exec('COMMIT;');
-        return result;
-      } catch (err) {
-        this.sqliteDb.exec('ROLLBACK;');
-        throw err;
-      }
+    if (!this.sqliteDb) this.initSqlite('sqlite:///ultron.db');
+    this.sqliteDb!.exec('BEGIN TRANSACTION;');
+    try {
+      const txClient: TransactionClient = {
+        query: async (sql, params = []) => {
+          const normalized = this.normalizeSql(sql);
+          const stmt = this.sqliteDb!.prepare(normalized);
+          return stmt.all(...params) as any;
+        },
+        execute: async (sql, params = []) => {
+          const normalized = this.normalizeSql(sql);
+          const stmt = this.sqliteDb!.prepare(normalized);
+          const res = stmt.run(...params);
+          return { rowCount: Number(res.changes || 0) };
+        },
+      };
+      const result = await callback(txClient);
+      this.sqliteDb!.exec('COMMIT;');
+      return result;
+    } catch (err) {
+      this.sqliteDb!.exec('ROLLBACK;');
+      throw err;
     }
-
-    throw new Error('DatabaseAdapter: No active database connection');
   }
 
   /**
