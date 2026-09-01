@@ -55,11 +55,11 @@ export class DatabaseAdapter {
   }
 
   private constructor() {
-    let dbUrl = process.env.DATABASE_URL || '';
+    let dbUrl = process.env.SUPABASE_DATABASE_URL || process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || '';
 
-    // If DATABASE_URL is docker internal placeholder, fallback to SQLite
-    if (dbUrl.includes('@postgres:5432') || !dbUrl) {
-      this.initSqlite('sqlite:///ultron.db');
+    // If DATABASE_URL is docker internal placeholder or SQLite url, initialize SQLite
+    if (dbUrl.startsWith('sqlite://') || !dbUrl || dbUrl.includes('@postgres:5432')) {
+      this.initSqlite(dbUrl || 'sqlite:///ultron.db');
       return;
     }
 
@@ -70,14 +70,14 @@ export class DatabaseAdapter {
           connectionString: dbUrl,
           max: poolSize,
           idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 5000,
-          ssl: (dbUrl.includes('supabase') || dbUrl.includes('pooler')) ? { rejectUnauthorized: false } : undefined,
+          connectionTimeoutMillis: 10000,
+          ssl: { rejectUnauthorized: false },
         });
         this.engine = 'PostgreSQL';
-        this.dbName = 'postgres_db';
-        console.log(`🔌 DatabaseAdapter: Initialized PostgreSQL connection pool (max: ${poolSize})`);
+        this.dbName = 'supabase_postgres';
+        console.log(`🔌 DatabaseAdapter: Initialized Supabase PostgreSQL connection pool (max: ${poolSize})`);
       } catch (err: any) {
-        console.warn('⚠️ Failed to initialize PostgreSQL pool, falling back to SQLite:', err.message);
+        console.warn('⚠️ Failed to initialize Supabase PostgreSQL pool, falling back to SQLite:', err.message);
         this.initSqlite('sqlite:///ultron.db');
       }
     } else {
@@ -124,6 +124,14 @@ export class DatabaseAdapter {
       let pgSql = sql
         .replace(/INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/gi, 'BIGSERIAL PRIMARY KEY')
         .replace(/PRAGMA\s+[^;]+;?/gi, '');
+
+      // Normalize SQLite INSERT OR IGNORE to Postgres ON CONFLICT DO NOTHING if no conflict clause
+      if (/INSERT\s+OR\s+IGNORE\s+INTO/i.test(pgSql)) {
+        pgSql = pgSql.replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT INTO');
+        if (!/ON\s+CONFLICT/i.test(pgSql)) {
+          pgSql = pgSql.trim().replace(/;?$/, ' ON CONFLICT DO NOTHING;');
+        }
+      }
       
       let index = 1;
       return pgSql.replace(/\?/g, () => `$${index++}`);
