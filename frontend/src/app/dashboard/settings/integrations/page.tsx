@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Key, CheckCircle2, XCircle, RefreshCw, Plus, Eye, EyeOff, Zap, Copy, Check, ExternalLink, ShieldCheck } from "lucide-react";
+import { Key, CheckCircle2, XCircle, RefreshCw, Plus, Eye, EyeOff, Zap, Copy, Check, ExternalLink, ShieldCheck, Code } from "lucide-react";
 import { api, useAuth } from "../../../../lib/auth";
 
 interface Connection {
@@ -27,10 +27,12 @@ export default function IntegrationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
 
   const tenantId = tenant?.id || user?.tenantId || "your_tenant_id";
   const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || `${window.location.protocol}//${window.location.hostname}:3001`) : "http://localhost:3001";
   const webhookUrl = `${apiBase}/webhooks/razorpay/${tenantId}`;
+  const scriptTag = `<script src="${apiBase}/sdk/ultron.js" data-api-key="YOUR_ULTRON_API_KEY" defer></script>`;
 
   const fetchConnections = async () => {
     setLoading(true);
@@ -50,6 +52,12 @@ export default function IntegrationsPage() {
     navigator.clipboard.writeText(webhookUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(scriptTag);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2500);
   };
 
   const handleConnect = async (e: React.FormEvent) => {
@@ -146,6 +154,45 @@ export default function IntegrationsPage() {
               </span>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Zero-Code Frontend Script Tag Card */}
+      <div className="card" style={{ padding: 20, background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.2)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div>
+            <h2 style={{ fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+              <Code size={16} color="var(--violet)" />
+              Zero-Code Drop-In Client Script (Any Webpage)
+            </h2>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              Paste this 1-line script tag into the HTML <code>&lt;head&gt;</code> or footer of <strong>any website</strong> (Shopify, WordPress, Webflow, Custom HTML/React).
+              It automatically hooks into <code>window.Razorpay</code> and streams failed payments to ULTRON without touching backend code or env variables.
+            </p>
+          </div>
+        </div>
+
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "10px 14px", borderRadius: 8,
+          background: "var(--bg-card)", border: "1px solid var(--border)",
+          fontFamily: "monospace", fontSize: 12, color: "var(--text-primary)",
+          overflowX: "auto"
+        }}>
+          <span style={{ flex: 1, wordBreak: "break-all" }}>{scriptTag}</span>
+          <button 
+            type="button"
+            className="btn btn-ghost" 
+            onClick={handleCopyScript}
+            style={{ padding: "6px 12px", fontSize: 12, gap: 6, flexShrink: 0 }}
+          >
+            {copiedScript ? <Check size={14} color="var(--emerald)" /> : <Copy size={14} />}
+            {copiedScript ? "Copied!" : "Copy Tag"}
+          </button>
+        </div>
+
+        <div style={{ marginTop: 12, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5 }}>
+          💡 <em>Tip: Replace <code>YOUR_ULTRON_API_KEY</code> with an API Key generated in <strong>Settings → API Keys</strong>.</em>
         </div>
       </div>
 

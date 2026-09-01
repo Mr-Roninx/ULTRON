@@ -16,6 +16,7 @@ import { integrationsRouter } from './routes/integrations.js';
 import { authRouter } from './routes/auth.js';
 import { apiKeysRouter } from './routes/api_keys.js';
 import { auditRouter } from './routes/audit.js';
+import { sdkRouter } from './routes/sdk.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -326,6 +327,10 @@ app.use('/v1/api-keys', apiKeysRouter);
 
 // Audit & Ledger Logs
 app.use('/audit', authenticateJWT, auditRouter);
+
+// Zero-Code Drop-In Client SDK
+app.use('/sdk', sdkRouter);
+app.use('/ultron.js', sdkRouter);
 
 // Start server if run directly
 const isDirectRun = process.argv[1] && (
