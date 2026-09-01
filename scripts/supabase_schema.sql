@@ -1,5 +1,6 @@
 -- ====================================================================
 -- ULTRON: Supabase PostgreSQL Complete Enterprise Schema
+-- Safe, Idempotent, Migration-Resilient Schema Script
 -- Execute this script in your Supabase Project -> SQL Editor
 -- ====================================================================
 
@@ -110,8 +111,6 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
-
 -- 8. Recovery Opportunities Table
 CREATE TABLE IF NOT EXISTS recovery_opportunities (
   id TEXT PRIMARY KEY,
@@ -133,11 +132,6 @@ CREATE TABLE IF NOT EXISTS recovery_opportunities (
   raw_payload_ref TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_opps_tenant ON recovery_opportunities(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_opps_status ON recovery_opportunities(status);
-CREATE INDEX IF NOT EXISTS idx_opps_created ON recovery_opportunities(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_opps_customer ON recovery_opportunities(customer_id);
-
 -- 9. Scores Table (1:1 with Opportunity)
 CREATE TABLE IF NOT EXISTS scores (
   opportunity_id TEXT PRIMARY KEY REFERENCES recovery_opportunities(id) ON DELETE CASCADE,
@@ -151,8 +145,6 @@ CREATE TABLE IF NOT EXISTS scores (
   confidence TEXT NOT NULL CHECK(confidence IN ('low', 'medium', 'high'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_scores_tenant ON scores(tenant_id);
-
 -- 10. Allocation Decisions Table (1:1 with Opportunity)
 CREATE TABLE IF NOT EXISTS allocation_decisions (
   opportunity_id TEXT PRIMARY KEY REFERENCES recovery_opportunities(id) ON DELETE CASCADE,
@@ -162,8 +154,6 @@ CREATE TABLE IF NOT EXISTS allocation_decisions (
   shadow_price_paise_at_decision BIGINT NOT NULL,
   reason TEXT NOT NULL
 );
-
-CREATE INDEX IF NOT EXISTS idx_alloc_tenant ON allocation_decisions(tenant_id);
 
 -- 11. Authority Checks Table (Many:1 with Opportunity)
 CREATE TABLE IF NOT EXISTS authority_checks (
@@ -175,9 +165,6 @@ CREATE TABLE IF NOT EXISTS authority_checks (
   reason TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_authority_opp ON authority_checks(opportunity_id);
-CREATE INDEX IF NOT EXISTS idx_authority_tenant ON authority_checks(tenant_id);
-
 -- 12. Execution Records Table (1:1 with Opportunity)
 CREATE TABLE IF NOT EXISTS execution_records (
   opportunity_id TEXT PRIMARY KEY REFERENCES recovery_opportunities(id) ON DELETE CASCADE,
@@ -188,8 +175,6 @@ CREATE TABLE IF NOT EXISTS execution_records (
   idempotency_key TEXT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_exec_tenant ON execution_records(tenant_id);
 
 -- 13. Ledger Entries Table (Append-only)
 CREATE TABLE IF NOT EXISTS ledger_entries (
@@ -203,9 +188,6 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
   timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   raw_payload_ref TEXT
 );
-
-CREATE INDEX IF NOT EXISTS idx_ledger_opp ON ledger_entries(opportunity_id);
-CREATE INDEX IF NOT EXISTS idx_ledger_tenant ON ledger_entries(tenant_id);
 
 -- 14. Audit Records Table (Immutable Compliance Audit Trail)
 CREATE TABLE IF NOT EXISTS audit_records (
@@ -221,9 +203,6 @@ CREATE TABLE IF NOT EXISTS audit_records (
   timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_records(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_records(timestamp DESC);
-
 -- 15. Sessions Table (Stateful User & API Sessions)
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
@@ -238,10 +217,66 @@ CREATE TABLE IF NOT EXISTS sessions (
   revoked_at TIMESTAMPTZ
 );
 
+-- ====================================================================
+-- Column Migration & Compatibility Safeguard
+-- Ensures all columns exist regardless of previous schema runs
+-- ====================================================================
+DO $$ 
+BEGIN
+  -- customers
+  ALTER TABLE customers ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+  ALTER TABLE customers ADD COLUMN IF NOT EXISTS merchant_id TEXT NOT NULL DEFAULT 'merchant_default';
+  ALTER TABLE customers ADD COLUMN IF NOT EXISTS trust_score REAL NOT NULL DEFAULT 0.65;
+  ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+  -- recovery_opportunities
+  ALTER TABLE recovery_opportunities ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+  ALTER TABLE recovery_opportunities ADD COLUMN IF NOT EXISTS merchant_id TEXT NOT NULL DEFAULT 'merchant_default';
+  ALTER TABLE recovery_opportunities ADD COLUMN IF NOT EXISTS razorpay_event_id TEXT;
+  ALTER TABLE recovery_opportunities ADD COLUMN IF NOT EXISTS raw_payload_ref TEXT;
+
+  -- scores
+  ALTER TABLE scores ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+
+  -- allocation_decisions
+  ALTER TABLE allocation_decisions ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+
+  -- authority_checks
+  ALTER TABLE authority_checks ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+
+  -- execution_records
+  ALTER TABLE execution_records ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+
+  -- ledger_entries
+  ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+
+  -- audit_records
+  ALTER TABLE audit_records ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';
+END $$;
+
+-- ====================================================================
+-- Indexes for High Performance & Multitenant Isolation
+-- ====================================================================
+CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_opps_tenant ON recovery_opportunities(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_opps_status ON recovery_opportunities(status);
+CREATE INDEX IF NOT EXISTS idx_opps_created ON recovery_opportunities(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_opps_customer ON recovery_opportunities(customer_id);
+CREATE INDEX IF NOT EXISTS idx_scores_tenant ON scores(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_alloc_tenant ON allocation_decisions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_authority_opp ON authority_checks(opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_authority_tenant ON authority_checks(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_exec_tenant ON execution_records(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_opp ON ledger_entries(opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_tenant ON ledger_entries(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_records(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_records(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 
+-- ====================================================================
 -- 16. Agent System Tables
+-- ====================================================================
 CREATE TABLE IF NOT EXISTS agent_runs (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
@@ -427,15 +462,31 @@ CREATE TABLE IF NOT EXISTS perception_annotations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Realtime Publications for Live UI
+-- ====================================================================
+-- Realtime Publications for Live Control Plane UI
+-- ====================================================================
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
     CREATE PUBLICATION supabase_realtime;
   END IF;
-END $$;
 
-ALTER PUBLICATION supabase_realtime ADD TABLE recovery_opportunities;
-ALTER PUBLICATION supabase_realtime ADD TABLE ledger_entries;
-ALTER PUBLICATION supabase_realtime ADD TABLE allocation_decisions;
-ALTER PUBLICATION supabase_realtime ADD TABLE execution_records;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'recovery_opportunities') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE recovery_opportunities;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'ledger_entries') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE ledger_entries;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'allocation_decisions') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE allocation_decisions;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'execution_records') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE execution_records;
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END $$;
