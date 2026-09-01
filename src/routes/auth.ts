@@ -209,6 +209,60 @@ authRouter.get(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PATCH /v1/auth/tenant
+// Updates tenant configuration (name, capacity_limit, environment).
+// ─────────────────────────────────────────────────────────────────────────────
+authRouter.patch(
+  '/tenant',
+  TenancyEnforcer.authenticateTenant(),
+  async (req: TenantScopedRequest, res: Response): Promise<void> => {
+    try {
+      const ctx = req.tenantContext!;
+      const { name, capacity_limit, environment } = req.body;
+      const db = DatabaseAdapter.getInstance();
+
+      const updates: string[] = [];
+      const params: any[] = [];
+
+      if (name !== undefined) {
+        updates.push('name = ?');
+        params.push(String(name).trim());
+      }
+      if (capacity_limit !== undefined) {
+        const limit = Math.max(1, Math.min(100, Number(capacity_limit)));
+        updates.push('capacity_limit = ?');
+        params.push(limit);
+      }
+      if (environment !== undefined && (environment === 'test' || environment === 'live')) {
+        updates.push('environment = ?');
+        params.push(environment);
+      }
+
+      if (updates.length > 0) {
+        params.push(ctx.tenantId);
+        await db.execute(
+          `UPDATE tenants SET ${updates.join(', ')} WHERE id = ?;`,
+          params
+        );
+      }
+
+      const tenants = await db.query<any>(
+        `SELECT id, name, slug, environment, status, capacity_limit, kill_switch_active FROM tenants WHERE id = ?;`,
+        [ctx.tenantId]
+      );
+
+      res.json({
+        success: true,
+        message: 'Tenant settings updated successfully.',
+        tenant: tenants[0] || { id: ctx.tenantId },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to update tenant settings', details: err.message });
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POST /v1/auth/refresh
 // Refreshes an expiring session without requiring re-login.
 // ─────────────────────────────────────────────────────────────────────────────
