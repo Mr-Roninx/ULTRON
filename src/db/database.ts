@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
 import {
   RecoveryOpportunity,
   Score,
@@ -28,7 +29,25 @@ import {
 
 const DB_PATH = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'ultron.db');
 
-export const db = new DatabaseSync(DB_PATH);
+function createDatabaseInstance(): DatabaseSync {
+  try {
+    const dir = path.dirname(DB_PATH);
+    if (dir && !fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return new DatabaseSync(DB_PATH);
+  } catch (err: any) {
+    console.warn(`⚠️ SQLite file '${DB_PATH}' could not be opened (${err.message}). Falling back to /tmp/ultron.db...`);
+    try {
+      return new DatabaseSync('/tmp/ultron.db');
+    } catch {
+      console.warn('⚠️ Falling back to in-memory SQLite database (:memory:)...');
+      return new DatabaseSync(':memory:');
+    }
+  }
+}
+
+export const db = createDatabaseInstance();
 
 export function initDatabase(): void {
   // Enable WAL mode & foreign keys

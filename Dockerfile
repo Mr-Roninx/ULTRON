@@ -30,9 +30,11 @@ ENV PORT=3001
 ENV DATABASE_URL=postgres://ultron:ultron_secure_password@postgres:5432/ultron_db
 ENV REDIS_URL=redis://redis:6379
 
-# Create non-root system user and group
+# Create non-root system user and group and writable data directory
 RUN addgroup -S -g 1001 ultron && \
-    adduser -S -u 1001 -G ultron ultron
+    adduser -S -u 1001 -G ultron ultron && \
+    mkdir -p /app/data && \
+    chown -R ultron:ultron /app
 
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
@@ -40,6 +42,11 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy compiled files and migrations
 COPY --from=builder --chown=ultron:ultron /app/dist ./dist
 COPY --from=builder --chown=ultron:ultron /app/package.json ./
+
+ENV DATABASE_PATH=/app/data/ultron.db
+
+# Ensure all files in /app are owned by ultron
+RUN chown -R ultron:ultron /app
 
 # Switch to non-root user
 USER ultron
