@@ -10,6 +10,12 @@ import { marketRouter } from './routes/market.js';
 import { authorityRouter } from './routes/authority.js';
 import { executionRouter } from './routes/execution.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { agentsRouter } from './routes/agents.js';
+import { eventsRouter } from './routes/events.js';
+import { integrationsRouter } from './routes/integrations.js';
+import { authRouter } from './routes/auth.js';
+import { apiKeysRouter } from './routes/api_keys.js';
+import { auditRouter } from './routes/audit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,52 +29,140 @@ initDatabase();
 export const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middlewares
-app.use(cors());
+import helmet from 'helmet';
+import { DistributedRateLimiter } from './cache/rate_limiter.js';
+import { authenticateJWT } from './security/auth.js';
+import { DatabaseAdapter } from './db/adapter.js';
+import { CacheManager } from './cache/redis.js';
+import { isKillSwitchActive } from './authority/gate.js';
+import { auditLogger } from './middleware/audit_logger.js';
 
-// Capture raw body for HMAC signature verification
+// Middlewares
+// 1. Helmet Security Headers (HSTS, CSP, X-Frame-Options)
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // allow local React/Next.js dashboard embedding
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+// 2. Strict CORS Origin Allowlist
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'test') {
+        callback(null, true);
+      } else {
+        callback(new Error('Blocked by CORS policy'));
+      }
+    },
+    credentials: true,
+  })
+);
+
+// 3. Tiered Rate Limiting Middleware
+const createRateLimitMiddleware = (tier: string, maxReq: number, windowSec: number) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const limitKey = `ratelimit:${tier}:${clientIp}`;
+    const result = await DistributedRateLimiter.checkLimit(limitKey, maxReq, windowSec);
+
+    res.setHeader('X-RateLimit-Limit', maxReq);
+    res.setHeader('X-RateLimit-Remaining', result.remaining);
+    res.setHeader('X-RateLimit-Reset', result.resetSeconds);
+
+    if (!result.allowed) {
+      res.status(429).json({
+        error: 'Too Many Requests',
+        message: `Rate limit exceeded for ${tier}. Try again in ${result.resetSeconds}s.`,
+      });
+      return;
+    }
+    next();
+  };
+};
+
+// Rate Limiters per Tier
+const webhookLimiter = createRateLimitMiddleware('webhook', 100, 60);
+const executionLimiter = createRateLimitMiddleware('execution', 10, 60);
+const generalLimiter = createRateLimitMiddleware('general', 120, 60);
+
+// Capture raw body for HMAC signature verification (Max 1MB)
 app.use(
   express.json({
+    limit: '1mb',
     verify: (req: any, _res, buf) => {
       req.rawBody = buf.toString('utf-8');
     },
   })
 );
 
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(generalLimiter);
 
-// Health Check
+// Health Check with Connection Pool Metrics & Cache Telemetry
 app.get('/health', (_req, res) => {
+  const dbAdapter = DatabaseAdapter.getInstance();
+  const cacheManager = CacheManager.getInstance();
+
   res.json({
     status: 'healthy',
     system: 'ULTRON Autonomous Economic Control Plane',
-    mode: 'Razorpay Test Mode',
+    mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development / Test Mode',
+    kill_switch_active: isKillSwitchActive(),
+    database: dbAdapter.getPoolMetrics(),
+    cache: cacheManager.getStatus(),
     timestamp: new Date().toISOString(),
   });
 });
 
-// Real Webhook endpoint (verified against secret, labels records source='real')
-app.post('/webhooks/razorpay', handleRazorpayWebhook);
+// Real Webhook endpoint (verified against tenant-specific secret, labels records source='real')
+app.post('/webhooks/razorpay/:tenant_id', webhookLimiter, handleRazorpayWebhook);
 
 // Simulation Webhook endpoint (for tests/demo simulation, labels records source='synthetic' unconditionally)
 if (process.env.ALLOW_TEST_INGESTION !== 'false') {
-  app.post('/internal/simulate-webhook', handleSimulatedWebhook);
+  app.post('/internal/simulate-webhook/:tenant_id', webhookLimiter, handleSimulatedWebhook);
+  app.post('/internal/simulate-webhook', webhookLimiter, handleSimulatedWebhook); // legacy route for existing tests
 }
 
 // Opportunities endpoints
-app.use('/opportunities', opportunitiesRouter);
+app.use('/opportunities', authenticateJWT, auditLogger('access_opportunities', 'opportunities'), opportunitiesRouter);
 
 // Recovery Market endpoints (Feature 4)
-app.use('/market', marketRouter);
+app.use('/market', authenticateJWT, auditLogger('access_market', 'market'), marketRouter);
 
 // Action Authority endpoints (Feature 5)
-app.use('/authority', authorityRouter);
+app.use('/authority', authenticateJWT, auditLogger('access_authority', 'authority'), authorityRouter);
 
-// Execution endpoints (Feature 6)
-app.use('/execution', executionRouter);
+// Execution endpoints (Feature 6 with strict rate limiter)
+app.use('/execution', authenticateJWT, auditLogger('access_execution', 'execution'), executionLimiter, executionRouter);
 
 // Dashboard endpoints (Feature 7)
-app.use('/dashboard', dashboardRouter);
+app.use('/dashboard', authenticateJWT, dashboardRouter);
+
+// Agent Control Plane endpoints (ULTRON AI Agent)
+app.use('/agents', authenticateJWT, agentsRouter);
+
+// Canonical Event Ingestion Gateway (v6)
+app.use('/v1/events', eventsRouter);
+
+// Provider Integration & Capability Discovery (v6)
+app.use('/v1/integrations', integrationsRouter);
+
+// Authentication & Merchant Onboarding (v6)
+app.use('/v1/auth', authRouter);
+
+// API Key Management (v6)
+app.use('/v1/api-keys', apiKeysRouter);
+
+// Audit & Ledger Logs
+app.use('/audit', authenticateJWT, auditRouter);
 
 // Start server if run directly
 if (process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {

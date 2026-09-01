@@ -1,0 +1,186 @@
+{
+  "timestamp": "2026-09-01T12:50:00.000Z",
+  "phase": 2,
+  "governing_specification": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md",
+  "status": "PHASE_2_COMPLETE_PENDING_REVIEW",
+  "hierarchy_rule": "PROVIDER_TRUTH > AUTHORITATIVE_RECONCILIATION > LOCAL_FINANCIAL_STATE",
+  "key_invariant": "LINK_CREATED != RECOVERED",
+  "canonical_states": [
+    {
+      "state": "PENDING",
+      "type": "TRANSIENT",
+      "description": "Initial state upon ingestion of payment failure event.",
+      "allowed_next_states": ["SCORED", "BLOCKED", "DEFERRED", "ABSTAINED"],
+      "source_reference": "src/types/index.ts#L6"
+    },
+    {
+      "state": "SCORED",
+      "type": "TRANSIENT",
+      "description": "Economic evaluation complete; IVEN, ΔP, and confidence calculated.",
+      "allowed_next_states": ["ALLOCATED", "DEFERRED", "ABSTAINED", "BLOCKED"],
+      "source_reference": "src/types/index.ts#L7"
+    },
+    {
+      "state": "ALLOCATED",
+      "type": "TRANSIENT",
+      "description": "Opportunity selected by knapsack portfolio optimization within capacity cap.",
+      "allowed_next_states": ["AUTHORIZED", "DEFERRED", "BLOCKED"],
+      "source_reference": "src/types/index.ts#L8"
+    },
+    {
+      "state": "AUTHORIZED",
+      "type": "PRE_EXECUTION_GATE",
+      "description": "Deterministic Action Authority compliance checks (5/5) passed.",
+      "allowed_next_states": ["EXECUTING", "BLOCKED", "ABORTED"],
+      "source_reference": "src/types/index.ts#L9"
+    },
+    {
+      "state": "DEFERRED",
+      "type": "WAIT_QUEUE",
+      "description": "Economically viable opportunity placed in wait state due to portfolio capacity limits.",
+      "allowed_next_states": ["SCORED", "ALLOCATED", "AUTHORIZED", "RECOVERED"],
+      "source_reference": "src/types/index.ts#L10"
+    },
+    {
+      "state": "BLOCKED",
+      "type": "TERMINAL_VETO",
+      "description": "Hard decline code, retry cap limit (>=3), or active kill switch vetoed action.",
+      "allowed_next_states": ["ABORTED"],
+      "source_reference": "src/types/index.ts#L11"
+    },
+    {
+      "state": "ABSTAINED",
+      "type": "TERMINAL_ECONOMIC",
+      "description": "Non-positive expected incremental value (IVEN <= 0) or low confidence.",
+      "allowed_next_states": ["SCORED", "DEFERRED"],
+      "source_reference": "src/types/index.ts#L12"
+    },
+    {
+      "state": "EXECUTING",
+      "type": "IN_FLIGHT",
+      "description": "Executor actively calling Razorpay API with idempotency token.",
+      "allowed_next_states": ["PROVIDER_OBJECT_CREATED", "PAYMENT_PENDING", "PAYMENT_CONFIRMED", "RECOVERED", "FAILED", "NOT_RECOVERED", "EXPIRED", "CANCELLED", "MISMATCH", "UNKNOWN", "ABORTED"],
+      "source_reference": "src/types/index.ts#L13"
+    },
+    {
+      "state": "PROVIDER_OBJECT_CREATED",
+      "type": "ACTIVE_PENDING",
+      "description": "Razorpay payment link object created successfully in provider system.",
+      "allowed_next_states": ["PAYMENT_PENDING", "PAYMENT_CONFIRMED", "RECOVERED", "FAILED", "NOT_RECOVERED", "EXPIRED", "CANCELLED", "MISMATCH", "UNKNOWN"],
+      "source_reference": "src/truth/canonical_state_machine.ts#L22"
+    },
+    {
+      "state": "PAYMENT_PENDING",
+      "type": "ACTIVE_AWAITING_PAYER",
+      "description": "Payment link active and delivered to payer; awaiting settlement.",
+      "allowed_next_states": ["PAYMENT_CONFIRMED", "RECOVERED", "FAILED", "NOT_RECOVERED", "EXPIRED", "CANCELLED", "MISMATCH", "UNKNOWN"],
+      "source_reference": "src/truth/canonical_state_machine.ts#L23"
+    },
+    {
+      "state": "PAYMENT_CONFIRMED",
+      "type": "SETTLEMENT_VERIFIED",
+      "description": "Provider confirmed payment receipt (status='paid'/'captured', amount_paid > 0).",
+      "allowed_next_states": ["RECOVERED"],
+      "source_reference": "src/truth/canonical_state_machine.ts#L24"
+    },
+    {
+      "state": "RECOVERED",
+      "type": "TERMINAL_SETTLED",
+      "description": "Authoritatively reconciled with balanced double-entry ledger entry.",
+      "allowed_next_states": [],
+      "source_reference": "src/types/index.ts#L14"
+    },
+    {
+      "state": "NOT_RECOVERED",
+      "type": "TERMINAL_UNRECOVERED",
+      "description": "Payment link expired or cancelled without settlement.",
+      "allowed_next_states": ["PAYMENT_CONFIRMED", "RECOVERED"],
+      "source_reference": "src/types/index.ts#L15"
+    },
+    {
+      "state": "EXPIRED",
+      "type": "TERMINAL_EXPIRED",
+      "description": "Provider payment link reached expiration TTL without payment.",
+      "allowed_next_states": ["NOT_RECOVERED"],
+      "source_reference": "src/truth/canonical_state_machine.ts#L28"
+    },
+    {
+      "state": "CANCELLED",
+      "type": "TERMINAL_CANCELLED",
+      "description": "Provider payment link was cancelled by merchant/system.",
+      "allowed_next_states": ["NOT_RECOVERED"],
+      "source_reference": "src/truth/canonical_state_machine.ts#L29"
+    },
+    {
+      "state": "MISMATCH",
+      "type": "QUARANTINED",
+      "description": "Amount paid is less than required total amount; quarantined from revenue.",
+      "allowed_next_states": ["RECOVERED", "FAILED", "NOT_RECOVERED"],
+      "source_reference": "src/truth/canonical_state_machine.ts#L31"
+    },
+    {
+      "state": "UNKNOWN",
+      "type": "QUARANTINED",
+      "description": "Ambiguous provider status or temporary network timeout; quarantined without guessing.",
+      "allowed_next_states": ["PAYMENT_CONFIRMED", "RECOVERED", "FAILED", "NOT_RECOVERED", "EXPIRED", "CANCELLED"],
+      "source_reference": "src/truth/canonical_state_machine.ts#L32"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "SCENARIO_1_STANDARD_RECOVERY",
+      "name": "Native Failure to Autonomous Recovery Settlement",
+      "events": [
+        "payment.failed (Razorpay webhook)",
+        "paymentLink.create (Razorpay API write)",
+        "payment_link.paid (Razorpay webhook)",
+        "paymentLink.fetch (Razorpay API read)",
+        "Double-Entry Ledger Append (Debit: bank_settlement, Credit: recovered_revenue)"
+      ]
+    },
+    {
+      "id": "SCENARIO_2_HARD_DECLINE_VETO",
+      "name": "Hard Fraud/Stolen Decline Veto",
+      "events": [
+        "payment.failed (error_code: bad_request_payment_card_stolen_or_lost)",
+        "Perception Taxonomy: hard decline",
+        "Action Authority Check 1: FAIL",
+        "Status: BLOCKED (Zero provider write)"
+      ]
+    },
+    {
+      "id": "SCENARIO_3_LINK_EXPIRATION",
+      "name": "Payment Link Expiration without Settlement",
+      "events": [
+        "payment_link.expired (Razorpay webhook)",
+        "ProviderTruthEvaluator: EXPIRED",
+        "Status: NOT_RECOVERED (Zero ledger revenue)"
+      ]
+    },
+    {
+      "id": "SCENARIO_4_PARTIAL_PAYMENT_MISMATCH",
+      "name": "Partial Payment Quarantined Mismatch",
+      "events": [
+        "payment_link.paid (amount_paid < amount)",
+        "CanonicalStateMachine: MISMATCH",
+        "Reconciliation Divergence: AMOUNT_OR_STATE_MISMATCH",
+        "Status: Quarantined (Zero false revenue credited)"
+      ]
+    }
+  ],
+  "correlation_and_deduplication": {
+    "inbound_webhook": {
+      "primary_key": "event_id",
+      "fallback_key": "payment_id",
+      "action": "Return 200 OK deduplicated: true without reprocessing"
+    },
+    "execution_idempotency": {
+      "key": "idempotency_key = ref_${opportunity_id}",
+      "action": "Return existing payment link record without second API call"
+    },
+    "cross_stream_dedup": {
+      "composite_key": "(environment, provider, provider_payment_id)",
+      "provisional_handling": "Hold event as PROVISIONAL until Razorpay payment_id arrives"
+    }
+  }
+}

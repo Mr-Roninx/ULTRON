@@ -43,22 +43,44 @@ export function verifyWebhookSignature(
  * NOTE: This endpoint accepts deliveries verified against RAZORPAY_WEBHOOK_SECRET.
  * Every failed payment ingested here is assigned source='real'.
  */
-export function handleRazorpayWebhook(req: Request, res: Response): void {
+import { WebhookValidator } from '../security/webhook_validator.js';
+import { RazorpayConnectionService } from '../providers/razorpay/connection_service.js';
+
+export async function handleRazorpayWebhook(req: Request, res: Response): Promise<void> {
   try {
+    const tenantId = req.params.tenant_id;
+    if (!tenantId) {
+      res.status(400).json({ error: 'Missing tenant_id in webhook URL' });
+      return;
+    }
+
     const signature = req.headers['x-razorpay-signature'] as string | undefined;
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-
-    // Verify HMAC signature against raw payload
+    const timestamp = req.headers['x-razorpay-event-timestamp'] as string | undefined;
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-    const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
+    const eventId = req.body?.event_id || req.body?.payload?.payment?.entity?.id;
 
-    if (!isValid) {
-      res.status(400).json({ error: 'Invalid webhook signature' });
+    // Fetch tenant's webhook secrets (try 'live' first, then 'test' if needed)
+    // For now we assume test environment since this is ULTRON's test focus, but in prod we'd check both
+    const env = (req.body?.payload?.payment?.entity?.environment === 'live') ? 'live' : 'test';
+    const webhookSecrets = await RazorpayConnectionService.getWebhookSecrets(tenantId, env);
+
+    const validation = await WebhookValidator.validateWebhook({
+      tenantId,
+      webhookSecrets,
+      clientIp,
+      rawBody,
+      signatureHeader: signature,
+      timestampHeader: timestamp,
+      eventId: eventId,
+    });
+
+    if (!validation.valid) {
+      res.status(validation.status_code).json({ error: validation.error_reason });
       return;
     }
 
     const payload = req.body;
-    const eventId: string | undefined = payload?.event_id || payload?.id;
     const eventName: string | undefined = payload?.event;
 
     // Deduplication check by eventId
@@ -188,7 +210,7 @@ export function handleRazorpayWebhook(req: Request, res: Response): void {
       }
 
       // Run Perception Normalization (source='real')
-      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'real' });
+      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'real', tenantId });
 
       // Insert normalized opportunity
       insertOpportunity(opportunity);
@@ -232,14 +254,34 @@ export function handleRazorpayWebhook(req: Request, res: Response): void {
  * Isolated Simulation Webhook Handler (Test Traffic Only).
  * Explicitly marks all ingested opportunities as source='synthetic' unconditionally.
  */
-export function handleSimulatedWebhook(req: Request, res: Response): void {
+export async function handleSimulatedWebhook(req: Request, res: Response): Promise<void> {
   try {
     const signature = req.headers['x-razorpay-signature'] as string | undefined;
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    // Extract tenant_id from simulated request params or fallback to system default
+    const tenantId = req.params.tenant_id || 'tenant_system_default';
+    const webhookSecrets = await RazorpayConnectionService.getWebhookSecrets(tenantId, 'test');
+    
+    // In simulated test routes without explicit webhook setup, we use the fallback
+    if (webhookSecrets.length === 0 && process.env.RAZORPAY_WEBHOOK_SECRET === 'rzp_whsec_ultron_test') {
+      webhookSecrets.push('rzp_whsec_ultron_test');
+    }
 
     // Verify HMAC signature against raw payload
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-    const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
+
+    if (!signature || webhookSecrets.length === 0) {
+      res.status(400).json({ error: 'Missing signature or no webhook secrets configured' });
+      return;
+    }
+
+    let isValid = false;
+    for (const secret of webhookSecrets) {
+      if (verifyWebhookSignature(rawBody, signature, secret)) {
+        isValid = true;
+        break;
+      }
+    }
 
     if (!isValid) {
       res.status(400).json({ error: 'Invalid simulated webhook signature' });
@@ -334,7 +376,7 @@ export function handleSimulatedWebhook(req: Request, res: Response): void {
       }
 
       // Run Perception Normalization with source='synthetic' unconditionally
-      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'synthetic' });
+      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'synthetic', tenantId });
 
       // Insert synthetic opportunity
       insertOpportunity(opportunity);

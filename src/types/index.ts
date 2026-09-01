@@ -45,6 +45,7 @@ export interface RecoveryOpportunity {
   customer_trust_score: number;
   created_at: string;
   status: OpportunityStatus;
+  tenant_id?: string;
   razorpay_event_id?: string | null;
   raw_payload_ref?: string | null;
 }

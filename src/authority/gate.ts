@@ -14,17 +14,39 @@ import {
   getAllocationDecisionByOpportunityId,
 } from '../db/database.js';
 import { runMarketAllocation } from '../market/allocator.js';
+import { scoreOpportunity } from '../economics/scorer.js';
 
-// Global Kill Switch State
+// Multi-Level Kill Switch State
 let isGlobalKillSwitchActive = false;
+const tenantKillSwitches = new Map<string, boolean>();
+const providerKillSwitches = new Map<string, boolean>();
 
-export function isKillSwitchActive(): boolean {
-  return isGlobalKillSwitchActive;
+export function isKillSwitchActive(tenantId?: string, provider?: string): boolean {
+  if (isGlobalKillSwitchActive) return true;
+  if (tenantId && tenantKillSwitches.get(tenantId) === true) return true;
+  if (provider && providerKillSwitches.get(provider) === true) return true;
+  return false;
 }
 
 export function setKillSwitch(enabled: boolean): boolean {
   isGlobalKillSwitchActive = Boolean(enabled);
   return isGlobalKillSwitchActive;
+}
+
+export function setTenantKillSwitch(tenantId: string, enabled: boolean): boolean {
+  tenantKillSwitches.set(tenantId, Boolean(enabled));
+  return Boolean(enabled);
+}
+
+export function setProviderKillSwitch(provider: string, enabled: boolean): boolean {
+  providerKillSwitches.set(provider, Boolean(enabled));
+  return Boolean(enabled);
+}
+
+export function resetAllKillSwitches(): void {
+  isGlobalKillSwitchActive = false;
+  tenantKillSwitches.clear();
+  providerKillSwitches.clear();
 }
 
 export interface AuthorityEvaluationResult {
@@ -39,9 +61,18 @@ export interface AuthorityEvaluationResult {
  */
 export function evaluateOpportunity(
   opp: RecoveryOpportunity,
-  decision: AllocationDecision,
-  score: Score
+  decision?: AllocationDecision,
+  score?: Score
 ): AuthorityEvaluationResult {
+  const effectiveScore = score || getScoreByOpportunityId(opp.id) || scoreOpportunity(opp);
+  const effectiveDecision = decision || getAllocationDecisionByOpportunityId(opp.id) || {
+    opportunity_id: opp.id,
+    decision: 'ACT',
+    rank_in_batch: 1,
+    shadow_price_paise_at_decision: 0,
+    reason: 'Default evaluation',
+  };
+
   const checks: AuthorityCheck[] = [];
 
   // Check 1: Hard Decline Check
@@ -96,7 +127,7 @@ export function evaluateOpportunity(
   }
 
   // Check 4: Confidence Recheck
-  if (score.confidence === 'low') {
+  if (effectiveScore.confidence === 'low') {
     checks.push({
       opportunity_id: opp.id,
       check_name: 'confidence_recheck',
@@ -108,24 +139,24 @@ export function evaluateOpportunity(
       opportunity_id: opp.id,
       check_name: 'confidence_recheck',
       passed: true,
-      reason: `confidence level is sufficient (${score.confidence})`,
+      reason: `confidence level is sufficient (${effectiveScore.confidence})`,
     });
   }
 
   // Check 5: Capacity Recheck
-  if (decision.decision !== 'ACT') {
+  if (effectiveDecision.decision !== 'ACT') {
     checks.push({
       opportunity_id: opp.id,
       check_name: 'capacity_recheck',
       passed: false,
-      reason: `not within active market allocation batch (market status: ${decision.decision})`,
+      reason: `not within active market allocation batch (market status: ${effectiveDecision.decision})`,
     });
   } else {
     checks.push({
       opportunity_id: opp.id,
       check_name: 'capacity_recheck',
       passed: true,
-      reason: `allocated in current active batch (rank #${decision.rank_in_batch})`,
+      reason: `allocated in current active batch (rank #${effectiveDecision.rank_in_batch})`,
     });
   }
 

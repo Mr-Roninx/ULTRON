@@ -13,33 +13,32 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **Feature 5: Action Authority** (Completed)
 - [x] **Feature 6: Execution** (Completed)
 - [x] **Feature 7: Truth Engine + Dashboard** (Completed)
+- [x] **ULTRON v5.0: AI Agent Control Plane & Evidence Hardening** (Completed & Audited)
+- [x] **ULTRON v5.1 — Step 1: Portfolio Intelligence & Multi-Opportunity Autonomy** (Completed & Verified)
+- [x] **ULTRON v5.1 — Steps 4 & 5: Concurrency Coordination & Replay Fingerprinting** (Completed & Verified)
+- [x] **ULTRON v5.1 — Step 6: Expanded Causal Benchmark Suite & Statistical Verification** (Completed & Verified)
+- [x] **ULTRON v5.1 — Steps 7 & 8: Real-World Razorpay Test Verification & Master Audit Package** (Completed & Verified)
 
 ---
 
-## Feature 7: Truth Engine + Dashboard — Summary
+## ULTRON v5.1 — Final System Summary
 
-### What Was Built
-1. **Truth Engine Dual-Path Reconciliation (`src/reconciliation/poller.ts`, `src/webhooks/razorpay.ts`)**:
-   - **Webhook Outcome Handlers**: Supports `payment_link.paid`, `payment_link.expired`, and `payment_link.cancelled`, automatically updating status to `recovered` / `not_recovered` and inserting immutable audit events to `ledger_entries`.
-   - **Active Fallback Poller (`pollAndReconcile`)**: Proactively queries Razorpay API state via `rzpClient.paymentLink.fetch()` for opportunities in `executing` status to guarantee eventual truth consistency in the presence of dropped/delayed webhooks.
-2. **Dashboard Summary API (`src/routes/dashboard.ts`)**:
-   - `GET /dashboard/summary`: Computes total opportunities, gross amount at risk, **strictly real-only reconciled recovered amount** (never mixing synthetic estimations), shadow price, and capacity utilization metrics.
-3. **Interactive React Single-Page Dashboard (`frontend/src/app/page.tsx`)**:
-   - High-contrast dark-mode interface with glassmorphic styling, live 3-second auto-polling, and real-time status transitions.
-   - **Summary KPI Metric Cards**: Live opportunities count, total amount at risk, real reconciled recovery amount (₹), binding shadow price (₹), and capacity gauge.
-   - **Ranked Opportunity Portfolio Table**: Interactive table with color-coded badges (`recovered`, `executing`, `authorized`, `deferred`, `blocked`, `abstained`), live Razorpay link launchers, and payment simulation helpers.
-   - **Forensic "Why?" Audit Drawer**: Constructed **strictly by reading immutable stored SQLite database records in order**:
-     1. Raw Ingestion Event & Gateway Error Code
-     2. Perception Normalization (Hard/Soft/Unknown taxonomy & Customer Trust Score)
-     3. Economic Reasoning & Costs (labeled **"model-estimated"**)
-     4. Recovery Market Greedy Allocation (decision, rank, marginal shadow price at run)
-     5. Action Authority Compliance Checklist (5 checks with `✓` / `✗` symbols)
-     6. Execution & Truth Engine Ledger Audit Trail (Plink ID, Hosted URL, Chronological Events)
-
-### What Was Verified
-- **Webhook Payment Settlement**: `payment_link.paid` flips opportunity to `recovered` in real-time.
-- **Active Poller**: Fallback poller inspects live Razorpay state and reconciles statuses without errors.
-- **Strict Financial Metric Boundary**: Summary KPI "Total Recovered (Real)" strictly reflects `source = 'real'` reconciled payments and ignores synthetic recoveries.
-- **"Why?" Forensic Stored Audit**: Complete 6-stage audit trail rendered directly from stored SQLite fields without runtime hallucination.
-- **Full End-to-End Test Suite**: 100% passing across all 7 features.
-- **Live Frontend & Backend**: Backend operational on `http://localhost:3001`, Frontend operational on `http://localhost:3000`.
+### What Was Built & Verified
+1. **Multi-Opportunity Portfolio Intelligence**:
+   - `PortfolioAgent`: Composite multi-signal priority scoring (IVEN, urgency, gateway, fatigue, expiry).
+   - `UncertaintyModel`: 3-dimensional confidence quantification (`MODEL`, `DATA`, `ECONOMIC`).
+   - `InformationValueEstimator`: Bounded $\text{EVOI}$ advisory for `ACT`/`WAIT`/`INVESTIGATE`.
+   - `PlanMonitor`: Continuous assumption validation against changing environment conditions.
+2. **Concurrency & Replay Governance**:
+   - `MissionConcurrencyCoordinator`: Parallel execution pool under max concurrency ceiling with per-opportunity locks.
+   - `MissionReplayEngine`: Cryptographic SHA-256 fingerprinting with automated divergence localization.
+3. **Causal Evidence & Statistical Rigor**:
+   - 8 paired causal experiments matrix ($N=5$ seeds each) yielding 100% positive effect validation.
+4. **Live Razorpay Test Mode & Provider Truth**:
+   - Live Razorpay Test Mode execution creating and independently verifying payment links via `rzpClient.paymentLink.fetch()`.
+   - Absolute adherence to Provider Truth invariant: `LINK_CREATED != RECOVERED`.
+5. **Master Verification & Audit Artifacts**:
+   - `ULTRON_V5_1_FINAL_AUDIT.md`
+   - `ULTRON_V5_1_DEMO_RUNBOOK.md`
+   - `results/agent/v51/final_v51_truth.json`
+   - 100% test pass rate across 28 Agent, 5 Core, 3 Infra, and 8 Causal suites.

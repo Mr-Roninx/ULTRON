@@ -1,0 +1,225 @@
+{
+  "timestamp": "2026-09-01T12:40:00.000Z",
+  "phase": 1,
+  "governing_specification": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md",
+  "status": "PHASE_1_COMPLETE_PENDING_REVIEW",
+  "odoox_framework": {
+    "merchant_platform": "OdooX ERP / E-Commerce application",
+    "architecture_role": "External host application initiating native Razorpay payments",
+    "coupling": "Fully decoupled; ULTRON is an external economic control plane layer",
+    "fail_safe_behavior": "If ULTRON is offline or unreachable, OdooX payment flows continue uninterrupted",
+    "source_references": [
+      "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md#L19-L23",
+      "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md#L77-L89"
+    ]
+  },
+  "odoox_razorpay_integration": {
+    "provider": "Razorpay",
+    "api_mode": "Standard API & Checkout Webhook Ingestion",
+    "webhook_endpoint": "/webhooks/razorpay",
+    "signature_algorithm": "HMAC-SHA256",
+    "security_controls": {
+      "ip_allowlist": ["52.66.75.174", "52.66.75.175", "13.235.25.1", "13.235.25.2"],
+      "timestamp_freshness_window_sec": 300,
+      "max_payload_size_bytes": 1048576,
+      "multi_secret_rotation": true
+    },
+    "source_references": [
+      "src/webhooks/razorpay.ts#L48-L237",
+      "src/security/webhook_validator.ts#L11-L247"
+    ]
+  },
+  "flows": {
+    "payment_creation_flow": {
+      "description": "Customer checks out on OdooX; Razorpay creates payment order and provides checkout interface.",
+      "source_references": [
+        "src/perception/normalizer.ts#L174",
+        "src/webhooks/razorpay.ts#L60"
+      ]
+    },
+    "payment_failure_flow": {
+      "description": "Payment fails at gateway; Razorpay delivers payment.failed webhook; ULTRON validates HMAC, classifies decline taxonomy (hard/soft/unknown), updates customer trust score, and creates RecoveryOpportunity with status 'pending'.",
+      "source_references": [
+        "src/webhooks/razorpay.ts#L178-L229",
+        "src/perception/normalizer.ts#L55-L178"
+      ]
+    },
+    "payment_success_flow": {
+      "description": "Customer completes payment via recovery link; Razorpay emits payment_link.paid; AuthoritativeReconciler queries Razorpay API to confirm settlement, updates status to 'recovered', and writes double-entry balanced ledger entry.",
+      "source_references": [
+        "src/webhooks/razorpay.ts#L86-L130",
+        "src/reconciliation/authoritative_reconciler.ts#L30-L357",
+        "src/truth/provider_truth.ts#L36-L130"
+      ]
+    },
+    "webhook_flow": {
+      "description": "Inbound webhook is received, raw body preserved, validated against IP allowlist, timestamp freshness, and HMAC secrets before parsing.",
+      "source_references": [
+        "src/server.ts#L90-L98",
+        "src/webhooks/razorpay.ts#L48-L67",
+        "src/security/webhook_validator.ts#L126-L216"
+      ]
+    }
+  },
+  "identifiers": {
+    "payment_identifiers": [
+      { "name": "payment_id", "example": "pay_TWd8rHL0ewMl51", "source": "src/types/index.ts#L37" },
+      { "name": "razorpay_event_id", "example": "event_NWxyz12345", "source": "src/types/index.ts#L48" },
+      { "name": "razorpay_payment_link_id", "example": "plink_TWcnQZVwogNPop", "source": "src/types/index.ts#L81" },
+      { "name": "order_id", "example": "order_NWabc98765", "source": "src/perception/normalizer.ts#L174" },
+      { "name": "idempotency_key", "example": "ref_rzp_live_test_1788233420739", "source": "src/execution/executor.ts#L132" }
+    ],
+    "customer_identifiers": [
+      { "name": "customer_id", "example": "cust_test_123 / email / phone", "source": "src/types/index.ts#L44" },
+      { "name": "customer_trust_score", "example": 0.65, "source": "src/types/index.ts#L45" }
+    ],
+    "tenancy_identifiers": [
+      { "name": "tenant_id", "example": "tenant_001 / ul_org_xxx", "source": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md#L97" },
+      { "name": "merchant_id", "example": "merchant_default", "source": "src/db/migrations/001_core_schema.ts#L13" }
+    ]
+  },
+  "credential_storage": {
+    "current_v5_state": {
+      "storage_mechanism": "Process environment variables (.env)",
+      "keys": [
+        "RAZORPAY_KEY_ID",
+        "RAZORPAY_KEY_SECRET",
+        "RAZORPAY_WEBHOOK_SECRET",
+        "RAZORPAY_WEBHOOK_SECRETS",
+        "JWT_SECRET",
+        "NVIDIA_API_KEY"
+      ]
+    },
+    "target_v6_model": {
+      "storage_mechanism": "Tenant-scoped credential_reference referencing KMS / encrypted envelope storage",
+      "api_key_format": "ul_live_xxxx / ul_test_xxxx with SHA-256 hashed storage in database",
+      "isolation_rules": "Secrets never exposed to browser frontend, agent context, LLM prompts, or public API responses"
+    }
+  },
+  "database_tables": {
+    "core_financial": [
+      "customers",
+      "recovery_opportunities",
+      "scores",
+      "allocation_decisions",
+      "authority_checks",
+      "execution_records",
+      "ledger_entries"
+    ],
+    "agent_intelligence": [
+      "agent_runs",
+      "agent_states",
+      "agent_steps",
+      "agent_tool_calls",
+      "agent_plans",
+      "agent_hypotheses",
+      "agent_proposals",
+      "agent_memories",
+      "agent_outcomes",
+      "agent_authority_checks",
+      "llm_invocations",
+      "outreach_drafts",
+      "perception_annotations"
+    ],
+    "truth_and_audit": [
+      "double_entry_ledger",
+      "reconciliation_divergences",
+      "webhook_audit_log"
+    ]
+  },
+  "ultron_integration_points": [
+    { "path": "POST /webhooks/razorpay", "purpose": "Direct webhook ingestion from Razorpay", "source": "src/server.ts#L120" },
+    { "path": "POST /v1/events", "purpose": "Target canonical event ingestion API from merchant (OdooX)", "source": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md#L191" },
+    { "path": "GET /opportunities", "purpose": "Query recovery opportunities", "source": "src/routes/opportunities.ts#L14" },
+    { "path": "POST /market/run", "purpose": "Execute knapsack market allocation", "source": "src/routes/market.ts#L12" },
+    { "path": "POST /authority/run", "purpose": "Execute compliance authority gate checks", "source": "src/routes/authority.ts#L13" },
+    { "path": "POST /authority/kill-switch", "purpose": "Toggle emergency kill switch", "source": "src/routes/authority.ts#L42" },
+    { "path": "POST /execution/run", "purpose": "Execute authorized payment link generation", "source": "src/routes/execution.ts#L14" },
+    { "path": "GET /dashboard/summary", "purpose": "Retrieve financial control metrics", "source": "src/routes/dashboard.ts#L13" },
+    { "path": "POST /agents/mission", "purpose": "Dispatch autonomous agent investigation mission", "source": "src/routes/agents.ts#L17" }
+  ],
+  "decision_d5_resolution": {
+    "direct_db_access_necessary": false,
+    "status": "RESOLVED",
+    "rationale": [
+      "Razorpay webhook payloads and HTTP API event ingestion provide 100% of required failure attributes and customer references.",
+      "Settlement truth is governed strictly by Razorpay API verification, never by local merchant database records.",
+      "Zero direct DB coupling ensures complete fault isolation; OdooX payments are unaffected if ULTRON is offline.",
+      "Eliminating DB access adheres to the principle of least privilege and prevents expanding PCI-DSS audit scope."
+    ]
+  },
+  "actual_event_types": {
+    "razorpay_webhooks": [
+      "payment.failed",
+      "payment_link.paid",
+      "payment_link.expired",
+      "payment_link.cancelled",
+      "payment.captured"
+    ],
+    "canonical_odoox_events": [
+      "payment.created",
+      "payment.failed",
+      "payment.captured",
+      "payment.cancelled",
+      "payment.expired"
+    ]
+  },
+  "unresolved_decisions": [
+    {
+      "id": "D1",
+      "title": "Regulatory Posture (PCI-DSS & RBI Data Localization)",
+      "status": "OPEN",
+      "owner": "Legal / Compliance",
+      "impact": "Confirms data localization and tokenized reference handling requirements before Phase 4"
+    },
+    {
+      "id": "D2",
+      "title": "Customer Contact Compliance (Consent & Opt-in Basis)",
+      "status": "OPEN",
+      "owner": "Legal / Product",
+      "impact": "Gates outbound communication channels (SMS/WhatsApp/Email) in outreach_drafts"
+    },
+    {
+      "id": "D3",
+      "title": "Initial Default Safety Ceilings for Pilot Tenant",
+      "status": "OPEN",
+      "owner": "Merchant / Product Owner",
+      "impact": "Sets max_autonomous_recovery_amount, max_actions_per_hour, and human_review_threshold"
+    },
+    {
+      "id": "D4",
+      "title": "Partial-Payment Accounting Semantics",
+      "status": "OPEN",
+      "owner": "Finance / Accounting",
+      "impact": "Defines ledger accounting behavior for partial payment settlements (currently quarantined as MISMATCH)"
+    },
+    {
+      "id": "D6",
+      "title": "Secrets Management Technology at Rest",
+      "status": "OPEN",
+      "owner": "Infrastructure / DevOps",
+      "impact": "Chooses KMS / Vault vs AES-256-GCM encrypted column for tenant credentials"
+    },
+    {
+      "id": "D7",
+      "title": "Dashboard Session Authentication Mechanism",
+      "status": "OPEN",
+      "owner": "Security / Product",
+      "impact": "Chooses JWT session cookies vs OAuth2 / SSO / MFA for Owner/Admin roles"
+    },
+    {
+      "id": "D8",
+      "title": "Currency Scope for v6",
+      "status": "OPEN",
+      "owner": "Product Owner",
+      "impact": "Determines INR-only vs multi-currency schema extension before Phase 3"
+    },
+    {
+      "id": "D9",
+      "title": "Worker Queue & Job Scheduler Technology",
+      "status": "OPEN",
+      "owner": "Infrastructure / Engineering",
+      "impact": "Chooses Redis-backed BullMQ vs in-memory concurrency queue before Phase 3"
+    }
+  ]
+}

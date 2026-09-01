@@ -10,13 +10,15 @@ import {
 } from '../db/database.js';
 import { scoreOpportunity } from '../economics/scorer.js';
 import { evaluateOpportunity } from '../authority/gate.js';
+import { explainOpportunityDecision } from '../llm/explainer.js';
 
 export const opportunitiesRouter = Router();
 
 // GET all opportunities
-opportunitiesRouter.get('/', (_req: Request, res: Response) => {
+opportunitiesRouter.get('/', (req: Request, res: Response) => {
   try {
-    const opportunities = getAllOpportunities();
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const opportunities = getAllOpportunities(tenantId);
     res.json({
       count: opportunities.length,
       opportunities,
@@ -28,9 +30,10 @@ opportunitiesRouter.get('/', (_req: Request, res: Response) => {
 });
 
 // POST score all opportunities
-opportunitiesRouter.post('/score-all', (_req: Request, res: Response) => {
+opportunitiesRouter.post('/score-all', (req: Request, res: Response) => {
   try {
-    const opportunities = getAllOpportunities();
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const opportunities = getAllOpportunities(tenantId);
     const scoredList = opportunities.map((opp) => scoreOpportunity(opp));
     res.json({
       success: true,
@@ -208,3 +211,51 @@ opportunitiesRouter.get('/:id', (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch opportunity' });
   }
 });
+
+// GET / POST single opportunity AI explanation (NVIDIA NIM GPT-OSS-120B)
+const handleExplainRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const oppId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!oppId) {
+      res.status(400).json({ error: 'Missing opportunity ID' });
+      return;
+    }
+
+    const opp = getOpportunityById(oppId);
+    if (!opp) {
+      res.status(404).json({ error: 'Opportunity not found' });
+      return;
+    }
+
+    let score = getScoreByOpportunityId(oppId);
+    if (!score) score = scoreOpportunity(opp);
+
+    let decision = getAllocationDecisionByOpportunityId(oppId);
+    let checks = getAuthorityChecksByOpportunityId(oppId);
+
+    if (!decision || checks.length === 0) {
+      const evalResult = evaluateOpportunity(
+        opp,
+        decision || {
+          opportunity_id: oppId,
+          decision: 'WAIT',
+          rank_in_batch: 999,
+          shadow_price_paise_at_decision: 0,
+          reason: 'Unallocated evaluation',
+        },
+        score
+      );
+      checks = evalResult.checks;
+    }
+
+    const result = await explainOpportunityDecision(opp, score, decision, checks);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to generate opportunity explanation:', error);
+    res.status(500).json({ error: error?.message || 'Failed to generate opportunity explanation' });
+  }
+};
+
+opportunitiesRouter.get('/:id/explain', handleExplainRequest);
+opportunitiesRouter.post('/:id/explain', handleExplainRequest);
+

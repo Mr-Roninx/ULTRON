@@ -1,0 +1,83 @@
+{
+  "timestamp": "2026-09-01T13:26:00.000Z",
+  "phase": 8,
+  "governing_specification": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md",
+  "status": "PHASE_8_COMPLETE",
+  "economic_formulas": {
+    "incremental_probability": "incremental_prob = intervention_recovery_prob - natural_recovery_prob",
+    "iven_paise": "IVEN = (incremental_prob * amount_paise) - (operational_cost_paise + fatigue_cost_paise)",
+    "shadow_price": "Shadow price lambda = IVEN of the marginal accepted opportunity under binding capacity"
+  },
+  "fatigue_cost_schedule_paise": {
+    "attempt_1": 0,
+    "attempt_2": 250,
+    "attempt_3": 750,
+    "attempt_4_plus": "1500 + (attempt - 4) * 500"
+  },
+  "decisions": ["ACT", "WAIT", "ABSTAIN"],
+  "invariants_verified": [
+    {
+      "invariant": "All recovery rates and probabilities must be labeled as model-estimated",
+      "test_suite": "tests/v6/test_counterfactual_attribution.ts",
+      "status": "VERIFIED_PASS"
+    },
+    {
+      "invariant": "Hard declines with zero incremental probability must resolve to negative IVEN and ABSTAIN",
+      "test_suite": "tests/v6/test_iven_calculation.ts",
+      "status": "VERIFIED_PASS"
+    },
+    {
+      "invariant": "Bayesian calibration updates Beta distributions and gates auto-promotion on statistical significance",
+      "test_suite": "tests/v6/test_bayesian_calibration.ts",
+      "status": "VERIFIED_PASS"
+    },
+    {
+      "invariant": "Shadow price exposes marginal accepted value under binding capacity constraints",
+      "test_suite": "tests/v6/test_counterfactual_attribution.ts",
+      "status": "VERIFIED_PASS"
+    }
+  ],
+  "test_results": {
+    "phase_8_suites": [
+      { "name": "tests/v6/test_iven_calculation.ts", "passed": 3, "failed": 0, "status": "PASSED" },
+      { "name": "tests/v6/test_bayesian_calibration.ts", "passed": 3, "failed": 0, "status": "PASSED" },
+      { "name": "tests/v6/test_counterfactual_attribution.ts", "passed": 3, "failed": 0, "status": "PASSED" }
+    ],
+    "phase_8_totals": {
+      "suites_passed": 3,
+      "suites_failed": 0,
+      "test_cases_passed": 9,
+      "test_cases_failed": 0
+    },
+    "phase_7_totals": {
+      "suites_passed": 3,
+      "suites_failed": 0,
+      "test_cases_passed": 8,
+      "test_cases_failed": 0
+    },
+    "phase_6_totals": {
+      "suites_passed": 2,
+      "suites_failed": 0,
+      "test_cases_passed": 6,
+      "test_cases_failed": 0
+    },
+    "phase_5_totals": {
+      "suites_passed": 3,
+      "suites_failed": 0,
+      "test_cases_passed": 6,
+      "test_cases_failed": 0
+    },
+    "phase_4_totals": {
+      "suites_passed": 4,
+      "suites_failed": 0,
+      "test_cases_passed": 7,
+      "test_cases_failed": 0
+    },
+    "v5_regression_totals": {
+      "suites_passed": 5,
+      "suites_failed": 0,
+      "test_cases_passed": 55,
+      "test_cases_failed": 0
+    }
+  }
+}

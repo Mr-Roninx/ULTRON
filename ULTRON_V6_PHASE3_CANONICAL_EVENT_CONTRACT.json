@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-09-01T12:52:00.000Z",
+  "phase": 3,
+  "governing_specification": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md",
+  "status": "PHASE_3_COMPLETE_PENDING_REVIEW",
+  "contract_name": "CanonicalPaymentEvent",
+  "contract_version": "1.0.0",
+  "design_principles": [
+    "Unified normalization envelope for all inbound streams",
+    "Strict schema validation on ingestion without silent coercion",
+    "Minor-unit integer arithmetic only (paise)",
+    "Tenant isolation by construction"
+  ],
+  "schema_definition": {
+    "fields": [
+      { "name": "event_id", "type": "string", "required": true, "description": "Unique event identifier" },
+      { "name": "tenant_id", "type": "string", "required": true, "description": "Multi-tenant organization identifier" },
+      { "name": "source", "type": "enum", "enum": ["ODOOX_EVENT", "RAZORPAY_WEBHOOK", "RAZORPAY_API_FETCH", "ULTRON_RECONCILIATION"], "required": true },
+      { "name": "provider", "type": "enum", "enum": ["razorpay", "stripe", "manual"], "required": true },
+      { "name": "environment", "type": "enum", "enum": ["live", "test"], "required": true },
+      { "name": "payment_id", "type": "string", "required": false },
+      { "name": "order_id", "type": "string", "required": false },
+      { "name": "payment_link_id", "type": "string", "required": false },
+      { "name": "amount_paise", "type": "integer", "required": true, "constraints": "positive integer" },
+      { "name": "currency", "type": "string", "required": true, "default": "INR", "constraints": "ISO 4217 code" },
+      { "name": "method", "type": "string", "required": false },
+      { "name": "status", "type": "enum", "enum": ["created", "authorized", "failed", "captured", "paid", "cancelled", "expired"], "required": true },
+      { "name": "failure_code", "type": "string", "required": false },
+      { "name": "failure_description", "type": "string", "required": false },
+      { "name": "failure_type", "type": "enum", "enum": ["hard", "soft", "unknown"], "required": false },
+      { "name": "attempt_number", "type": "integer", "required": true, "default": 1 },
+      { "name": "customer_reference", "type": "string", "required": true },
+      { "name": "customer_email", "type": "string", "required": false },
+      { "name": "customer_phone", "type": "string", "required": false },
+      { "name": "occurred_at", "type": "datetime_iso8601", "required": true },
+      { "name": "received_at", "type": "datetime_iso8601", "required": true },
+      { "name": "correlation_id", "type": "string", "required": true },
+      { "name": "metadata", "type": "record", "required": false }
+    ]
+  },
+  "decision_resolutions": {
+    "D8": {
+      "id": "D8",
+      "title": "Currency Scope for v6",
+      "status": "RESOLVED",
+      "resolution": "INR as canonical base currency stored in integer paise (BIGINT). ISO 4217 currency tagging supported on all entities. Multi-currency exchange rate conversion deferred to post-pilot.",
+      "financial_rule": "Zero floating-point currency representation in database or financial ledger."
+    },
+    "D9": {
+      "id": "D9",
+      "title": "Worker Queue & Job Scheduler Architecture",
+      "status": "RESOLVED",
+      "resolution": "Two-tier architecture: In-memory async coordinator with Redis 7+ distributed locks for local/pilot mode; BullMQ with Redis job persistence and DLQ for distributed multi-tenant production scale.",
+      "reconciliation_scheduler": "Periodic 5-minute poller sweep with 350ms provider rate throttle and circuit breaker protection."
+    }
+  },
+  "transformation_streams": [
+    {
+      "stream": "Razorpay Inbound Webhook",
+      "endpoint": "POST /webhooks/razorpay",
+      "security": "HMAC-SHA256 signature verification + IP allowlist + 300s freshness window",
+      "normalizer": "src/perception/normalizer.ts"
+    },
+    {
+      "stream": "OdooX Merchant Inbound API",
+      "endpoint": "POST /v1/events",
+      "security": "Bearer API Key authentication with events:write scope",
+      "normalizer": "src/security/schemas.ts"
+    },
+    {
+      "stream": "Authoritative Reconciliation REST Fetch",
+      "mechanism": "rzpClient.paymentLink.fetch()",
+      "security": "Internal executor credentials",
+      "normalizer": "src/truth/provider_truth.ts"
+    }
+  ]
+}

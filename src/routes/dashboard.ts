@@ -10,11 +10,12 @@ import { pollAndReconcile } from '../reconciliation/poller.js';
 export const dashboardRouter = Router();
 
 // GET /dashboard/summary
-dashboardRouter.get('/summary', (_req: Request, res: Response) => {
+dashboardRouter.get('/summary', (req: Request, res: Response) => {
   try {
-    const allOpps = getAllOpportunities();
-    const decisions = getAllAllocationDecisions();
-    const executionRecords = getAllExecutionRecords();
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const allOpps = getAllOpportunities(tenantId);
+    const decisions = getAllAllocationDecisions(tenantId);
+    const executionRecords = getAllExecutionRecords(tenantId);
 
     // 1. Total Opportunities
     const total_opportunities = allOpps.length;

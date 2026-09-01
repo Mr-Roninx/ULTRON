@@ -1,0 +1,86 @@
+{
+  "timestamp": "2026-09-01T13:13:00.000Z",
+  "phase": 6,
+  "governing_specification": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md",
+  "status": "PHASE_6_COMPLETE",
+  "modules_created": [
+    "src/providers/razorpay/types.ts",
+    "src/providers/razorpay/client_factory.ts",
+    "src/providers/razorpay/adapter.ts",
+    "src/providers/razorpay/connection_service.ts",
+    "src/routes/integrations.ts"
+  ],
+  "discovered_capabilities": [
+    {
+      "capability": "payment_links",
+      "supported": true,
+      "requires_live": false,
+      "status": "VERIFIED"
+    },
+    {
+      "capability": "webhooks",
+      "supported": true,
+      "requires_live": false,
+      "status": "VERIFIED"
+    },
+    {
+      "capability": "smart_routing",
+      "supported": false,
+      "requires_live": true,
+      "status": "UNSUPPORTED"
+    },
+    {
+      "capability": "recurring_auto_debit",
+      "supported": false,
+      "requires_live": true,
+      "status": "UNSUPPORTED"
+    }
+  ],
+  "invariants_verified": [
+    {
+      "invariant": "Razorpay client instantiation requires explicit environment and refuses key-prefix inference alone",
+      "test_suite": "tests/v6/test_provider_connection.ts",
+      "status": "VERIFIED_PASS"
+    },
+    {
+      "invariant": "Webhook signatures support timing-safe verification and multi-secret rotation",
+      "test_suite": "tests/v6/test_webhook_security.ts",
+      "status": "VERIFIED_PASS"
+    },
+    {
+      "invariant": "Provider credentials stored with AES-256-GCM authenticated envelope encryption",
+      "test_suite": "tests/v6/test_provider_connection.ts",
+      "status": "VERIFIED_PASS"
+    }
+  ],
+  "test_results": {
+    "phase_6_suites": [
+      { "name": "tests/v6/test_webhook_security.ts", "passed": 3, "failed": 0, "status": "PASSED" },
+      { "name": "tests/v6/test_provider_connection.ts", "passed": 3, "failed": 0, "status": "PASSED" }
+    ],
+    "phase_6_totals": {
+      "suites_passed": 2,
+      "suites_failed": 0,
+      "test_cases_passed": 6,
+      "test_cases_failed": 0
+    },
+    "phase_5_totals": {
+      "suites_passed": 3,
+      "suites_failed": 0,
+      "test_cases_passed": 6,
+      "test_cases_failed": 0
+    },
+    "phase_4_totals": {
+      "suites_passed": 4,
+      "suites_failed": 0,
+      "test_cases_passed": 7,
+      "test_cases_failed": 0
+    },
+    "v5_regression_totals": {
+      "suites_passed": 5,
+      "suites_failed": 0,
+      "test_cases_passed": 55,
+      "test_cases_failed": 0
+    }
+  }
+}

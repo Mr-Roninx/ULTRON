@@ -117,7 +117,7 @@ export interface RawPaymentPayload {
 export function normalizeOpportunity(
   paymentEntity: RawPaymentPayload,
   eventId?: string | null,
-  options: { source?: 'real' | 'synthetic' } = {}
+  options: { source?: 'real' | 'synthetic'; tenantId?: string } = {}
 ): RecoveryOpportunity {
   const paymentId = paymentEntity.id || `pay_${Date.now()}`;
   const amountPaise = Number(paymentEntity.amount) || 0;
@@ -165,6 +165,7 @@ export function normalizeOpportunity(
     customer_trust_score: customer.trust_score,
     created_at: now,
     status: 'pending',
+    tenant_id: options.tenantId || 'tenant_default',
     razorpay_event_id: eventId || null,
     raw_payload_ref: JSON.stringify({
       error_source: errorSource,

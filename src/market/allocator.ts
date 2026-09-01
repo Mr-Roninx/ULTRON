@@ -11,6 +11,7 @@ import {
   AllocationDecision,
   DecisionType,
 } from '../types/index.js';
+import { DatabaseAdapter } from '../db/adapter.js';
 
 export interface OpportunityWithScore {
   opportunity: RecoveryOpportunity;
@@ -45,13 +46,25 @@ export interface MarketRunResult {
   items: MarketAllocationItem[];
 }
 
-export function runMarketAllocation(options: { capacity?: number } = {}): MarketRunResult {
-  const capacity =
-    options.capacity !== undefined
-      ? options.capacity
-      : Number(process.env.MAX_LINKS_PER_RUN) || 5;
+export function runMarketAllocation(options: { capacity?: number; opportunities?: RecoveryOpportunity[]; tenantId?: string } = {}): MarketRunResult {
+  // Resolve capacity: explicit > per-tenant DB > env var > default
+  let capacity = options.capacity;
+  if (capacity === undefined && options.tenantId) {
+    try {
+      const db = DatabaseAdapter.getInstance();
+      const rows = db.querySync<{ capacity_limit: number }>(
+        `SELECT capacity_limit FROM tenants WHERE id = ? LIMIT 1;`,
+        [options.tenantId]
+      );
+      if (rows.length > 0) capacity = rows[0].capacity_limit;
+    } catch { /* fallthrough to env var */ }
+  }
+  if (capacity === undefined) {
+    capacity = Number(process.env.MAX_LINKS_PER_RUN) || 5;
+  }
 
-  const allOpps = getAllOpportunities();
+  // Filter opportunities to tenant scope if provided
+  const allOpps = options.opportunities || getAllOpportunities(options.tenantId);
 
   // 1. Fetch or compute economic scores for all opportunities
   const scoredItems: OpportunityWithScore[] = allOpps.map((opp) => {

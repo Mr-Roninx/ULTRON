@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-09-01T12:58:00.000Z",
+  "phase": 4,
+  "governing_specification": "ULTRON_V6_MASTER_IMPLEMENTATION_PROMPT.md",
+  "status": "PHASE_4_COMPLETE",
+  "migration_applied": "004_v6_tenancy_and_auth_schema",
+  "entities": [
+    "tenants",
+    "organizations",
+    "users",
+    "memberships",
+    "sessions",
+    "api_keys",
+    "audit_records",
+    "tenant_credentials"
+  ],
+  "decision_resolutions": {
+    "D6": {
+      "id": "D6",
+      "title": "Secrets Management at Rest",
+      "status": "RESOLVED",
+      "mechanism": "AES-256-GCM authenticated envelope encryption with tenant salt key derivation in SecretsManager",
+      "source_reference": "src/security/secrets.ts"
+    },
+    "D7": {
+      "id": "D7",
+      "title": "Dashboard Session Authentication",
+      "status": "RESOLVED",
+      "mechanism": "Signed JWT session tokens tracked in SQLite sessions table with instant revocation and role binding in SessionAuthService",
+      "source_reference": "src/security/session_auth.ts"
+    }
+  },
+  "api_key_specifications": {
+    "live_prefix": "ul_live_",
+    "test_prefix": "ul_test_",
+    "hash_algorithm": "SHA-256",
+    "valid_scopes": [
+      "events:write",
+      "events:read",
+      "payments:read",
+      "recoveries:read",
+      "analytics:read",
+      "agent:read",
+      "integrations:read",
+      "integrations:write"
+    ],
+    "financial_execution_scope_allowed": false,
+    "source_reference": "src/security/api_keys.ts"
+  },
+  "rbac_matrix": {
+    "Viewer": { "read": true, "trigger_runs": false, "review_drafts": false, "config_integrations": false, "manage_api_keys": false, "rotate_owner_creds": false, "modify_safety_ceilings": false, "mark_provider_recovery": false },
+    "Analyst": { "read": true, "trigger_runs": false, "review_drafts": true, "config_integrations": false, "manage_api_keys": false, "rotate_owner_creds": false, "modify_safety_ceilings": false, "mark_provider_recovery": false },
+    "Operator": { "read": true, "trigger_runs": true, "review_drafts": true, "config_integrations": false, "manage_api_keys": true, "rotate_owner_creds": false, "modify_safety_ceilings": false, "mark_provider_recovery": false },
+    "Admin": { "read": true, "trigger_runs": true, "review_drafts": true, "config_integrations": true, "manage_api_keys": true, "rotate_owner_creds": true, "modify_safety_ceilings": false, "mark_provider_recovery": false },
+    "Owner": { "read": true, "trigger_runs": true, "review_drafts": true, "config_integrations": true, "manage_api_keys": true, "rotate_owner_creds": true, "modify_safety_ceilings": true, "mark_provider_recovery": false }
+  },
+  "test_results": {
+    "phase_4_suites": [
+      { "name": "tests/v6/test_tenant_isolation.ts", "passed": 2, "failed": 0, "status": "PASSED" },
+      { "name": "tests/v6/test_authentication.ts", "passed": 2, "failed": 0, "status": "PASSED" },
+      { "name": "tests/v6/test_api_keys.ts", "passed": 1, "failed": 0, "status": "PASSED" },
+      { "name": "tests/v6/test_scopes.ts", "passed": 2, "failed": 0, "status": "PASSED" }
+    ],
+    "phase_4_totals": {
+      "suites_passed": 4,
+      "suites_failed": 0,
+      "test_cases_passed": 7,
+      "test_cases_failed": 0
+    },
+    "v5_regression_totals": {
+      "suites_passed": 5,
+      "suites_failed": 0,
+      "test_cases_passed": 55,
+      "test_cases_failed": 0
+    }
+  }
+}

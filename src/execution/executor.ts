@@ -13,15 +13,16 @@ import {
 import { scoreOpportunity } from '../economics/scorer.js';
 import { evaluateOpportunity, runAuthorityPipeline } from '../authority/gate.js';
 import { ExecutionRecord, RecoveryOpportunity } from '../types/index.js';
+import { CircuitBreaker } from './circuit_breaker.js';
+import { ExecutionDLQ } from './dlq.js';
+import { RazorpayClientPool } from '../providers/razorpay/client_pool.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const key_id = process.env.RAZORPAY_KEY_ID || '';
-const key_secret = process.env.RAZORPAY_KEY_SECRET || '';
-
+// Backward-compatible fallback client for system-default tenant / local dev
 export const rzpClient = new Razorpay({
-  key_id,
-  key_secret,
+  key_id: process.env.RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 });
 
 export interface SingleExecutionResult {
@@ -86,31 +87,42 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     };
   }
 
-  // 3. Call Razorpay API (Test Mode)
+  // 3. Call Razorpay API (Test Mode) — resolve client from per-tenant pool
   try {
-    const rzpResponse = await rzpClient.paymentLink.create({
-      amount: opp.amount_paise,
-      currency: opp.currency || 'INR',
-      accept_partial: false,
-      reference_id: opp.id,
-      description: `ULTRON automated recovery for opportunity ${opp.id}`,
-      customer: {
-        name: opp.customer_id,
-        email: opp.customer_id.includes('@') ? opp.customer_id : undefined,
-        contact: opp.customer_id.startsWith('+') ? opp.customer_id : undefined,
+    const circuitBreaker = CircuitBreaker.getInstance();
+
+    // Resolve tenant-specific Razorpay client (falls back to env vars for system default)
+    const tenantId = (opp as any).tenant_id || 'tenant_system_default';
+    const tenantClient = await RazorpayClientPool.getClient(tenantId, 'test').catch(() => rzpClient);
+
+    const rzpResponse: any = await circuitBreaker.executeWithResilience(
+      async () => {
+        return tenantClient.paymentLink.create({
+          amount: opp.amount_paise,
+          currency: opp.currency || 'INR',
+          accept_partial: false,
+          reference_id: opp.id,
+          description: `ULTRON automated recovery for opportunity ${opp.id}`,
+          customer: {
+            name: opp.customer_id,
+            email: opp.customer_id.includes('@') ? opp.customer_id : undefined,
+            contact: opp.customer_id.startsWith('+') ? opp.customer_id : undefined,
+          },
+          notify: {
+            sms: false,
+            email: false,
+          },
+          reminder_enable: false,
+          notes: {
+            opportunity_id: opp.id,
+            source: opp.source,
+            reason_code: opp.reason_code,
+            system: 'ULTRON Economic Recovery Control Plane',
+          },
+        });
       },
-      notify: {
-        sms: false,
-        email: false,
-      },
-      reminder_enable: false,
-      notes: {
-        opportunity_id: opp.id,
-        source: opp.source,
-        reason_code: opp.reason_code,
-        system: 'ULTRON Economic Recovery Control Plane',
-      },
-    });
+      `RazorpayPaymentLinkCreate(${opp.id})`
+    );
 
     const now = new Date().toISOString();
     const linkUrl = rzpResponse.short_url || `https://rzp.io/i/${rzpResponse.id}`;
@@ -180,12 +192,14 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
             record: executionRecord,
           };
         }
-      } catch (fetchErr) {
-        console.error(`Failed to fetch existing remote link for ${opp.id}:`, fetchErr);
+      } catch (e) {
+        // fall through
       }
     }
 
-    console.error(`Razorpay API execution error for ${opp.id}:`, error);
+    // Record failure in Dead Letter Queue
+    await ExecutionDLQ.recordExecutionFailure(opp.id, errorDesc);
+
     return {
       opportunity_id: opp.id,
       success: false,

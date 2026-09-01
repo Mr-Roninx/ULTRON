@@ -1,0 +1,477 @@
+{
+  "audit": {
+    "name": "ULTRON v5.1 Complete System Verification & Canonical Truth Audit",
+    "timestamp": "2026-09-01T04:05:00.000Z",
+    "workspace": "D:\\Work Space\\Project\\Ultron",
+    "git_commit": "d78ce2e",
+    "status": "VERIFIED_WITH_LIMITATIONS"
+  },
+  "system": {
+    "architecture": "Two-Tier Autonomous Economic Control Plane (Tier 2 AI Intelligence + Tier 1 Deterministic Financial Core)",
+    "provider": "Razorpay",
+    "environment": "RAZORPAY_TEST_MODE"
+  },
+  "components": [
+    {
+      "name": "Event Fabric & Ingestion",
+      "implementation_path": "src/webhooks/razorpay.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Ingests raw webhook payloads, verifies HMAC signatures, normalizes to RecoveryOpportunity schema in SQLite.",
+      "limitations": "Live webhooks require public HTTPS tunnel; local simulation uses signed fixture validation.",
+      "evidence_references": ["tests/core/test_webhook_security.ts", "src/webhooks/razorpay.ts"]
+    },
+    {
+      "name": "Perception & Taxonomy Normalization",
+      "implementation_path": "src/perception/normalizer.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Normalizes decline codes into hard/soft/unknown taxonomy and evaluates customer trust scores.",
+      "limitations": "Decline mapping relies on standardized hand-coded tables and Bayesian Beta adjustments.",
+      "evidence_references": ["scripts/test_perception.ts", "src/perception/normalizer.ts"]
+    },
+    {
+      "name": "Deterministic Economic Reasoning & IVEN",
+      "implementation_path": "src/economics/scorer.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Calculates IVEN = (P_intervention - P_natural) * amount - operational_cost - fatigue_cost entirely in integer paise.",
+      "limitations": "Probabilities are explicitly model-estimated counterfactuals, never measured ground truth for single transactions.",
+      "evidence_references": ["scripts/test_economics.ts", "tests/agent/test_agent_economic_bridge.ts"]
+    },
+    {
+      "name": "Recovery Market Knapsack Auction",
+      "implementation_path": "src/market/allocator.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Greedy portfolio allocation sorting by IVEN, respecting capacity caps (default 5), and establishing binding shadow prices.",
+      "limitations": "Portfolio sorting is greedy linear allocation, not an integer linear programming solver.",
+      "evidence_references": ["scripts/test_market.ts", "src/market/allocator.ts"]
+    },
+    {
+      "name": "Action Authority Compliance Gate",
+      "implementation_path": "src/authority/gate.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "5 independent compliance rules (hard decline veto, retry cap, kill switch, confidence check, environment) running deterministically after allocation.",
+      "limitations": "Compliance rules are strictly deterministic and cannot be bypassed or overridden by AI agents.",
+      "evidence_references": ["scripts/test_authority.ts", "tests/agent/test_agent_gate.ts"]
+    },
+    {
+      "name": "Razorpay Test Mode Execution",
+      "implementation_path": "src/execution/executor.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "RAZORPAY_TEST_VERIFIED",
+      "provider_verified": true,
+      "actual_result": "Creates live payment links against Razorpay Test Mode API and records Plink IDs, URLs, and idempotency keys.",
+      "limitations": "Cap enforced at max 5 links per run under Test Mode keys.",
+      "evidence_references": ["scripts/test_end_to_end_razorpay_mission.ts", "results/agent/v51/razorpay_test_verification.json"]
+    },
+    {
+      "name": "Truth Reconciliation & Double-Entry Ledger",
+      "implementation_path": "src/truth/double_entry_ledger.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": true,
+      "actual_result": "Double-Entry Ledger with SHA-256 audit chain enforcing SUM(DEBITS) == SUM(CREDITS) and LINK_CREATED != RECOVERED.",
+      "limitations": "Eventual consistency SLA target <= 5000ms.",
+      "evidence_references": ["tests/truth/test_provider_truth_invariants.ts", "tests/core/test_double_entry_ledger.ts"]
+    },
+    {
+      "name": "Portfolio Agent",
+      "implementation_path": "src/agents/portfolio_agent.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Scans multiple pending opportunities, evaluates 5-signal composite priority, and submits ranked advisory proposals.",
+      "limitations": "Advisory only; does not execute or allocate capacity directly.",
+      "evidence_references": ["tests/agent/test_portfolio_agent.ts", "results/agent/v51/portfolio.json"]
+    },
+    {
+      "name": "Structured Uncertainty Model",
+      "implementation_path": "src/agents/uncertainty.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Quantifies uncertainty across MODEL, DATA, and ECONOMIC dimensions, routing to PROCEED, INVESTIGATE, HUMAN_REVIEW, or ABSTAIN.",
+      "limitations": "Deterministic routing based on calibrated thresholds, not uncalibrated LLM confidence scores.",
+      "evidence_references": ["tests/agent/test_uncertainty.ts", "docs/ULTRON_V5_1_UNCERTAINTY.md"]
+    },
+    {
+      "name": "Information Value Estimator",
+      "implementation_path": "src/agents/information_value.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Calculates EVOI bounded at 20% IVEN; routes degraded gateways to INVESTIGATE when EVOI > 200 paise.",
+      "limitations": "Static investigation cost assumption of 200 paise.",
+      "evidence_references": ["tests/agent/test_information_value.ts", "docs/ULTRON_V5_1_INFORMATION_VALUE.md"]
+    },
+    {
+      "name": "Plan Monitor",
+      "implementation_path": "src/agents/plan_monitor.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Continuously validates active plan assumptions (gateway health, capacity, staleness >5m, terminal state).",
+      "limitations": "Evaluates local environment signals; external provider downtime detected on next probe.",
+      "evidence_references": ["tests/agent/test_plan_monitor.ts"]
+    },
+    {
+      "name": "Mission Concurrency Coordinator",
+      "implementation_path": "src/agents/concurrency.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Coordinates concurrent worker pool enforcing max concurrency ceiling (default 3) and per-opportunity async locks.",
+      "limitations": "Runs within a single Node.js runtime process; multi-node coordination requires distributed Redis locks.",
+      "evidence_references": ["tests/agent/test_concurrency.ts", "results/agent/v51/concurrency.json"]
+    },
+    {
+      "name": "Mission Replay Engine",
+      "implementation_path": "src/agents/replay.ts",
+      "implementation_status": "IMPLEMENTED",
+      "test_status": "PASSED",
+      "runtime_status": "OPERATIONAL",
+      "evidence_class": "INTEGRATION_VERIFIED",
+      "provider_verified": false,
+      "actual_result": "Computes deterministic SHA-256 trace fingerprints and detects exact stage of replay divergence.",
+      "limitations": "Replay assumes telemetry tables in SQLite are persisted and un-purged.",
+      "evidence_references": ["tests/agent/test_replay.ts", "results/agent/v51/replay.json"]
+    }
+  ],
+  "agent": {
+    "state_machine": {
+      "total_states": 21,
+      "enforced_transitions": true,
+      "sqlite_persisted": true,
+      "status": "VERIFIED"
+    },
+    "orchestrator": {
+      "execution_loop": "OBSERVE -> INVESTIGATE -> DIAGNOSE -> PLAN -> PROPOSE",
+      "financial_write_boundary": "ENFORCED_ZERO_WRITE",
+      "status": "VERIFIED"
+    },
+    "tools": {
+      "total_registered": 18,
+      "read_tools_count": 8,
+      "propose_tools_count": 10,
+      "execute_tools_count": 0,
+      "status": "VERIFIED"
+    },
+    "llm": {
+      "provider": "NVIDIA NIM",
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "fallback_mode": "DETERMINISTIC_FALLBACK_ON_ERROR",
+      "execution_path_presence": "ZERO_LLM_ON_EXECUTION_PATH",
+      "status": "VERIFIED"
+    },
+    "memory": {
+      "working_memory": "RUN_SCOPED",
+      "episodic_memory": "CROSS_MISSION_PERSISTED",
+      "semantic_memory": "DOMAIN_KNOWLEDGE_BOUNDED",
+      "temporal_firewall": "ACTIVE_ANTI_LOOKAHEAD",
+      "status": "VERIFIED"
+    },
+    "planning": {
+      "assumption_backed": true,
+      "schema_validated": true,
+      "max_replan_limit": 3,
+      "status": "VERIFIED"
+    },
+    "replanning": {
+      "trigger": "ASSUMPTION_INVALIDATION",
+      "transition": "PLAN -> WAIT -> INVALID -> REPLAN -> PLAN_V2",
+      "status": "VERIFIED"
+    },
+    "learning": {
+      "outcome_evaluation": "BRIER_SCORE_PREDICTION_ERROR",
+      "auto_model_mutation": "FORBIDDEN_PROPOSAL_ONLY",
+      "status": "VERIFIED"
+    },
+    "portfolio": {
+      "strategy": "MULTI_SIGNAL_PRIORITY_SWEEP",
+      "weights": { "w_iven": 0.40, "w_time": 0.25, "w_gw": 0.15, "w_fatigue": 0.10, "w_expiry": 0.10 },
+      "status": "VERIFIED"
+    },
+    "uncertainty": {
+      "dimensions": ["MODEL_CONFIDENCE", "DATA_CONFIDENCE", "ECONOMIC_CONFIDENCE"],
+      "routing_thresholds": { "proceed": 0.70, "investigate": 0.40, "abstain": 0.40 },
+      "status": "VERIFIED"
+    },
+    "information_value": {
+      "formula": "EVOI = IVEN * (1 - C_composite) * 0.20",
+      "investigate_cost_paise": 200,
+      "status": "VERIFIED"
+    },
+    "concurrency": {
+      "max_workers": 3,
+      "lock_deduplication": true,
+      "kill_switch_halting": true,
+      "status": "VERIFIED"
+    },
+    "replay": {
+      "algorithm": "SHA-256",
+      "divergence_localization": true,
+      "status": "VERIFIED"
+    }
+  },
+  "deterministic_core": {
+    "economics": {
+      "currency_unit": "INTEGER_PAISE",
+      "counterfactual_scoring": "P_intervention - P_natural",
+      "status": "VERIFIED"
+    },
+    "iven": {
+      "formula": "(incremental_prob * amount_paise) - operational_cost - fatigue_cost",
+      "hard_decline_invariant": "IVEN <= 0",
+      "status": "VERIFIED"
+    },
+    "market": {
+      "allocation_mechanism": "GREEDY_KNAPSACK_AUCTION",
+      "shadow_price_reporting": true,
+      "capacity_cap": 5,
+      "status": "VERIFIED"
+    },
+    "authority": {
+      "checks_count": 5,
+      "independent_compliance_gate": true,
+      "kill_switch_master": true,
+      "status": "VERIFIED"
+    },
+    "execution": {
+      "re_checks_authorization": true,
+      "idempotency_key_enforced": true,
+      "circuit_breaker_and_dlq": true,
+      "status": "VERIFIED"
+    }
+  },
+  "razorpay": {
+    "api": {
+      "configured": true,
+      "reachable": true,
+      "test_mode": true,
+      "status": "VERIFIED"
+    },
+    "link_creation": {
+      "sdk_create": true,
+      "cap_per_run": 5,
+      "status": "RAZORPAY_TEST_VERIFIED"
+    },
+    "webhook": {
+      "hmac_sha256_verification": true,
+      "replay_prevention": true,
+      "status": "INTEGRATION_VERIFIED"
+    },
+    "polling": {
+      "fallback_poller": true,
+      "rzp_fetch_verification": true,
+      "status": "RAZORPAY_TEST_VERIFIED"
+    },
+    "payment": {
+      "test_mode_payment_confirmed": true,
+      "verified_link_id": "plink_TWcnQZVwogNPop",
+      "payment_id": "pay_TWd8rHL0ewMl51",
+      "provider_status": "paid",
+      "amount_paid_paise": 450000,
+      "amount_paid_inr": "₹4500.00",
+      "evidence_class": "PROVIDER_VERIFIED",
+      "status": "VERIFIED"
+    },
+    "provider_truth": {
+      "link_created_not_equal_recovered": true,
+      "amount_paid_zero_is_pending": true,
+      "amount_paid_greater_zero_is_recovered": true,
+      "status": "VERIFIED"
+    },
+    "reconciliation": {
+      "double_entry_ledger": true,
+      "sha256_hash_chain": true,
+      "opportunity_status": "recovered",
+      "sla_tracking": true,
+      "status": "VERIFIED"
+    }
+  },
+  "security": {
+    "authority_boundary": {
+      "agent_cannot_write_financials": true,
+      "agent_cannot_call_razorpay_write": true,
+      "status": "VERIFIED"
+    },
+    "agent_authority_gate_9_checks": {
+      "checks": [
+        "kill_switch_check",
+        "agent_identity_check",
+        "tool_scope_check",
+        "mission_budget_check",
+        "rate_limit_check",
+        "write_boundary_check",
+        "environment_check",
+        "injection_taint_check",
+        "loop_guard_check"
+      ],
+      "status": "VERIFIED"
+    },
+    "financial_action_authority_5_rules": {
+      "rules": [
+        "hard_decline_veto",
+        "retry_cap",
+        "kill_switch",
+        "confidence_rule",
+        "environment_rule"
+      ],
+      "status": "VERIFIED"
+    },
+    "prompt_injection": {
+      "adversarial_jailbreaks_blocked": true,
+      "status": "VERIFIED"
+    },
+    "tool_injection": {
+      "unauthorized_tool_denied": true,
+      "status": "VERIFIED"
+    },
+    "temporal_firewall": {
+      "future_records_invisible": true,
+      "status": "VERIFIED"
+    },
+    "secrets": {
+      "zero_secrets_in_telemetry": true,
+      "zero_secrets_in_frontend": true,
+      "status": "VERIFIED"
+    },
+    "kill_switch": {
+      "instant_halt_all_subsystems": true,
+      "status": "VERIFIED"
+    },
+    "loop_guard": {
+      "anti_recursion_fingerprinting": true,
+      "max_tool_repeats": 3,
+      "status": "VERIFIED"
+    }
+  },
+  "testing": {
+    "commands": [
+      { "command": "npm run test:agent", "category": "TEST", "exit_code": 0, "pass_count": 28, "fail_count": 0 },
+      { "command": "npm run test:core", "category": "TEST", "exit_code": 0, "pass_count": 5, "fail_count": 0 },
+      { "command": "npm run test:infra", "category": "TEST", "exit_code": 0, "pass_count": 3, "fail_count": 0 },
+      { "command": "npx tsx --test tests/truth/test_state_consistency.ts", "category": "TEST", "exit_code": 0, "pass_count": 11, "fail_count": 0 },
+      { "command": "npx tsx --test tests/truth/test_causal_statistics.ts", "category": "TEST", "exit_code": 0, "pass_count": 8, "fail_count": 0 },
+      { "command": "cd frontend && npm run build", "category": "BUILD", "exit_code": 0, "pass_count": 1, "fail_count": 0 }
+    ],
+    "totals": {
+      "unique_automated_tests": 55,
+      "passed": 55,
+      "failed": 0,
+      "skipped": 0,
+      "pass_rate": "100%",
+      "build_checks": 1,
+      "combined_verification_checks": 56,
+      "arithmetic": "28 (Agent) + 5 (Core) + 3 (Infra) + 11 (State Consistency) + 8 (Causal Statistics) = 55 automated tests (+ 1 build check = 56 combined)"
+    },
+    "failures": [],
+    "warnings": []
+  },
+  "causal_experiments": [
+    { "id": "EXP_1_LLM_ABLATION", "component": "Semantic Signals", "treatment": "Semantic Signals ON", "control": "Semantic Signals OFF", "n": 5, "metric": "IVEN (paise)", "mean_diff": 78922.6, "percent_change": "+14.60%", "confidence_interval_95": [59165.2821, 98679.9179], "ci_status": "DEFINED", "effect_size": "Cohen's d_z = 4.959 (Large observed effect size)", "effect_size_value": 4.959, "effect_size_status": "DEFINED", "classification": "POSITIVE_EFFECT", "interpretation": "Observed positive directional lift (+78,922.60 paise, +14.60%, Cohen's d_z = 4.959) under N=5 paired synthetic cohorts.", "limitation": "Preliminary exploratory benchmark across paired synthetic cohorts (N=5); directional model estimation." },
+    { "id": "EXP_2_TOOLS_ABLATION", "component": "Tool Registry", "treatment": "Live Read Tools", "control": "Blind Hypothesis", "n": 5, "metric": "Contextual Urgency & Intent Score (0-1)", "mean_diff": 0.55, "percent_change": "+137.50%", "confidence_interval_95": [0.55, 0.55], "ci_status": "DEGENERATE_ZERO_VARIANCE", "effect_size": "Undefined (zero variance)", "effect_size_value": null, "effect_size_status": "UNDEFINED_ZERO_VARIANCE", "classification": "POSITIVE_EFFECT", "interpretation": "Observed positive directional lift (+0.55 score, +137.50%, effect size undefined due to zero variance) under N=5 paired synthetic cohorts.", "limitation": "Contextual scoring rules tested on synthetic failure taxonomy scenarios." },
+    { "id": "EXP_3_MEMORY_ABLATION", "component": "Episodic Memory", "treatment": "Memory Recall ON", "control": "Tabula Rasa", "n": 5, "metric": "Brier Error Score", "mean_diff": -0.0895, "percent_change": "-19.89%", "confidence_interval_95": [-0.0993, -0.0797], "ci_status": "DEFINED", "effect_size": "Cohen's d_z = -11.321 (Large observed effect size)", "effect_size_value": -11.321, "effect_size_status": "DEFINED", "classification": "POSITIVE_EFFECT", "interpretation": "Observed positive directional lift (-0.0895 Brier error reduction, -19.89%, Cohen's d_z = -11.321) under N=5 paired synthetic cohorts.", "limitation": "Requires prior episodic history seeded in SQLite." },
+    { "id": "EXP_4_REPLAN_ABLATION", "component": "Replan Engine", "treatment": "Dynamic Replanning ON", "control": "Static Execution", "n": 5, "metric": "Wasted Link Dispatches", "mean_diff": -1.0, "percent_change": "-100.00%", "confidence_interval_95": [-1.0, -1.0], "ci_status": "DEGENERATE_ZERO_VARIANCE", "effect_size": "Undefined (zero variance)", "effect_size_value": null, "effect_size_status": "UNDEFINED_ZERO_VARIANCE", "classification": "POSITIVE_EFFECT", "interpretation": "100% of futile link dispatches avoided during simulated bank gateway degradation; effect size undefined due to zero variance.", "limitation": "Tested under simulated gateway outage triggers." },
+    { "id": "EXP_5_PORTFOLIO_SWEEP", "component": "Portfolio Agent", "treatment": "Multi-Signal Priority Sweep", "control": "Naive FIFO", "n": 5, "metric": "Allocated IVEN (paise)", "mean_diff": 799800.0, "percent_change": "+901.18%", "confidence_interval_95": [780541.7814, 819058.2186], "ci_status": "DEFINED", "effect_size": "Cohen's d_z = 51.558 (Large observed effect size)", "effect_size_value": 51.558, "effect_size_status": "DEFINED", "classification": "POSITIVE_EFFECT", "interpretation": "Observed positive directional lift (+799,800.00 paise, +901.18%, Cohen's d_z = 51.558) under N=5 paired synthetic cohorts.", "limitation": "Evaluated across synthetic multi-opportunity candidate pools." },
+    { "id": "EXP_6_UNCERTAINTY_GATING", "component": "Uncertainty Model", "treatment": "3-Dim Confidence Gating", "control": "Blind Dispatch", "n": 5, "metric": "Avoided Loss (paise)", "mean_diff": 400.0, "percent_change": "Absolute delta: +400.00 paise", "confidence_interval_95": [400.0, 400.0], "ci_status": "DEGENERATE_ZERO_VARIANCE", "effect_size": "Undefined (zero variance)", "effect_size_value": null, "effect_size_status": "UNDEFINED_ZERO_VARIANCE", "classification": "POSITIVE_EFFECT", "interpretation": "Futile operational costs and customer contact fatigue eliminated on uncertain opportunities (+400.00 paise saved; effect size undefined due to zero variance).", "limitation": "Heuristic 3-dimensional confidence boundaries tested on synthetic cohorts." },
+    { "id": "EXP_7_CONCURRENCY_SCALING", "component": "Concurrency Coordinator", "treatment": "Worker Pool (C=2)", "control": "Sequential Execution (C=1)", "n": 5, "metric": "Batch Latency (ms)", "mean_diff": -1550.0, "percent_change": "-48.44%", "confidence_interval_95": [-1550.0, -1550.0], "ci_status": "DEGENERATE_ZERO_VARIANCE", "effect_size": "Undefined (zero variance)", "effect_size_value": null, "effect_size_status": "UNDEFINED_ZERO_VARIANCE", "classification": "POSITIVE_EFFECT", "interpretation": "Observed batch processing latency reduced by 48.44% under concurrent worker pool; effect size undefined due to zero variance.", "limitation": "Tested in single-process Node.js runtime." },
+    { "id": "EXP_8_HOLISTIC_INTELLIGENCE", "component": "Complete v5.1 Agent", "treatment": "Tier 1 + Tier 2 System", "control": "Tier 1 Core Alone", "n": 5, "metric": "Expected Value (paise)", "mean_diff": 78922.6, "percent_change": "+14.60%", "confidence_interval_95": [59165.2821, 98679.9179], "ci_status": "DEFINED", "effect_size": "Cohen's d_z = 4.959 (Large observed effect size)", "effect_size_value": 4.959, "effect_size_status": "DEFINED", "classification": "POSITIVE_EFFECT", "interpretation": "Observed positive directional lift (+78,922.60 paise, +14.60%, Cohen's d_z = 4.959) over Tier 1 baseline alone.", "limitation": "Preliminary exploratory benchmark across paired synthetic cohorts (N=5); shares paired cohort structure with EXP_1." }
+  ],
+  "performance": {
+    "state_transition_latency_ms": 1.2,
+    "knapsack_market_allocation_latency_ms": 3.8,
+    "action_authority_evaluation_latency_ms": 0.9,
+    "sqlite_audit_write_latency_ms": 1.5,
+    "razorpay_api_fetch_latency_ms": 842.0,
+    "razorpay_link_creation_latency_ms": 1120.0
+  },
+  "frontend": {
+    "framework": "Next.js 16.3.3 (App Router)",
+    "build_status": "SUCCESS",
+    "telemetry_integration": "LIVE_API_POLLING",
+    "forensic_audit_drawer": "STORED_SQLITE_RECORDS_ONLY",
+    "status": "VERIFIED"
+  },
+  "evidence_conflicts": [
+    {
+      "conflict_id": "CONF-01",
+      "historical_claim": "Payment link creation equals payment recovered",
+      "historical_evidence": "Payment link created in status='created' and amount_paid=0.00 was loosely described as recovery in early prototyping.",
+      "current_evidence": "Razorpay API returned status='created', amount_paid=0 for new link, and status='paid', amount_paid=450000 for settled link.",
+      "corrected_truth": "Enforced Provider Truth Invariant: LINK_CREATED != RECOVERED. Provider-confirmed status='paid' and amount_paid > 0 required for RECOVERED.",
+      "reason": "Clear separation between execution dispatch and provider truth settlement.",
+      "resolution_reference": "src/truth/provider_truth.ts"
+    },
+    {
+      "conflict_id": "CONF-02",
+      "historical_claim": "AI agent directly drives financial transactions",
+      "historical_evidence": "Prototyping architecture diagrams loosely placed LLM across all layers.",
+      "current_evidence": "Static boundary analysis and runtime tests prove AI Agent has READ/PROPOSE tools only; Recovery Market and Action Authority Gate control all financial writes.",
+      "corrected_truth": "Strict Two-Tier Architecture: Tier 2 AI Intelligence generates proposals; Tier 1 Deterministic Financial Core holds sole financial execution authority.",
+      "reason": "Eliminate hallucination and non-deterministic financial risk.",
+      "resolution_reference": "tests/agent/test_agent_authority_boundary.ts"
+    },
+    {
+      "conflict_id": "CONF-03",
+      "historical_claim": "Actual payment settlement in Test Mode is PAYMENT_NOT_CONFIRMED",
+      "historical_evidence": "Early Phase 10 test verified link creation object state only (status='created', amount_paid=0).",
+      "current_evidence": "Direct query to Razorpay API for plink_TWcnQZVwogNPop returned status='paid', amount_paid=450000, and payment_id='pay_TWd8rHL0ewMl51'.",
+      "corrected_truth": "Actual Razorpay Test Mode Payment is PROVIDER_VERIFIED and CONFIRMED; Opportunity rzp_live_test_1788233420739 reconciled to recovered state.",
+      "reason": "Superseded by live provider payment confirmation on Razorpay Test Mode.",
+      "resolution_reference": "scripts/reconcile_live_paid_link.ts"
+    }
+  ],
+  "claims": [
+    { "claim": "Autonomous economic recovery scoring in integer paise", "evidence_class": "INTEGRATION_VERIFIED", "status": "VERIFIED", "notes": "Math.round() used for all paise values" },
+    { "claim": "Greedy portfolio allocation under capacity caps with shadow pricing", "evidence_class": "INTEGRATION_VERIFIED", "status": "VERIFIED", "notes": "Marginal opportunity defines shadow price" },
+    { "claim": "Two-stage Action Authority compliance gate with global kill switch", "evidence_class": "INTEGRATION_VERIFIED", "status": "VERIFIED", "notes": "5 independent checks veto allocation" },
+    { "claim": "Independent provider polling reconciliation", "evidence_class": "RAZORPAY_TEST_VERIFIED", "status": "VERIFIED", "notes": "Polls live Razorpay API" },
+    { "claim": "Razorpay Test Mode payment settlement confirmation", "evidence_class": "PROVIDER_VERIFIED", "status": "VERIFIED", "notes": "Verified on plink_TWcnQZVwogNPop (status=paid, amount_paid=450000, payment_id=pay_TWd8rHL0ewMl51)" },
+    { "claim": "Multi-opportunity portfolio sweep prioritization", "evidence_class": "INTEGRATION_VERIFIED", "status": "VERIFIED", "notes": "Portfolio agent generates ranked proposals" },
+    { "claim": "3-dimensional structured uncertainty quantification", "evidence_class": "INTEGRATION_VERIFIED", "status": "VERIFIED", "notes": "Model, Data, Economic dimensions" },
+    { "claim": "Bounded concurrency pool with per-opportunity locks", "evidence_class": "INTEGRATION_VERIFIED", "status": "VERIFIED", "notes": "Max 3 concurrent workers enforced" },
+    { "claim": "SHA-256 mission replay and divergence localization", "evidence_class": "INTEGRATION_VERIFIED", "status": "VERIFIED", "notes": "Canonical trace hashing" }
+  ],
+  "limitations": [
+    "Razorpay Test Mode keys used; no live production money claims.",
+    "Initial causal benchmark experiments use N=5 paired random seeds; findings are directionally positive within the tested synthetic distributions.",
+    "NVIDIA NIM LLM operates in deterministic fallback mode when network timeout occurs."
+  ],
+  "final_truth": {
+    "verdict": "VERIFIED_WITH_LIMITATIONS",
+    "rationale": "All 55 unique automated test cases across Agent (28), Core Hardening (5), Infrastructure (3), State Consistency (11), and Causal Statistics (8) pass with 100% test integrity, alongside 1 successful frontend production build check (56 total automated verification checks). Architectural invariants (zero AI financial authority, Recovery Market primacy, Action Authority compliance veto, Provider Truth invariant) are proven in runtime execution. Razorpay Test Mode payment settlement is provider-confirmed on plink_TWcnQZVwogNPop (status='paid', amount_paid=₹4,500.00, payment_id='pay_TWd8rHL0ewMl51')."
+  }
+}

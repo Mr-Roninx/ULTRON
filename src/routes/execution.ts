@@ -36,9 +36,10 @@ executionRouter.post('/opportunity/:id', async (req: Request, res: Response) => 
 });
 
 // GET /execution/records
-executionRouter.get('/records', (_req: Request, res: Response) => {
+executionRouter.get('/records', (req: Request, res: Response) => {
   try {
-    const records = getAllExecutionRecords();
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const records = getAllExecutionRecords(tenantId);
     res.json({
       count: records.length,
       records,

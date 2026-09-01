@@ -7,10 +7,11 @@ export const marketRouter = Router();
 // GET /market/run?capacity=5
 marketRouter.get('/run', (req: Request, res: Response) => {
   try {
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
     const capacityParam = req.query.capacity as string | undefined;
     const capacity = capacityParam ? parseInt(capacityParam, 10) : undefined;
 
-    const result = runMarketAllocation({ capacity });
+    const result = runMarketAllocation({ capacity, tenantId });
     res.json(result);
   } catch (error) {
     console.error('Failed to run market allocation:', error);
@@ -21,8 +22,9 @@ marketRouter.get('/run', (req: Request, res: Response) => {
 // POST /market/run
 marketRouter.post('/run', (req: Request, res: Response) => {
   try {
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
     const capacity = req.body.capacity !== undefined ? Number(req.body.capacity) : undefined;
-    const result = runMarketAllocation({ capacity });
+    const result = runMarketAllocation({ capacity, tenantId });
     res.json(result);
   } catch (error) {
     console.error('Failed to execute market allocation:', error);
@@ -31,9 +33,10 @@ marketRouter.post('/run', (req: Request, res: Response) => {
 });
 
 // GET /market/decisions
-marketRouter.get('/decisions', (_req: Request, res: Response) => {
+marketRouter.get('/decisions', (req: Request, res: Response) => {
   try {
-    const decisions = getAllAllocationDecisions();
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const decisions = getAllAllocationDecisions(tenantId);
     res.json({
       count: decisions.length,
       decisions,
