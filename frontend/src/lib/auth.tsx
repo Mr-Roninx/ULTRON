@@ -5,6 +5,8 @@ import { supabase } from "./supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 const TOKEN_KEY = "ultron_session_token";
+const USER_KEY = "ultron_user_profile";
+const TENANT_KEY = "ultron_tenant_profile";
 
 export interface AuthUser {
   userId: string;
@@ -42,12 +44,41 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    token: null,
-    user: null,
-    tenant: null,
-    loading: true,
+  const [state, setState] = useState<AuthState>(() => {
+    if (typeof window === "undefined") {
+      return { token: null, user: null, tenant: null, loading: true };
+    }
+    const token = localStorage.getItem(TOKEN_KEY);
+    let user: AuthUser | null = null;
+    let tenant: AuthTenant | null = null;
+    try {
+      const storedUser = localStorage.getItem(USER_KEY);
+      if (storedUser) user = JSON.parse(storedUser);
+      const storedTenant = localStorage.getItem(TENANT_KEY);
+      if (storedTenant) tenant = JSON.parse(storedTenant);
+    } catch {}
+
+    return { token, user, tenant, loading: !token };
   });
+
+  const saveToStorage = useCallback((token: string | null, user: AuthUser | null, tenant: AuthTenant | null) => {
+    if (typeof window === "undefined") return;
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_KEY);
+    }
+    if (tenant) {
+      localStorage.setItem(TENANT_KEY, JSON.stringify(tenant));
+    } else {
+      localStorage.removeItem(TENANT_KEY);
+    }
+  }, []);
 
   const fetchMe = useCallback(async (token: string) => {
     try {
@@ -71,20 +102,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       if (session?.access_token) {
         const token = session.access_token;
-        localStorage.setItem(TOKEN_KEY, token);
         fetchMe(token).then((data) => {
           if (!mounted) return;
           const userMeta = session.user.user_metadata || {};
+          const user: AuthUser = data?.user || {
+            userId: session.user.id,
+            email: session.user.email || "",
+            name: userMeta.business_name || session.user.email?.split("@")[0] || "Merchant",
+            role: userMeta.role || "Owner",
+            tenantId: userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`,
+          };
+          const tenant = data?.tenant || null;
+          saveToStorage(token, user, tenant);
           setState({
             token,
-            user: data?.user || {
-              userId: session.user.id,
-              email: session.user.email || "",
-              name: userMeta.business_name || session.user.email?.split("@")[0] || "Merchant",
-              role: userMeta.role || "Owner",
-              tenantId: userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`,
-            },
-            tenant: data?.tenant || null,
+            user,
+            tenant,
             loading: false,
           });
         });
@@ -101,9 +134,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetchMe(stored).then((data) => {
         if (!mounted) return;
         if (data) {
+          saveToStorage(stored, data.user, data.tenant);
           setState({ token: stored, user: data.user, tenant: data.tenant, loading: false });
         } else {
-          localStorage.removeItem(TOKEN_KEY);
+          saveToStorage(null, null, null);
           setState({ token: null, user: null, tenant: null, loading: false });
         }
       });
@@ -114,20 +148,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       if (session?.access_token) {
         const token = session.access_token;
-        localStorage.setItem(TOKEN_KEY, token);
         fetchMe(token).then((data) => {
           if (!mounted) return;
           const userMeta = session.user.user_metadata || {};
+          const user: AuthUser = data?.user || {
+            userId: session.user.id,
+            email: session.user.email || "",
+            name: userMeta.business_name || session.user.email?.split("@")[0] || "Merchant",
+            role: userMeta.role || "Owner",
+            tenantId: userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`,
+          };
+          const tenant = data?.tenant || null;
+          saveToStorage(token, user, tenant);
           setState({
             token,
-            user: data?.user || {
-              userId: session.user.id,
-              email: session.user.email || "",
-              name: userMeta.business_name || session.user.email?.split("@")[0] || "Merchant",
-              role: userMeta.role || "Owner",
-              tenantId: userMeta.tenant_id || `tnt_${session.user.id.slice(0, 8)}`,
-            },
-            tenant: data?.tenant || null,
+            user,
+            tenant,
             loading: false,
           });
         });
@@ -138,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchMe]);
+  }, [fetchMe, saveToStorage]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -152,13 +188,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (res.ok && data?.session?.token) {
         const token = data.session.token;
-        localStorage.setItem(TOKEN_KEY, token);
         const me = await fetchMe(token);
+
+        const user: AuthUser = me?.user || (data.user ? {
+          userId: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          tenantId: data.merchant?.id || `tnt_${data.user.id.slice(0, 8)}`,
+        } : data.merchant);
+
+        const tenant: AuthTenant | null = me?.tenant || (data.merchant ? {
+          id: data.merchant.id,
+          name: data.merchant.name,
+          slug: data.merchant.slug,
+          environment: data.merchant.environment || "test",
+          status: data.merchant.status || "ACTIVE",
+          capacity_limit: 5,
+          kill_switch_active: false,
+        } : null);
+
+        saveToStorage(token, user, tenant);
 
         setState({
           token,
-          user: me?.user || data.merchant,
-          tenant: me?.tenant || null,
+          user,
+          tenant,
           loading: false,
         });
 
@@ -176,20 +231,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!sbError && sbData?.session?.access_token) {
         const token = sbData.session.access_token;
-        localStorage.setItem(TOKEN_KEY, token);
         const me = await fetchMe(token);
         const userMeta = sbData.user.user_metadata || {};
 
+        const user: AuthUser = me?.user || {
+          userId: sbData.user.id,
+          email: sbData.user.email || "",
+          name: userMeta.business_name || email.split("@")[0],
+          role: userMeta.role || "Owner",
+          tenantId: userMeta.tenant_id || `tnt_${sbData.user.id.slice(0, 8)}`,
+        };
+
+        const tenant = me?.tenant || null;
+        saveToStorage(token, user, tenant);
+
         setState({
           token,
-          user: me?.user || {
-            userId: sbData.user.id,
-            email: sbData.user.email || "",
-            name: userMeta.business_name || email.split("@")[0],
-            role: userMeta.role || "Owner",
-            tenantId: userMeta.tenant_id || `tnt_${sbData.user.id.slice(0, 8)}`,
-          },
-          tenant: me?.tenant || null,
+          user,
+          tenant,
           loading: false,
         });
         return { success: true };
@@ -223,12 +282,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const token = data?.session?.token;
       if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
         const me = await fetchMe(token);
+        const user: AuthUser = me?.user || (data.user ? {
+          userId: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          tenantId: data.merchant?.id || `tnt_${data.user.id.slice(0, 8)}`,
+        } : data.merchant);
+
+        const tenant: AuthTenant | null = me?.tenant || (data.merchant ? {
+          id: data.merchant.id,
+          name: data.merchant.name,
+          slug: data.merchant.slug,
+          environment: data.merchant.environment || "test",
+          status: data.merchant.status || "ACTIVE",
+          capacity_limit: 5,
+          kill_switch_active: false,
+        } : null);
+
+        saveToStorage(token, user, tenant);
+
         setState({
           token,
-          user: me?.user || data.merchant,
-          tenant: me?.tenant || null,
+          user,
+          tenant,
           loading: false,
         });
       }
@@ -241,7 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             business_name,
             role: "Owner",
-            tenant_id: data?.merchant?.tenant_id,
+            tenant_id: data?.merchant?.id,
           },
         },
       }).catch(() => {});
@@ -254,7 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     const token = state.token;
-    localStorage.removeItem(TOKEN_KEY);
+    saveToStorage(null, null, null);
     setState({ token: null, user: null, tenant: null, loading: false });
 
     // Sign out from Supabase & backend
@@ -270,7 +348,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refresh = async () => {
     if (!state.token) return;
     const me = await fetchMe(state.token);
-    if (me) setState((s) => ({ ...s, user: me.user, tenant: me.tenant }));
+    if (me) {
+      saveToStorage(state.token, me.user, me.tenant);
+      setState((s) => ({ ...s, user: me.user, tenant: me.tenant }));
+    }
   };
 
   return (
