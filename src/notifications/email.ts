@@ -1,12 +1,29 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 const resendApiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'ULTRON Recovery <onboarding@resend.dev>';
+const fromEmail = process.env.SMTP_FROM || process.env.RESEND_FROM_EMAIL || 'ULTRON Recovery <onboarding@resend.dev>';
 
+// Initialize Resend Client
 let resendClient: Resend | null = null;
-
 if (resendApiKey) {
   resendClient = new Resend(resendApiKey);
+}
+
+// Initialize Custom SMTP Transporter
+let smtpTransporter: nodemailer.Transporter | null = null;
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  const isSecure = process.env.SMTP_SECURE === 'true' || Number(process.env.SMTP_PORT) === 465;
+  smtpTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || (isSecure ? 465 : 587),
+    secure: isSecure,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  console.log(`📧 EmailService: Initialized custom SMTP transporter (${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587})`);
 }
 
 export interface SendEmailOptions {
@@ -16,28 +33,41 @@ export interface SendEmailOptions {
 }
 
 /**
- * Dispatches an email via Resend with graceful console fallback in development.
+ * Dispatches an email via SMTP or Resend with graceful console fallback in development.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
-    if (!resendClient) {
-      console.log(`📧 [EMAIL SIMULATION] To: ${options.to} | Subject: ${options.subject}`);
-      return { success: true, id: `sim_${Date.now()}` };
+    // 1. Prioritize custom SMTP if configured
+    if (smtpTransporter) {
+      const info = await smtpTransporter.sendMail({
+        from: fromEmail,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      return { success: true, id: info.messageId };
     }
 
-    const { data, error } = await resendClient.emails.send({
-      from: fromEmail,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-    });
+    // 2. Fallback to Resend API
+    if (resendClient) {
+      const { data, error } = await resendClient.emails.send({
+        from: fromEmail,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
 
-    if (error) {
-      console.error('Failed to send email via Resend:', error);
-      return { success: false, error: error.message };
+      if (error) {
+        console.error('Failed to send email via Resend:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, id: data?.id };
     }
 
-    return { success: true, id: data?.id };
+    // 3. Fallback to Console simulation in dev
+    console.log(`📧 [EMAIL SIMULATION] To: ${options.to} | Subject: ${options.subject}`);
+    return { success: true, id: `sim_${Date.now()}` };
   } catch (err: any) {
     console.error('Error sending email:', err);
     return { success: false, error: err.message };
