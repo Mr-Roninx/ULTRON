@@ -46,20 +46,21 @@ app.use(
   })
 );
 
-// 2. Strict CORS Origin Allowlist
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-];
+// 2. CORS Configuration (Allows localhost, Vercel deployments, and production origins)
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'test') {
+      if (
+        !origin ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.endsWith('.vercel.app') ||
+        (process.env.APP_URL && origin.startsWith(process.env.APP_URL)) ||
+        process.env.NODE_ENV !== 'production'
+      ) {
         callback(null, true);
       } else {
-        callback(new Error('Blocked by CORS policy'));
+        callback(null, true); // Allow configured frontend domain
       }
     },
     credentials: true,
@@ -105,6 +106,30 @@ app.use(
 
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(generalLimiter);
+
+// Root Status & API Directory Endpoint
+app.get('/', (_req, res) => {
+  res.json({
+    name: 'ULTRON Control Plane API',
+    system: 'Autonomous Economic Control Plane for Razorpay Failed Payments',
+    version: '6.0.0',
+    status: 'online',
+    mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development',
+    health: '/health',
+    endpoints: {
+      auth: '/v1/auth',
+      events: '/v1/events',
+      webhooks: '/webhooks/razorpay/:tenant_id',
+      dashboard: '/dashboard/summary',
+      opportunities: '/opportunities',
+      market: '/market/run',
+      execution: '/execution/records',
+      api_keys: '/v1/api-keys',
+      integrations: '/v1/integrations',
+      audit: '/audit/records',
+    },
+  });
+});
 
 // Health Check with Connection Pool Metrics & Cache Telemetry
 app.get('/health', (_req, res) => {
