@@ -117,13 +117,132 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(generalLimiter);
 
 // Root Status & API Directory Endpoint
-app.get('/', (_req, res) => {
+app.get('/', (req, res) => {
+  const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
+
+  if (acceptsHtml) {
+    const frontendUrl = process.env.APP_URL || 'https://ultron-power.vercel.app';
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>ULTRON Control Plane API</title>
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              background: radial-gradient(circle at top, #0d1527 0%, #060b18 100%);
+              color: #f1f5f9;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 24px;
+            }
+            .card {
+              max-width: 600px;
+              width: 100%;
+              background: rgba(15, 23, 42, 0.75);
+              border: 1px solid rgba(59, 130, 246, 0.25);
+              border-radius: 20px;
+              padding: 40px;
+              text-align: center;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+              backdrop-filter: blur(12px);
+            }
+            .badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              padding: 6px 14px;
+              background: rgba(16, 185, 129, 0.12);
+              border: 1px solid rgba(16, 185, 129, 0.3);
+              color: #34d399;
+              border-radius: 9999px;
+              font-size: 13px;
+              font-weight: 600;
+              margin-bottom: 20px;
+            }
+            .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+            h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+            p { font-size: 15px; color: #94a3b8; line-height: 1.6; margin-bottom: 28px; }
+            .btn {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+              color: #ffffff;
+              padding: 14px 28px;
+              border-radius: 12px;
+              text-decoration: none;
+              font-size: 15px;
+              font-weight: 600;
+              box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+              transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .btn:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+            }
+            .endpoints {
+              margin-top: 32px;
+              padding-top: 24px;
+              border-top: 1px solid rgba(255, 255, 255, 0.08);
+              text-align: left;
+            }
+            .endpoints h3 { font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 12px; }
+            .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
+            .tag {
+              background: rgba(255, 255, 255, 0.05);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              padding: 4px 10px;
+              border-radius: 6px;
+              font-size: 12px;
+              font-family: monospace;
+              color: #cbd5e1;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="badge"><span class="dot"></span> Backend API Online • v6.0.0</div>
+            <h1>🛡️ ULTRON Control Plane</h1>
+            <p>
+              Autonomous Economic Control Plane for Razorpay Failed-Payment Recovery.
+              This is the backend API engine. You can access the live web dashboard below.
+            </p>
+            <a class="btn" href="${frontendUrl}" target="_blank">
+              Open Web Application Dashboard →
+            </a>
+            <div class="endpoints">
+              <h3>Active API Services</h3>
+              <div class="tag-group">
+                <span class="tag">GET /health</span>
+                <span class="tag">POST /v1/auth/signup</span>
+                <span class="tag">POST /v1/auth/login</span>
+                <span class="tag">POST /v1/events</span>
+                <span class="tag">POST /webhooks/razorpay/:tenant_id</span>
+                <span class="tag">GET /dashboard/summary</span>
+                <span class="tag">POST /market/run</span>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    return;
+  }
+
   res.json({
     name: 'ULTRON Control Plane API',
     system: 'Autonomous Economic Control Plane for Razorpay Failed Payments',
     version: '6.0.0',
     status: 'online',
     mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development',
+    frontend: process.env.APP_URL || 'https://ultron-power.vercel.app',
     health: '/health',
     endpoints: {
       auth: '/v1/auth',
