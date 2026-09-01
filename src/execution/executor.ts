@@ -20,10 +20,17 @@ import { RazorpayClientPool } from '../providers/razorpay/client_pool.js';
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 // Backward-compatible fallback client for system-default tenant / local dev
-export const rzpClient = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+function createDefaultRazorpayClient(): Razorpay {
+  const key_id = process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder';
+  const key_secret = process.env.RAZORPAY_KEY_SECRET || 'placeholder_secret';
+  try {
+    return new Razorpay({ key_id, key_secret });
+  } catch (err: any) {
+    return new Razorpay({ key_id: 'rzp_test_placeholder', key_secret: 'placeholder_secret' });
+  }
+}
+
+export const rzpClient = createDefaultRazorpayClient();
 
 export interface SingleExecutionResult {
   opportunity_id: string;
