@@ -93,6 +93,112 @@ export class BayesianProbabilityCalibrator {
     };
   }
 
+  private static cache: Map<string, CalibratedModelRecord> = new Map();
+  private static observationsCache: Map<string, { natSucc: number; natTot: number; intSucc: number; intTot: number }> = new Map();
+
+  /**
+   * Pre-populates cache from memory or records
+   */
+  public static preloadCache(records: CalibratedModelRecord[] = []): void {
+    for (const r of records) {
+      this.cache.set(r.reason_code, r);
+    }
+  }
+
+  /**
+   * Fast synchronous accessor for scoring pipelines.
+   * Reads from hot in-memory cache with fallback to static table.
+   */
+  public static getEffectiveProbabilitiesSync(
+    reasonCode: string,
+    declineType?: string
+  ): { p_natural: number; p_intervention: number; source: 'STATIC' | 'CALIBRATED'; credible_interval_95: [number, number] } {
+    const normReason = (reasonCode || '').toLowerCase();
+
+    // Invariant: Hard declines always near zero
+    if (declineType === 'hard') {
+      return {
+        p_natural: 0.02,
+        p_intervention: 0.02,
+        source: 'STATIC',
+        credible_interval_95: [0.01, 0.03],
+      };
+    }
+
+    const cached = this.cache.get(normReason);
+    if (cached && cached.sample_size >= 100 && cached.model_type === 'CALIBRATED') {
+      // Calculate 95% Credible Interval using Beta variance approximation: mean ± 1.96 * sqrt(p*(1-p)/N)
+      const p = cached.p_interv_mean;
+      const se = Math.sqrt((p * (1 - p)) / cached.sample_size);
+      const lower = Math.max(0.001, Number((p - 1.96 * se).toFixed(4)));
+      const upper = Math.min(0.999, Number((p + 1.96 * se).toFixed(4)));
+
+      return {
+        p_natural: cached.p_natural_mean,
+        p_intervention: cached.p_interv_mean,
+        source: 'CALIBRATED',
+        credible_interval_95: [lower, upper],
+      };
+    }
+
+    // Static fallback lookup
+    let staticBase = STATIC_PROBABILITY_TABLE[normReason];
+    if (!staticBase) {
+      if (normReason.includes('insufficient_funds')) staticBase = STATIC_PROBABILITY_TABLE['insufficient_funds'];
+      else if (normReason.includes('expired_card') || normReason.includes('card_expired')) staticBase = STATIC_PROBABILITY_TABLE['expired_card'];
+      else if (normReason.includes('timeout') || normReason.includes('network') || normReason.includes('bank_gateway_timeout')) staticBase = STATIC_PROBABILITY_TABLE['network_error'];
+      else if (normReason.includes('generic_decline') || normReason.includes('do_not_honor')) staticBase = STATIC_PROBABILITY_TABLE['generic_decline'];
+      else staticBase = STATIC_PROBABILITY_TABLE['default'];
+    }
+
+    return {
+      p_natural: staticBase.natural_recovery_prob,
+      p_intervention: staticBase.intervention_recovery_prob,
+      source: 'STATIC',
+      credible_interval_95: [
+        Math.max(0.01, Number((staticBase.intervention_recovery_prob - 0.10).toFixed(2))),
+        Math.min(0.99, Number((staticBase.intervention_recovery_prob + 0.10).toFixed(2)))
+      ],
+    };
+  }
+
+  /**
+   * Records a live recovery observation and updates posterior distributions in memory and database.
+   */
+  public static async recordRealtimeObservation(
+    reasonCode: string,
+    isRecovered: boolean,
+    wasIntervention: boolean
+  ): Promise<void> {
+    const normReason = (reasonCode || 'generic_decline').toLowerCase();
+    if (!this.observationsCache.has(normReason)) {
+      this.observationsCache.set(normReason, { natSucc: 0, natTot: 0, intSucc: 0, intTot: 0 });
+    }
+    const obs = this.observationsCache.get(normReason)!;
+
+    if (wasIntervention) {
+      obs.intTot += 1;
+      if (isRecovered) obs.intSucc += 1;
+    } else {
+      obs.natTot += 1;
+      if (isRecovered) obs.natSucc += 1;
+    }
+
+    // Periodically update calibrated distributions
+    if (obs.intTot + obs.natTot >= 5) {
+      try {
+        const updated = await this.updateCalibratedDistributions(
+          normReason,
+          { successes: obs.natSucc, total: obs.natTot },
+          { successes: obs.intSucc, total: obs.intTot }
+        );
+        this.cache.set(normReason, updated);
+      } catch (err) {
+        console.warn(`⚠️ [BayesianCalibrator] Error persisting observation for ${normReason}:`, (err as any)?.message);
+      }
+    }
+  }
+
   /**
    * Retrieves effective probability distribution for a decline code.
    * If calibrated model has < 100 observations, falls back to static baseline.
@@ -109,6 +215,7 @@ export class BayesianProbabilityCalibrator {
     );
 
     if (records.length > 0 && records[0].sample_size >= 100 && records[0].model_type === 'CALIBRATED') {
+      this.cache.set(reasonCode, records[0]);
       return {
         p_natural: records[0].p_natural_mean,
         p_intervention: records[0].p_interv_mean,

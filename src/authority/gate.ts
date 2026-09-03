@@ -223,11 +223,11 @@ export interface AuthorityPipelineResult {
 /**
  * Runs full two-stage pipeline: Recovery Market Allocation followed by Action Authority Gate
  */
-export function runAuthorityPipeline(options: { capacity?: number } = {}): AuthorityPipelineResult {
-  // 1. Run Market Allocation
+export function runAuthorityPipeline(options: { capacity?: number; tenantId?: string } = {}): AuthorityPipelineResult {
+  // 1. Run Market Allocation scoped to tenant
   runMarketAllocation(options);
 
-  const allOpps = getAllOpportunities();
+  const allOpps = getAllOpportunities(options.tenantId);
   const results: AuthorityEvaluationResult[] = [];
 
   let authorized_count = 0;
@@ -236,8 +236,19 @@ export function runAuthorityPipeline(options: { capacity?: number } = {}): Autho
   let deferred_count = 0;
 
   for (const opp of allOpps) {
-    const score = getScoreByOpportunityId(opp.id)!;
-    const decision = getAllocationDecisionByOpportunityId(opp.id)!;
+    let score = getScoreByOpportunityId(opp.id);
+    if (!score) score = scoreOpportunity(opp);
+
+    let decision = getAllocationDecisionByOpportunityId(opp.id);
+    if (!decision) {
+      decision = {
+        opportunity_id: opp.id,
+        decision: 'WAIT',
+        rank_in_batch: 999,
+        shadow_price_paise_at_decision: 0,
+        reason: 'Unallocated evaluation',
+      };
+    }
 
     const evalResult = evaluateOpportunity(opp, decision, score);
     results.push(evalResult);

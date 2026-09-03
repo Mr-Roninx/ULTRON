@@ -26,6 +26,16 @@ import {
   OutreachDraftRecord,
   PerceptionAnnotationRecord,
 } from '../agents/types.js';
+import { getSupabaseClient } from '../security/supabase.js';
+
+function syncToSupabase(table: string, payload: Record<string, any>, onConflictKey: string = 'id'): void {
+  try {
+    const sb = getSupabaseClient();
+    Promise.resolve(
+      sb.from(table).upsert(payload, { onConflict: onConflictKey })
+    ).catch(() => {});
+  } catch {}
+}
 
 const DB_PATH = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'ultron.db');
 
@@ -384,7 +394,201 @@ export function initDatabase(): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_perception_annotations_opp ON perception_annotations(opportunity_id);
+
+    -- ========================================================
+    -- WEB APP CLIENT CONNECTIONS (Live SDK Tracking)
+    -- ========================================================
+    CREATE TABLE IF NOT EXISTS web_app_connections (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      app_origin TEXT NOT NULL,
+      app_url TEXT,
+      app_name TEXT,
+      sdk_version TEXT DEFAULT '6.1.0',
+      status TEXT NOT NULL DEFAULT 'ONLINE' CHECK(status IN ('ONLINE', 'IDLE', 'OFFLINE')),
+      last_ping_at TEXT NOT NULL,
+      first_connected_at TEXT NOT NULL,
+      metadata TEXT,
+      UNIQUE(tenant_id, app_origin)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_web_app_tenant ON web_app_connections(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_web_app_last_ping ON web_app_connections(last_ping_at);
+
+    -- ========================================================
+    -- AUTONOMOUS DAEMON LOGS
+    -- ========================================================
+    CREATE TABLE IF NOT EXISTS daemon_sweep_logs (
+      id TEXT PRIMARY KEY,
+      sweep_number INTEGER NOT NULL,
+      started_at TEXT NOT NULL,
+      finished_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('SUCCESS','PARTIAL','FAILED','ABORTED')),
+      opps_scanned INTEGER DEFAULT 0,
+      opps_allocated INTEGER DEFAULT 0,
+      opps_executed INTEGER DEFAULT 0,
+      opps_reconciled INTEGER DEFAULT 0,
+      revenue_recovered_paise INTEGER DEFAULT 0,
+      error_message TEXT,
+      config_snapshot TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_daemon_sweep_logs_started ON daemon_sweep_logs(started_at);
+
+    -- ========================================================
+    -- EVENT INGESTION LOGS (Live Stream & Debugging)
+    -- ========================================================
+    CREATE TABLE IF NOT EXISTS event_ingestion_logs (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      event_id TEXT,
+      payment_id TEXT,
+      source TEXT NOT NULL DEFAULT 'CLIENT_SDK',
+      status TEXT NOT NULL CHECK(status IN ('ACCEPTED', 'REJECTED', 'DEDUPLICATED', 'UNAUTHORIZED')),
+      status_code INTEGER NOT NULL DEFAULT 200,
+      rejection_reason TEXT,
+      opportunity_id TEXT,
+      raw_payload TEXT NOT NULL,
+      origin TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_event_logs_tenant ON event_ingestion_logs(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_event_logs_event_id ON event_ingestion_logs(event_id);
+
+    -- ========================================================
+    -- NOTIFICATIONS (Recovery Activity & System Alerts)
+    -- ========================================================
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('LINK_CREATED', 'PAYMENT_RECOVERED', 'SWEEP_COMPLETED', 'INTEGRATION_ERROR', 'KILL_SWITCH_TRIGGERED', 'WHATSAPP_DISPATCHED')),
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      link_url TEXT,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_tenant_read ON notifications(tenant_id, read, created_at DESC);
+
+    -- ========================================================
+    -- WEBHOOK DELIVERY QUEUE & DEAD LETTER STORAGE
+    -- ========================================================
+    CREATE TABLE IF NOT EXISTS webhook_delivery_queue (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT 'RAZORPAY_WEBHOOK',
+      event_id TEXT,
+      event_type TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      headers TEXT,
+      status TEXT NOT NULL CHECK(status IN ('PENDING', 'PROCESSING', 'DELIVERED', 'FAILED', 'DEAD_LETTER')),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 5,
+      last_error TEXT,
+      next_retry_at TEXT,
+      delivered_at TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_webhook_queue_tenant ON webhook_delivery_queue(tenant_id, status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_webhook_queue_retry ON webhook_delivery_queue(status, next_retry_at);
+
+    -- ========================================================
+    -- DOUBLE ENTRY LEDGER & RECONCILIATION AUDIT TABLES
+    -- ========================================================
+    CREATE TABLE IF NOT EXISTS double_entry_ledger (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+      opportunity_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      debit_account TEXT NOT NULL,
+      credit_account TEXT NOT NULL,
+      amount_paise BIGINT NOT NULL,
+      timestamp TEXT NOT NULL,
+      prev_hash TEXT NOT NULL,
+      entry_hash TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_double_entry_ledger_tenant ON double_entry_ledger(tenant_id, timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_double_entry_ledger_opp ON double_entry_ledger(opportunity_id);
+
+    CREATE TABLE IF NOT EXISTS reconciliation_divergences (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+      opportunity_id TEXT NOT NULL,
+      webhook_status TEXT,
+      poller_status TEXT,
+      divergence_type TEXT,
+      type TEXT DEFAULT 'STATUS_DIVERGENCE',
+      severity TEXT DEFAULT 'MEDIUM',
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'OPEN',
+      detected_at TEXT,
+      resolved_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_divergences_tenant ON reconciliation_divergences(tenant_id, status);
+
+    CREATE TABLE IF NOT EXISTS probability_models (
+      reason_code TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+      p_natural_mean REAL NOT NULL,
+      p_interv_mean REAL NOT NULL,
+      sample_size INTEGER NOT NULL,
+      model_type TEXT NOT NULL CHECK(model_type IN ('STATIC', 'CALIBRATED')),
+      status TEXT NOT NULL CHECK(status IN ('ACTIVE', 'CANDIDATE')),
+      lift_vs_baseline REAL NOT NULL DEFAULT 0.0,
+      p_value REAL NOT NULL DEFAULT 1.0,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS bandit_arms (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+      context_key TEXT NOT NULL,
+      alpha_interv REAL NOT NULL DEFAULT 2.0,
+      beta_interv REAL NOT NULL DEFAULT 2.0,
+      alpha_nat REAL NOT NULL DEFAULT 2.0,
+      beta_nat REAL NOT NULL DEFAULT 5.0,
+      pull_count INTEGER NOT NULL DEFAULT 0,
+      reward_sum REAL NOT NULL DEFAULT 0.0,
+      updated_at TEXT NOT NULL,
+      UNIQUE(tenant_id, context_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bandit_arms_tenant ON bandit_arms(tenant_id, context_key);
+
+    CREATE TABLE IF NOT EXISTS pacing_bandit_logs (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+      time_window TEXT NOT NULL,
+      pacing_arm TEXT NOT NULL,
+      lambda_applied REAL NOT NULL,
+      spent_paise INTEGER NOT NULL,
+      budget_paise INTEGER NOT NULL,
+      reward REAL NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pacing_bandit_logs_tenant ON pacing_bandit_logs(tenant_id, created_at DESC);
   `);
+
+  try {
+    db.exec(`ALTER TABLE reconciliation_divergences ADD COLUMN webhook_status TEXT;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE reconciliation_divergences ADD COLUMN poller_status TEXT;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE reconciliation_divergences ADD COLUMN divergence_type TEXT;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE reconciliation_divergences ADD COLUMN detected_at TEXT;`);
+  } catch (e) {}
 }
 
 // Initial execution
@@ -508,6 +712,22 @@ export function insertOpportunity(opp: RecoveryOpportunity): void {
     opp.razorpay_event_id || null,
     opp.raw_payload_ref || null
   );
+
+  syncToSupabase('recovery_opportunities', {
+    id: opp.id,
+    source: opp.source,
+    amount_paise: opp.amount_paise,
+    currency: opp.currency || 'INR',
+    reason_code: opp.reason_code,
+    decline_type: opp.decline_type,
+    attempt_count: opp.attempt_count ?? 1,
+    customer_id: opp.customer_id,
+    customer_trust_score: opp.customer_trust_score ?? 0.65,
+    status: opp.status || 'pending',
+    tenant_id: tenantId,
+    merchant_id: tenantId,
+    created_at: opp.created_at || new Date().toISOString(),
+  }, 'id');
 }
 
 export function upsertOpportunity(opp: RecoveryOpportunity): void {
@@ -554,11 +774,33 @@ export function upsertOpportunity(opp: RecoveryOpportunity): void {
     opp.razorpay_event_id || null,
     opp.raw_payload_ref || null
   );
+
+  syncToSupabase('recovery_opportunities', {
+    id: opp.id,
+    source: opp.source,
+    amount_paise: opp.amount_paise,
+    currency: opp.currency || 'INR',
+    reason_code: opp.reason_code,
+    decline_type: opp.decline_type,
+    attempt_count: opp.attempt_count ?? 1,
+    customer_id: opp.customer_id,
+    customer_trust_score: opp.customer_trust_score ?? 0.65,
+    status: opp.status || 'pending',
+    tenant_id: tenantId,
+    merchant_id: tenantId,
+    created_at: opp.created_at || new Date().toISOString(),
+  }, 'id');
 }
 
 export function updateOpportunityStatus(id: string, status: OpportunityStatus): void {
   const stmt = db.prepare('UPDATE recovery_opportunities SET status = ? WHERE id = ?');
   stmt.run(status, id);
+
+  syncToSupabase('recovery_opportunities', {
+    id,
+    status,
+    updated_at: new Date().toISOString(),
+  }, 'id');
 }
 
 // Scores queries
@@ -595,6 +837,18 @@ export function upsertScore(score: Score): void {
     score.expected_incremental_value_paise,
     score.confidence
   );
+
+  syncToSupabase('scores', {
+    opportunity_id: score.opportunity_id,
+    tenant_id: score.tenant_id || 'tenant_system_default',
+    natural_recovery_prob: score.natural_recovery_prob,
+    intervention_recovery_prob: score.intervention_recovery_prob,
+    incremental_prob: score.incremental_prob,
+    operational_cost_paise: score.operational_cost_paise,
+    fatigue_cost_paise: score.fatigue_cost_paise,
+    expected_incremental_value_paise: score.expected_incremental_value_paise,
+    confidence: score.confidence,
+  }, 'opportunity_id');
 }
 
 export function getAllScores(): (Score & { opportunity_id: string })[] {
@@ -628,6 +882,14 @@ export function upsertAllocationDecision(decision: AllocationDecision): void {
     decision.shadow_price_paise_at_decision,
     decision.reason
   );
+
+  syncToSupabase('allocation_decisions', {
+    opportunity_id: decision.opportunity_id,
+    decision: decision.decision,
+    rank_in_batch: decision.rank_in_batch,
+    shadow_price_paise_at_decision: decision.shadow_price_paise_at_decision,
+    reason: decision.reason,
+  }, 'opportunity_id');
 }
 
 export function getAllAllocationDecisions(tenantId?: string): AllocationDecision[] {
@@ -680,6 +942,15 @@ export function insertAuthorityCheck(check: AuthorityCheck): void {
     check.passed ? 1 : 0,
     check.reason
   );
+
+  syncToSupabase('authority_checks', {
+    id: check.id || `chk_${check.opportunity_id}_${check.check_name}`,
+    opportunity_id: check.opportunity_id,
+    check_name: check.check_name,
+    passed: Boolean(check.passed),
+    reason: check.reason,
+    created_at: new Date().toISOString(),
+  }, 'id');
 }
 
 export function getAuthorityChecksByOpportunityId(oppId: string): AuthorityCheck[] {
@@ -726,6 +997,15 @@ export function upsertExecutionRecord(record: ExecutionRecord): void {
     record.idempotency_key,
     record.created_at || new Date().toISOString()
   );
+
+  syncToSupabase('execution_records', {
+    opportunity_id: record.opportunity_id,
+    razorpay_payment_link_id: record.razorpay_payment_link_id,
+    link_url: record.link_url,
+    status: record.status,
+    idempotency_key: record.idempotency_key,
+    created_at: record.created_at || new Date().toISOString(),
+  }, 'opportunity_id');
 }
 
 export function getExecutionRecordByOpportunityId(oppId: string): ExecutionRecord | undefined {
@@ -770,6 +1050,15 @@ export function insertLedgerEntry(entry: LedgerEntry): void {
     entry.timestamp || new Date().toISOString(),
     entry.raw_payload_ref || null
   );
+
+  syncToSupabase('ledger_entries', {
+    id: entry.id,
+    opportunity_id: entry.opportunity_id,
+    event_type: entry.event_type,
+    amount_paise: entry.amount_paise,
+    timestamp: entry.timestamp || new Date().toISOString(),
+    raw_payload_ref: entry.raw_payload_ref || null,
+  }, 'id');
 }
 
 export function getLedgerEntriesByOpportunity(oppId: string): LedgerEntry[] {
@@ -1379,4 +1668,524 @@ export function getPerceptionAnnotationByOpportunityId(oppId: string): Perceptio
   const stmt = db.prepare('SELECT * FROM perception_annotations WHERE opportunity_id = ?');
   return stmt.get(oppId) as unknown as PerceptionAnnotationRecord | undefined;
 }
+
+// 14. Web App Connections (Live Client SDK Tracking)
+export interface WebAppConnection {
+  id: string;
+  tenant_id: string;
+  app_origin: string;
+  app_url?: string | null;
+  app_name?: string | null;
+  sdk_version?: string | null;
+  status: 'ONLINE' | 'IDLE' | 'OFFLINE';
+  last_ping_at: string;
+  first_connected_at: string;
+  metadata?: string | null;
+}
+
+export function upsertWebAppConnection(conn: Partial<WebAppConnection> & { tenant_id: string; app_origin: string }): WebAppConnection {
+  const now = new Date().toISOString();
+  const id = conn.id || `wac_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const sdkVersion = conn.sdk_version || '6.1.0';
+
+  const stmt = db.prepare(`
+    INSERT INTO web_app_connections (
+      id, tenant_id, app_origin, app_url, app_name, sdk_version, status, last_ping_at, first_connected_at, metadata
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?, 'ONLINE', ?, ?, ?
+    )
+    ON CONFLICT(tenant_id, app_origin) DO UPDATE SET
+      app_url = COALESCE(excluded.app_url, web_app_connections.app_url),
+      app_name = COALESCE(excluded.app_name, web_app_connections.app_name),
+      sdk_version = excluded.sdk_version,
+      status = 'ONLINE',
+      last_ping_at = excluded.last_ping_at,
+      metadata = COALESCE(excluded.metadata, web_app_connections.metadata)
+  `);
+
+  stmt.run(
+    id,
+    conn.tenant_id,
+    conn.app_origin,
+    conn.app_url || null,
+    conn.app_name || null,
+    sdkVersion,
+    now,
+    conn.first_connected_at || now,
+    conn.metadata || null
+  );
+
+  return {
+    id,
+    tenant_id: conn.tenant_id,
+    app_origin: conn.app_origin,
+    app_url: conn.app_url || null,
+    app_name: conn.app_name || null,
+    sdk_version: sdkVersion,
+    status: 'ONLINE',
+    last_ping_at: now,
+    first_connected_at: conn.first_connected_at || now,
+    metadata: conn.metadata || null,
+  };
+}
+
+export function getWebAppConnections(tenantId?: string): WebAppConnection[] {
+  const now = Date.now();
+  const sql = tenantId
+    ? 'SELECT * FROM web_app_connections WHERE tenant_id = ? ORDER BY last_ping_at DESC'
+    : 'SELECT * FROM web_app_connections ORDER BY last_ping_at DESC';
+  const rows = (tenantId ? db.prepare(sql).all(tenantId) : db.prepare(sql).all()) as any[];
+
+  return rows.map((r) => {
+    const lastPingTime = new Date(r.last_ping_at).getTime();
+    const ageSeconds = Math.floor((now - lastPingTime) / 1000);
+    let status: 'ONLINE' | 'IDLE' | 'OFFLINE' = 'OFFLINE';
+    if (ageSeconds <= 90) {
+      status = 'ONLINE';
+    } else if (ageSeconds <= 300) {
+      status = 'IDLE';
+    } else {
+      status = 'OFFLINE';
+    }
+    return {
+      id: r.id,
+      tenant_id: r.tenant_id,
+      app_origin: r.app_origin,
+      app_url: r.app_url,
+      app_name: r.app_name,
+      sdk_version: r.sdk_version,
+      status,
+      last_ping_at: r.last_ping_at,
+      first_connected_at: r.first_connected_at,
+      metadata: r.metadata,
+    };
+  });
+}
+
+// ========================================================
+// AUTONOMOUS DAEMON HELPERS
+// ========================================================
+export interface DaemonSweepLog {
+  id: string;
+  sweep_number: number;
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
+  status: 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'ABORTED';
+  opps_scanned: number;
+  opps_allocated: number;
+  opps_executed: number;
+  opps_reconciled: number;
+  revenue_recovered_paise: number;
+  error_message?: string;
+  config_snapshot?: string;
+}
+
+export function insertDaemonSweepLog(log: DaemonSweepLog): void {
+  const stmt = db.prepare(`
+    INSERT INTO daemon_sweep_logs (
+      id, sweep_number, started_at, finished_at, duration_ms, status,
+      opps_scanned, opps_allocated, opps_executed, opps_reconciled,
+      revenue_recovered_paise, error_message, config_snapshot
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    log.id,
+    log.sweep_number,
+    log.started_at,
+    log.finished_at,
+    log.duration_ms,
+    log.status,
+    log.opps_scanned,
+    log.opps_allocated,
+    log.opps_executed,
+    log.opps_reconciled,
+    log.revenue_recovered_paise,
+    log.error_message || null,
+    log.config_snapshot || null
+  );
+}
+
+export function getDaemonSweepLogs(limit: number = 50): DaemonSweepLog[] {
+  const stmt = db.prepare('SELECT * FROM daemon_sweep_logs ORDER BY started_at DESC LIMIT ?');
+  return stmt.all(limit) as unknown as DaemonSweepLog[];
+}
+
+// ========================================================
+// EVENT INGESTION LOG HELPERS (Live Stream)
+// ========================================================
+export interface EventIngestionLog {
+  id: string;
+  tenant_id: string;
+  event_id?: string;
+  payment_id?: string | null;
+  source: string;
+  status: 'ACCEPTED' | 'REJECTED' | 'DEDUPLICATED' | 'UNAUTHORIZED';
+  status_code: number;
+  rejection_reason?: string;
+  opportunity_id?: string;
+  raw_payload: string;
+  origin?: string;
+  created_at: string;
+}
+
+export function insertEventIngestionLog(log: EventIngestionLog): void {
+  const stmt = db.prepare(`
+    INSERT INTO event_ingestion_logs (
+      id, tenant_id, event_id, payment_id, source, status, status_code,
+      rejection_reason, opportunity_id, raw_payload, origin, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    log.id,
+    log.tenant_id,
+    log.event_id || null,
+    log.payment_id || null,
+    log.source || 'CLIENT_SDK',
+    log.status,
+    log.status_code,
+    log.rejection_reason || null,
+    log.opportunity_id || null,
+    log.raw_payload,
+    log.origin || null,
+    log.created_at
+  );
+}
+
+export function getEventIngestionLogs(options: { tenantId?: string; status?: string; limit?: number } = {}): EventIngestionLog[] {
+  const limit = options.limit || 50;
+  if (options.tenantId && options.status) {
+    const stmt = db.prepare(`
+      SELECT * FROM event_ingestion_logs 
+      WHERE tenant_id = ? AND status = ? 
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `);
+    return stmt.all(options.tenantId, options.status, limit) as unknown as EventIngestionLog[];
+  } else if (options.tenantId) {
+    const stmt = db.prepare(`
+      SELECT * FROM event_ingestion_logs 
+      WHERE tenant_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `);
+    return stmt.all(options.tenantId, limit) as unknown as EventIngestionLog[];
+  } else if (options.status) {
+    const stmt = db.prepare(`
+      SELECT * FROM event_ingestion_logs 
+      WHERE status = ? 
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `);
+    return stmt.all(options.status, limit) as unknown as EventIngestionLog[];
+  } else {
+    const stmt = db.prepare(`
+      SELECT * FROM event_ingestion_logs 
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `);
+    return stmt.all(limit) as unknown as EventIngestionLog[];
+  }
+}
+
+// ========================================================
+// NOTIFICATION HELPERS
+// ========================================================
+export type NotificationType =
+  | 'LINK_CREATED'
+  | 'PAYMENT_RECOVERED'
+  | 'SWEEP_COMPLETED'
+  | 'INTEGRATION_ERROR'
+  | 'KILL_SWITCH_TRIGGERED'
+  | 'WHATSAPP_DISPATCHED';
+
+export interface NotificationItem {
+  id: string;
+  tenant_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link_url?: string;
+  read: boolean;
+  created_at: string;
+}
+
+export function insertNotification(n: Omit<NotificationItem, 'read'> & { read?: boolean }): void {
+  const stmt = db.prepare(`
+    INSERT INTO notifications (id, tenant_id, type, title, message, link_url, read, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    n.id,
+    n.tenant_id,
+    n.type,
+    n.title,
+    n.message,
+    n.link_url || null,
+    n.read ? 1 : 0,
+    n.created_at
+  );
+}
+
+export function getNotifications(tenantId: string, limit: number = 30): NotificationItem[] {
+  const stmt = db.prepare(`
+    SELECT id, tenant_id, type, title, message, link_url, read, created_at 
+    FROM notifications 
+    WHERE tenant_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT ?
+  `);
+  const rows = stmt.all(tenantId, limit) as any[];
+  return rows.map((r) => ({
+    ...r,
+    read: Boolean(r.read),
+  }));
+}
+
+export function getUnreadNotificationCount(tenantId: string): number {
+  const stmt = db.prepare(`
+    SELECT COUNT(*) as unread_count 
+    FROM notifications 
+    WHERE tenant_id = ? AND read = 0
+  `);
+  const row = stmt.get(tenantId) as { unread_count: number } | undefined;
+  return row ? row.unread_count : 0;
+}
+
+export function markNotificationAsRead(id: string, tenantId: string): void {
+  const stmt = db.prepare(`
+    UPDATE notifications 
+    SET read = 1 
+    WHERE id = ? AND tenant_id = ?
+  `);
+  stmt.run(id, tenantId);
+}
+
+export function markAllNotificationsAsRead(tenantId: string): void {
+  const stmt = db.prepare(`
+    UPDATE notifications 
+    SET read = 1 
+    WHERE tenant_id = ? AND read = 0
+  `);
+  stmt.run(tenantId);
+}
+
+// ========================================================
+// WEBHOOK DELIVERY QUEUE & REPLAY HELPERS
+// ========================================================
+export type WebhookQueueStatus = 'PENDING' | 'PROCESSING' | 'DELIVERED' | 'FAILED' | 'DEAD_LETTER';
+
+export interface WebhookDeliveryQueueItem {
+  id: string;
+  tenant_id: string;
+  source: string;
+  event_id?: string;
+  event_type: string;
+  payload: string;
+  headers?: string;
+  status: WebhookQueueStatus;
+  attempts: number;
+  max_attempts: number;
+  last_error?: string;
+  next_retry_at?: string;
+  delivered_at?: string;
+  created_at: string;
+}
+
+export function insertWebhookDelivery(item: WebhookDeliveryQueueItem): void {
+  const stmt = db.prepare(`
+    INSERT INTO webhook_delivery_queue (
+      id, tenant_id, source, event_id, event_type, payload, headers,
+      status, attempts, max_attempts, last_error, next_retry_at, delivered_at, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    item.id,
+    item.tenant_id,
+    item.source || 'RAZORPAY_WEBHOOK',
+    item.event_id || null,
+    item.event_type,
+    item.payload,
+    item.headers || null,
+    item.status || 'PENDING',
+    item.attempts || 0,
+    item.max_attempts || 5,
+    item.last_error || null,
+    item.next_retry_at || null,
+    item.delivered_at || null,
+    item.created_at
+  );
+}
+
+export function getWebhookDeliveries(options: { tenantId: string; status?: string; limit?: number }): WebhookDeliveryQueueItem[] {
+  const limit = options.limit || 50;
+  if (options.status && options.status !== 'ALL') {
+    const stmt = db.prepare(`
+      SELECT * FROM webhook_delivery_queue 
+      WHERE tenant_id = ? AND status = ? 
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `);
+    return stmt.all(options.tenantId, options.status, limit) as unknown as WebhookDeliveryQueueItem[];
+  }
+  const stmt = db.prepare(`
+    SELECT * FROM webhook_delivery_queue 
+    WHERE tenant_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT ?
+  `);
+  return stmt.all(options.tenantId, limit) as unknown as WebhookDeliveryQueueItem[];
+}
+
+export function getWebhookDeliveryById(id: string, tenantId: string): WebhookDeliveryQueueItem | undefined {
+  const stmt = db.prepare('SELECT * FROM webhook_delivery_queue WHERE id = ? AND tenant_id = ?');
+  return stmt.get(id, tenantId) as unknown as WebhookDeliveryQueueItem | undefined;
+}
+
+export function updateWebhookDeliveryStatus(
+  id: string,
+  status: WebhookQueueStatus,
+  options: { attempts?: number; last_error?: string; next_retry_at?: string; delivered_at?: string } = {}
+): void {
+  const stmt = db.prepare(`
+    UPDATE webhook_delivery_queue
+    SET status = ?,
+        attempts = COALESCE(?, attempts),
+        last_error = ?,
+        next_retry_at = ?,
+        delivered_at = ?
+    WHERE id = ?
+  `);
+  stmt.run(
+    status,
+    options.attempts !== undefined ? options.attempts : null,
+    options.last_error !== undefined ? options.last_error : null,
+    options.next_retry_at !== undefined ? options.next_retry_at : null,
+    options.delivered_at !== undefined ? options.delivered_at : null,
+    id
+  );
+}
+
+export function getDueWebhookRetries(limit: number = 20): WebhookDeliveryQueueItem[] {
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    SELECT * FROM webhook_delivery_queue
+    WHERE status IN ('PENDING', 'FAILED') AND (next_retry_at IS NULL OR next_retry_at <= ?)
+    ORDER BY created_at ASC
+    LIMIT ?
+  `);
+  return stmt.all(now, limit) as unknown as WebhookDeliveryQueueItem[];
+}
+
+export function requeueDeadLetterWebhooks(tenantId: string): number {
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    UPDATE webhook_delivery_queue
+    SET status = 'PENDING',
+        attempts = 0,
+        last_error = 'Manually requeued from Dead Letter Queue',
+        next_retry_at = ?
+    WHERE tenant_id = ? AND status IN ('DEAD_LETTER', 'FAILED')
+  `);
+  const info = stmt.run(now, tenantId);
+  return Number(info.changes);
+}
+
+// ========================================================
+// REINFORCEMENT LEARNING: BANDIT ARMS & PACING LOG HELPERS
+// ========================================================
+export interface BanditArmRecord {
+  id: string;
+  tenant_id: string;
+  context_key: string;
+  alpha_interv: number;
+  beta_interv: number;
+  alpha_nat: number;
+  beta_nat: number;
+  pull_count: number;
+  reward_sum: number;
+  updated_at: string;
+}
+
+export interface PacingBanditLogRecord {
+  id: string;
+  tenant_id: string;
+  time_window: string;
+  pacing_arm: string;
+  lambda_applied: number;
+  spent_paise: number;
+  budget_paise: number;
+  reward: number;
+  created_at: string;
+}
+
+export function getBanditArm(tenantId: string, contextKey: string): BanditArmRecord | undefined {
+  const stmt = db.prepare('SELECT * FROM bandit_arms WHERE tenant_id = ? AND context_key = ?');
+  return stmt.get(tenantId, contextKey) as unknown as BanditArmRecord | undefined;
+}
+
+export function upsertBanditArm(arm: BanditArmRecord): void {
+  const stmt = db.prepare(`
+    INSERT INTO bandit_arms (
+      id, tenant_id, context_key, alpha_interv, beta_interv,
+      alpha_nat, beta_nat, pull_count, reward_sum, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(tenant_id, context_key) DO UPDATE SET
+      alpha_interv = excluded.alpha_interv,
+      beta_interv = excluded.beta_interv,
+      alpha_nat = excluded.alpha_nat,
+      beta_nat = excluded.beta_nat,
+      pull_count = excluded.pull_count,
+      reward_sum = excluded.reward_sum,
+      updated_at = excluded.updated_at
+  `);
+  stmt.run(
+    arm.id,
+    arm.tenant_id,
+    arm.context_key,
+    arm.alpha_interv,
+    arm.beta_interv,
+    arm.alpha_nat,
+    arm.beta_nat,
+    arm.pull_count,
+    arm.reward_sum,
+    arm.updated_at
+  );
+
+  syncToSupabase('bandit_arms', arm as any, 'id');
+}
+
+export function getAllBanditArms(tenantId: string): BanditArmRecord[] {
+  const stmt = db.prepare('SELECT * FROM bandit_arms WHERE tenant_id = ? ORDER BY pull_count DESC');
+  return stmt.all(tenantId) as unknown as BanditArmRecord[];
+}
+
+export function insertPacingBanditLog(log: PacingBanditLogRecord): void {
+  const stmt = db.prepare(`
+    INSERT INTO pacing_bandit_logs (
+      id, tenant_id, time_window, pacing_arm, lambda_applied,
+      spent_paise, budget_paise, reward, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    log.id,
+    log.tenant_id,
+    log.time_window,
+    log.pacing_arm,
+    log.lambda_applied,
+    log.spent_paise,
+    log.budget_paise,
+    log.reward,
+    log.created_at
+  );
+
+  syncToSupabase('pacing_bandit_logs', log as any, 'id');
+}
+
+export function getRecentPacingBanditLogs(tenantId: string, limit: number = 50): PacingBanditLogRecord[] {
+  const stmt = db.prepare('SELECT * FROM pacing_bandit_logs WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?');
+  return stmt.all(tenantId, limit) as unknown as PacingBanditLogRecord[];
+}
+
+
 

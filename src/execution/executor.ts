@@ -3,12 +3,14 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import {
   getOpportunityById,
+  getCustomerById,
   getScoreByOpportunityId,
   getAllocationDecisionByOpportunityId,
   getExecutionRecordByOpportunityId,
   upsertExecutionRecord,
   updateOpportunityStatus,
   insertLedgerEntry,
+  insertNotification,
 } from '../db/database.js';
 import { scoreOpportunity } from '../economics/scorer.js';
 import { evaluateOpportunity, runAuthorityPipeline } from '../authority/gate.js';
@@ -16,6 +18,8 @@ import { ExecutionRecord, RecoveryOpportunity } from '../types/index.js';
 import { CircuitBreaker } from './circuit_breaker.js';
 import { ExecutionDLQ } from './dlq.js';
 import { RazorpayClientPool } from '../providers/razorpay/client_pool.js';
+import { sendWhatsAppRecoveryNotification } from '../notifications/whatsapp.js';
+import { sendCustomerRecoveryEmail } from '../notifications/email.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -102,6 +106,33 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     const tenantId = (opp as any).tenant_id || 'tenant_system_default';
     const tenantClient = await RazorpayClientPool.getClient(tenantId, 'test').catch(() => rzpClient);
 
+    // Resolve customer details from direct identifiers, raw payload, or customer profile
+    let payloadRef: any = {};
+    try {
+      if (opp.raw_payload_ref) {
+        payloadRef = JSON.parse(opp.raw_payload_ref);
+      }
+    } catch {}
+
+    const customerRecord = opp.customer_id ? getCustomerById(opp.customer_id) : undefined;
+    const customerEmail =
+      (opp.customer_id && opp.customer_id.includes('@') ? opp.customer_id : undefined) ||
+      payloadRef?.email ||
+      payloadRef?.notes?.email ||
+      (customerRecord as any)?.email;
+    const customerContact =
+      (opp.customer_id && (opp.customer_id.startsWith('+') || /^\d{10,12}$/.test(opp.customer_id)) ? opp.customer_id : undefined) ||
+      payloadRef?.contact ||
+      payloadRef?.phone ||
+      payloadRef?.notes?.phone ||
+      payloadRef?.notes?.contact ||
+      (customerRecord as any)?.phone;
+    const customerName =
+      (customerRecord as any)?.name ||
+      payloadRef?.name ||
+      payloadRef?.notes?.name ||
+      (customerEmail ? customerEmail.split('@')[0] : opp.customer_id);
+
     const rzpResponse: any = await circuitBreaker.executeWithResilience(
       async () => {
         return tenantClient.paymentLink.create({
@@ -111,15 +142,15 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
           reference_id: opp.id,
           description: `ULTRON automated recovery for opportunity ${opp.id}`,
           customer: {
-            name: opp.customer_id,
-            email: opp.customer_id.includes('@') ? opp.customer_id : undefined,
-            contact: opp.customer_id.startsWith('+') ? opp.customer_id : undefined,
+            name: customerName,
+            email: customerEmail,
+            contact: customerContact,
           },
           notify: {
-            sms: false,
-            email: false,
+            sms: Boolean(customerContact),
+            email: Boolean(customerEmail),
           },
-          reminder_enable: false,
+          reminder_enable: true,
           notes: {
             opportunity_id: opp.id,
             source: opp.source,
@@ -163,6 +194,52 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
       }),
     });
 
+    // Notification in-app
+    insertNotification({
+      id: `notif_link_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      tenant_id: tenantId,
+      type: 'LINK_CREATED',
+      title: 'Payment Link Created',
+      message: `Recovery link created for opportunity ${opp.id} (₹${(opp.amount_paise / 100).toFixed(2)})`,
+      link_url: '/dashboard/execution',
+      created_at: now,
+    });
+
+    // Omnichannel Customer Recovery: Dispatch via WhatsApp if contact is available
+    if (customerContact) {
+      try {
+        await sendWhatsAppRecoveryNotification({
+          to: customerContact,
+          customerName,
+          amountPaise: opp.amount_paise,
+          currency: opp.currency || 'INR',
+          recoveryUrl: linkUrl,
+          opportunityId: opp.id,
+          reasonCode: opp.reason_code,
+          tenantId,
+        });
+      } catch (waErr: any) {
+        console.warn(`[WhatsApp Delivery Warning] Could not dispatch to ${customerContact}:`, waErr.message);
+      }
+    }
+
+    // Omnichannel Customer Recovery: Dispatch via Email if email is available
+    if (customerEmail) {
+      try {
+        await sendCustomerRecoveryEmail({
+          to: customerEmail,
+          customerName,
+          amountPaise: opp.amount_paise,
+          currency: opp.currency || 'INR',
+          recoveryUrl: linkUrl,
+          opportunityId: opp.id,
+          reasonCode: opp.reason_code,
+        });
+      } catch (mailErr: any) {
+        console.warn(`[Email Delivery Warning] Could not dispatch to ${customerEmail}:`, mailErr.message);
+      }
+    }
+
     return {
       opportunity_id: opp.id,
       success: true,
@@ -205,13 +282,18 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     }
 
     // Record failure in Dead Letter Queue
-    await ExecutionDLQ.recordExecutionFailure(opp.id, errorDesc);
+    let userFacingError = error?.error?.description || error?.message || 'Razorpay API execution failed';
+    if (userFacingError.includes('auth') || userFacingError.includes('key_id') || userFacingError.includes('Unauthorized') || error?.statusCode === 401) {
+      userFacingError = 'Razorpay credentials unauthorized or missing. Please configure valid Test Mode Key ID & Secret in Settings > Integrations.';
+    }
+
+    await ExecutionDLQ.recordExecutionFailure(opp.id, userFacingError);
 
     return {
       opportunity_id: opp.id,
       success: false,
       created_new: false,
-      error: error?.message || error?.description || 'Razorpay API execution failed',
+      error: userFacingError,
     };
   }
 }
@@ -220,12 +302,12 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
  * Executes payment link creation for all currently AUTHORIZED opportunities up to capacity cap (default 5).
  */
 export async function executeAuthorizedBatch(
-  options: { maxLinks?: number; capacity?: number } = {}
+  options: { maxLinks?: number; capacity?: number; tenantId?: string } = {}
 ): Promise<BatchExecutionResult> {
   const maxLinks = options.maxLinks || Number(process.env.MAX_LINKS_PER_RUN) || 5;
 
-  // 1. Run Authority Pipeline to get up-to-date compliance verdicts
-  const authorityRun = runAuthorityPipeline({ capacity: options.capacity || maxLinks });
+  // 1. Run Authority Pipeline scoped to tenant to get up-to-date compliance verdicts
+  const authorityRun = runAuthorityPipeline({ capacity: options.capacity || maxLinks, tenantId: options.tenantId });
   const authorizedOpps = authorityRun.results.filter((r) => r.verdict === 'AUTHORIZED');
 
   const executionResults: SingleExecutionResult[] = [];

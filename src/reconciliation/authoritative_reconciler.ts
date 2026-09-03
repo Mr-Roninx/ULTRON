@@ -4,6 +4,8 @@ import { ProviderTruthEvaluator, ProviderTruthEvaluation } from '../truth/provid
 import { CanonicalStateMachine, CanonicalPaymentState } from '../truth/canonical_state_machine.js';
 import { DoubleEntryLedger } from '../truth/double_entry_ledger.js';
 import { RecoveryOpportunity, ExecutionRecord, OpportunityStatus } from '../types/index.js';
+import { BayesianProbabilityCalibrator } from '../economics/bayesian_calibration.js';
+import { ThompsonSamplingBandit } from '../economics/bandit_policy.js';
 
 export interface ReconciliationResult {
   opportunity_id: string;
@@ -307,19 +309,45 @@ export class AuthoritativeReconciler {
 
       // If mismatch, record divergence
       if (reconciliationOutcome === 'MISMATCH') {
+        const divId = `div_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         db.prepare(`
-          INSERT INTO reconciliation_divergences (opportunity_id, webhook_status, poller_status, divergence_type, detected_at)
-          VALUES (?, ?, ?, ?, ?);
+          INSERT INTO reconciliation_divergences (id, tenant_id, opportunity_id, type, severity, description, status, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         `).run(
+          divId,
+          (opp as any).tenant_id || 'tenant_system_default',
           opp.id,
-          'UNKNOWN',
-          truthEval.provider_status,
           'AMOUNT_OR_STATE_MISMATCH',
+          'HIGH',
+          `Reconciliation mismatch: provider status is ${truthEval.provider_status} with paid amount ${truthEval.amount_paid_paise}`,
+          'OPEN',
           now
         );
       }
 
       db.exec('COMMIT;');
+
+      // Real-Time Bayesian Continuous Learning Feedback
+      if (targetOpportunityStatus === 'recovered' || targetOpportunityStatus === 'not_recovered') {
+        const isRecovered = targetOpportunityStatus === 'recovered';
+        const wasIntervention = Boolean(execRecord?.razorpay_payment_link_id);
+        BayesianProbabilityCalibrator.recordRealtimeObservation(
+          opp.reason_code,
+          isRecovered,
+          wasIntervention
+        ).catch(() => {});
+
+        try {
+          const bandit = ThompsonSamplingBandit.getInstance();
+          const contextKey = bandit.getContextKey(opp);
+          bandit.updateReward({
+            tenantId: (opp as any).tenant_id || 'tenant_system_default',
+            contextKey,
+            isRecovered,
+            isIntervention: wasIntervention,
+          });
+        } catch {}
+      }
     } catch (err: any) {
       db.exec('ROLLBACK;');
       return {

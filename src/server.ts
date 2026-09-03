@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initDatabase } from './db/database.js';
 import { handleRazorpayWebhook, handleSimulatedWebhook } from './webhooks/razorpay.js';
+import { handleWhatsAppVerification, handleWhatsAppWebhookEvent } from './webhooks/whatsapp.js';
 import { opportunitiesRouter } from './routes/opportunities.js';
 import { marketRouter } from './routes/market.js';
 import { authorityRouter } from './routes/authority.js';
@@ -17,6 +18,15 @@ import { authRouter } from './routes/auth.js';
 import { apiKeysRouter } from './routes/api_keys.js';
 import { auditRouter } from './routes/audit.js';
 import { sdkRouter } from './routes/sdk.js';
+import { notificationsRouter } from './routes/notifications.js';
+import { webhooksQueueRouter } from './routes/webhooks_queue.js';
+import { playgroundRouter } from './routes/playground.js';
+import { auditExportRouter } from './routes/audit_export.js';
+import { AutonomousRecoveryDaemon } from './agents/daemon.js';
+import { WebhookQueueEngine } from './webhooks/queue.js';
+import { metrics } from './observability/metrics.js';
+import { tracingMiddleware } from './middleware/tracing.js';
+import { HealthService } from './observability/health.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +45,41 @@ MigrationRunner.migrateUp().then(({ applied }) => {
 }).catch((err) => {
   console.warn('⚠️ Migration warning:', err.message);
 });
+
+// Auto-Sync and Permanently Seed Default Tenant Credentials & API Keys to Supabase
+(async () => {
+  try {
+    const { SecretsManager } = await import('./security/secrets.js');
+    const { ApiKeyService } = await import('./security/api_keys.js');
+
+    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+      await SecretsManager.storeTenantCredential({
+        tenantId: 'tenant_system_default',
+        provider: 'razorpay',
+        environment: 'test',
+        credentialReference: 'ref_rzp_tenant_system_default_test',
+        rawSecret: JSON.stringify({
+          key_id: process.env.RAZORPAY_KEY_ID,
+          key_secret: process.env.RAZORPAY_KEY_SECRET,
+          webhook_secret: process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_whsec_ultron_test',
+        }),
+      });
+    }
+
+    const existingKeys = await ApiKeyService.listApiKeys('tenant_system_default');
+    if (existingKeys.length === 0) {
+      await ApiKeyService.createApiKey({
+        tenantId: 'tenant_system_default',
+        name: 'Default Root Production Key',
+        environment: 'test',
+        scopes: ['events:write', 'events:read', 'payments:read', 'recoveries:read', 'analytics:read', 'agent:read', 'integrations:read', 'integrations:write'],
+      });
+    }
+    console.log('⚡ SupabaseStore: Synced and verified permanent credentials with Supabase.');
+  } catch (err: any) {
+    console.warn('⚠️ SupabaseStore auto-seed warning:', err.message);
+  }
+})();
 
 export const app = express();
 const PORT = process.env.PORT || 3001;
@@ -115,7 +160,45 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(tracingMiddleware);
 app.use(generalLimiter);
+
+// Enterprise Prometheus Metrics Export Endpoint
+app.get('/metrics', (_req, res) => {
+  res.setHeader('Content-Type', 'text/plain; version=0.0.4');
+  res.send(metrics.exportMetrics());
+});
+
+// 3-Tier Enterprise Health Check Probes
+app.get('/health/live', HealthService.liveness);
+app.get('/health/ready', HealthService.readiness);
+app.get('/health/deep', HealthService.deep);
+
+// Health Check with Connection Pool Metrics & Cache Telemetry (Legacy /health)
+app.get('/health', (_req, res) => {
+  try {
+    const dbAdapter = DatabaseAdapter.getInstance();
+    const cacheManager = CacheManager.getInstance();
+
+    res.json({
+      status: 'healthy',
+      system: 'ULTRON Autonomous Economic Control Plane',
+      mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development / Test Mode',
+      kill_switch_active: isKillSwitchActive(),
+      database: dbAdapter.getPoolMetrics(),
+      cache: cacheManager.getStatus(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.json({
+      status: 'degraded',
+      system: 'ULTRON Autonomous Economic Control Plane',
+      mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development',
+      error: err.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 // Root Status & API Directory Endpoint
 app.get('/', (req, res) => {
@@ -260,32 +343,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health Check with Connection Pool Metrics & Cache Telemetry
-app.get('/health', (_req, res) => {
-  try {
-    const dbAdapter = DatabaseAdapter.getInstance();
-    const cacheManager = CacheManager.getInstance();
-
-    res.json({
-      status: 'healthy',
-      system: 'ULTRON Autonomous Economic Control Plane',
-      mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development / Test Mode',
-      kill_switch_active: isKillSwitchActive(),
-      database: dbAdapter.getPoolMetrics(),
-      cache: cacheManager.getStatus(),
-      timestamp: new Date().toISOString(),
-    });
-  } catch (err: any) {
-    res.json({
-      status: 'degraded',
-      system: 'ULTRON Autonomous Economic Control Plane',
-      mode: process.env.NODE_ENV === 'production' ? 'Production Enterprise SaaS' : 'Development',
-      error: err.message,
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
 // Real Webhook endpoint (verified against tenant-specific secret, labels records source='real')
 app.post('/webhooks/razorpay/:tenant_id', webhookLimiter, handleRazorpayWebhook);
 
@@ -294,6 +351,12 @@ if (process.env.ALLOW_TEST_INGESTION !== 'false') {
   app.post('/internal/simulate-webhook/:tenant_id', webhookLimiter, handleSimulatedWebhook);
   app.post('/internal/simulate-webhook', webhookLimiter, handleSimulatedWebhook); // legacy route for existing tests
 }
+
+// Meta WhatsApp Cloud API Webhook endpoints (Challenge GET verification & Delivery Receipts POST)
+app.get('/webhooks/whatsapp', handleWhatsAppVerification);
+app.post('/webhooks/whatsapp', handleWhatsAppWebhookEvent);
+app.get('/v1/webhooks/whatsapp', handleWhatsAppVerification);
+app.post('/v1/webhooks/whatsapp', handleWhatsAppWebhookEvent);
 
 // Opportunities endpoints
 app.use('/opportunities', authenticateJWT, auditLogger('access_opportunities', 'opportunities'), opportunitiesRouter);
@@ -327,6 +390,16 @@ app.use('/v1/api-keys', apiKeysRouter);
 
 // Audit & Ledger Logs
 app.use('/audit', authenticateJWT, auditRouter);
+app.use('/v1/audit', auditExportRouter);
+
+// Recovery Activity Notifications (v6)
+app.use('/v1/notifications', notificationsRouter);
+
+// Webhook Delivery Queue & Replay (v6)
+app.use('/v1/webhooks/queue', webhooksQueueRouter);
+
+// Recovery Playground & Real-Time Visualization (v6)
+app.use('/v1/playground', playgroundRouter);
 
 // Zero-Code Drop-In Client SDK
 app.use('/sdk', sdkRouter);
@@ -349,5 +422,14 @@ if (isDirectRun && process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
     console.log(`🛡️ Action Authority endpoint: GET/POST http://localhost:${PORT}/authority/run`);
     console.log(`⚡ Execution endpoint: POST http://localhost:${PORT}/execution/run`);
     console.log(`📈 Dashboard summary: GET http://localhost:${PORT}/dashboard/summary`);
+    
+    // Start Webhook Queue Retry Worker
+    WebhookQueueEngine.getInstance().startWorker(10000);
+
+    // Auto-start autonomous daemon if enabled
+    if (process.env.AUTONOMOUS_AGENT_ENABLED === 'true') {
+      console.log(`🤖 Starting Autonomous Recovery Agent Daemon (24/7 Background Sweep)`);
+      AutonomousRecoveryDaemon.getInstance().start();
+    }
   });
 }

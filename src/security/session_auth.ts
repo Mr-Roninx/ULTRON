@@ -68,6 +68,19 @@ export class SessionAuthService {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const db = DatabaseAdapter.getInstance();
 
+    // Ensure tenant & user exist to satisfy foreign key constraints
+    await db.execute(
+      `INSERT OR IGNORE INTO tenants (id, name, slug, environment, status, created_at)
+       VALUES (?, ?, ?, 'test', 'ACTIVE', ?);`,
+      [params.tenantId, `Merchant ${params.tenantId.slice(0, 8)}`, `slug_${params.tenantId}`, now.toISOString()]
+    ).catch(() => {});
+
+    await db.execute(
+      `INSERT OR IGNORE INTO users (id, email, name, password_hash, created_at)
+       VALUES (?, ?, ?, 'dummy_hash', ?);`,
+      [params.userId, params.email, 'Merchant Owner', now.toISOString()]
+    ).catch(() => {});
+
     await db.execute(
       `INSERT INTO sessions (id, user_id, tenant_id, token_hash, role, ip_address, user_agent, expires_at, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,

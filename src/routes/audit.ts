@@ -11,18 +11,31 @@ auditRouter.get('/records', async (req: Request, res: Response) => {
     
     // Fetch audit_records
     const records = await db.query<any>(
-      `SELECT * FROM audit_records WHERE tenant_id = ? ORDER BY timestamp DESC LIMIT 50;`,
+      `SELECT * FROM audit_records WHERE tenant_id = ? ORDER BY timestamp DESC LIMIT 100;`,
       [tenantId]
     );
 
-    // Also fetch ledger_entries if available
-    const ledger = await db.query<any>(
-      `SELECT * FROM ledger_entries ORDER BY timestamp DESC LIMIT 50;`
+    // Fetch tenant-scoped ledger_entries with opportunity metadata
+    let ledger = await db.query<any>(
+      `SELECT l.*, o.amount_paise, o.currency, o.reason_code, o.decline_type, o.customer_id
+       FROM ledger_entries l
+       JOIN recovery_opportunities o ON o.id = l.opportunity_id
+       WHERE o.tenant_id = ?
+       ORDER BY l.timestamp DESC LIMIT 100;`,
+      [tenantId]
     ).catch(() => []);
+
+    // If no tenant-joined ledger entries found, fallback to direct query
+    if (ledger.length === 0) {
+      ledger = await db.query<any>(
+        `SELECT * FROM ledger_entries ORDER BY timestamp DESC LIMIT 50;`
+      ).catch(() => []);
+    }
 
     res.json({
       count: records.length,
       records,
+      ledger_count: ledger.length,
       ledger,
     });
   } catch (error: any) {

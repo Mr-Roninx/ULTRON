@@ -173,6 +173,8 @@ export function normalizeOpportunity(
       error_reason: errorReason,
       error_code: errorCode,
       order_id: paymentEntity.order_id,
+      email: paymentEntity.email,
+      contact: paymentEntity.contact,
       notes: paymentEntity.notes,
     }),
   };

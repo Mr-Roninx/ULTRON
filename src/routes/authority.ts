@@ -39,10 +39,11 @@ authorityRouter.post('/kill-switch', (req: Request, res: Response) => {
 // GET /authority/run?capacity=5
 authorityRouter.get('/run', (req: Request, res: Response) => {
   try {
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
     const capacityParam = req.query.capacity as string | undefined;
     const capacity = capacityParam ? parseInt(capacityParam, 10) : undefined;
 
-    const result = runAuthorityPipeline({ capacity });
+    const result = runAuthorityPipeline({ capacity, tenantId });
     res.json(result);
   } catch (error) {
     console.error('Failed to run authority pipeline:', error);
@@ -53,8 +54,9 @@ authorityRouter.get('/run', (req: Request, res: Response) => {
 // POST /authority/run
 authorityRouter.post('/run', (req: Request, res: Response) => {
   try {
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
     const capacity = req.body.capacity !== undefined ? Number(req.body.capacity) : undefined;
-    const result = runAuthorityPipeline({ capacity });
+    const result = runAuthorityPipeline({ capacity, tenantId });
     res.json(result);
   } catch (error) {
     console.error('Failed to execute authority pipeline:', error);

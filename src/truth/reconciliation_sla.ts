@@ -30,15 +30,34 @@ export class ReconciliationSlaTracker {
     const adapter = db || DatabaseAdapter.getInstance();
     await adapter.execute(`
       CREATE TABLE IF NOT EXISTS reconciliation_divergences (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
         opportunity_id TEXT NOT NULL,
-        webhook_status TEXT NOT NULL,
-        poller_status TEXT NOT NULL,
-        divergence_type TEXT NOT NULL,
-        detected_at TEXT NOT NULL,
-        FOREIGN KEY (opportunity_id) REFERENCES recovery_opportunities(id) ON DELETE CASCADE
+        webhook_status TEXT,
+        poller_status TEXT,
+        divergence_type TEXT,
+        type TEXT DEFAULT 'STATUS_DIVERGENCE',
+        severity TEXT DEFAULT 'MEDIUM',
+        description TEXT,
+        status TEXT NOT NULL DEFAULT 'OPEN',
+        detected_at TEXT,
+        resolved_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
     `);
+
+    try {
+      await adapter.execute(`ALTER TABLE reconciliation_divergences ADD COLUMN webhook_status TEXT;`);
+    } catch (e) {}
+    try {
+      await adapter.execute(`ALTER TABLE reconciliation_divergences ADD COLUMN poller_status TEXT;`);
+    } catch (e) {}
+    try {
+      await adapter.execute(`ALTER TABLE reconciliation_divergences ADD COLUMN divergence_type TEXT;`);
+    } catch (e) {}
+    try {
+      await adapter.execute(`ALTER TABLE reconciliation_divergences ADD COLUMN detected_at TEXT;`);
+    } catch (e) {}
   }
 
   /**
@@ -90,7 +109,7 @@ export class ReconciliationSlaTracker {
   }
 
   /**
-   * Detects divergence between webhook state and poller state.
+   * Detects and logs divergences between webhook and poller states.
    */
   public static async detectDivergence(
     opportunityId: string,
@@ -104,20 +123,38 @@ export class ReconciliationSlaTracker {
     const adapter = DatabaseAdapter.getInstance();
     await this.initTable(adapter);
 
+    const now = new Date().toISOString();
+    const id = `div_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
     const alert: DivergenceAlert = {
       opportunity_id: opportunityId,
       webhook_status: webhookStatus,
       poller_status: pollerStatus,
       divergence_type: `MISMATCH (${webhookStatus} vs ${pollerStatus})`,
-      detected_at: new Date().toISOString(),
+      detected_at: now,
     };
 
     console.error(`🚨 Divergence Detected for opportunity ${opportunityId}: Webhook=${webhookStatus}, Poller=${pollerStatus}`);
 
     await adapter.execute(
-      `INSERT INTO reconciliation_divergences (opportunity_id, webhook_status, poller_status, divergence_type, detected_at)
-       VALUES (?, ?, ?, ?, ?);`,
-      [alert.opportunity_id, alert.webhook_status, alert.poller_status, alert.divergence_type, alert.detected_at]
+      `INSERT INTO reconciliation_divergences (
+        id, tenant_id, opportunity_id, webhook_status, poller_status, divergence_type,
+        type, severity, description, status, detected_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [
+        id,
+        'tenant_system_default',
+        alert.opportunity_id,
+        alert.webhook_status,
+        alert.poller_status,
+        alert.divergence_type,
+        'STATUS_DIVERGENCE',
+        'HIGH',
+        `Reconciliation divergence: webhook status '${webhookStatus}' differs from poller status '${pollerStatus}'`,
+        'OPEN',
+        alert.detected_at,
+        now,
+      ]
     );
 
     return alert;

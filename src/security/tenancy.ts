@@ -67,7 +67,12 @@ export class TenancyEnforcer {
    */
   public static authenticateTenant(requiredScope?: ApiKeyScope) {
     return async (req: TenantScopedRequest, res: Response, next: NextFunction): Promise<void> => {
-      const authHeader = req.headers.authorization;
+      let authHeader = req.headers.authorization;
+      if (!authHeader && typeof req.query.token === 'string') {
+        authHeader = `Bearer ${req.query.token}`;
+      } else if (!authHeader && typeof req.query.api_key === 'string') {
+        authHeader = `Bearer ${req.query.api_key}`;
+      }
 
       if (process.env.AUTH_REQUIRED === 'false' && (!authHeader || !authHeader.startsWith('Bearer '))) {
         req.tenantContext = {
@@ -88,7 +93,7 @@ export class TenancyEnforcer {
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         res.status(401).json({
           error: 'Unauthorized',
-          message: 'Missing or malformed Authorization Bearer header.',
+          message: 'Missing or malformed Authorization Bearer header or token parameter.',
         });
         return;
       }

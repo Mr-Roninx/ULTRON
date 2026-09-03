@@ -12,7 +12,8 @@ import {
   AllocationDecision,
   DecisionType,
 } from '../types/index.js';
-import { DatabaseAdapter } from '../db/adapter.js';
+import { DualMirrorBudgetPacer } from './capacity_policy.js';
+import { AntiBlastEngine } from '../economics/anti_blast_engine.js';
 
 export interface OpportunityWithScore {
   opportunity: RecoveryOpportunity;
@@ -45,6 +46,9 @@ export interface MarketRunResult {
   shadow_price_paise: number;
   shadow_price_display: string;
   items: MarketAllocationItem[];
+  lagrangian_shadow_multiplier?: number;
+  lagrangian_target_shadow_price_paise?: number;
+  budget_pacing_burn_rate?: number;
 }
 
 export function runMarketAllocation(options: { capacity?: number; opportunities?: RecoveryOpportunity[]; tenantId?: string } = {}): MarketRunResult {
@@ -169,6 +173,9 @@ export function runMarketAllocation(options: { capacity?: number; opportunities?
 
     upsertAllocationDecision(decisionRecord);
 
+    // Record Anti-Blast prevented intervention and capital saved
+    AntiBlastEngine.recordPreventedIntervention(opportunity, reason).catch(() => {});
+
     finalItems.push({
       opportunity_id: opportunity.id,
       amount_paise: opportunity.amount_paise,
@@ -186,15 +193,21 @@ export function runMarketAllocation(options: { capacity?: number; opportunities?
     });
   }
 
-  return {
-    capacity,
-    total_opportunities: allOpps.length,
-    eligible_count: eligibleList.length,
-    abstained_count: abstainedList.length,
-    accepted_count: Math.min(capacity, eligibleList.length),
-    deferred_count: Math.max(0, eligibleList.length - capacity),
-    shadow_price_paise: shadowPricePaise,
-    shadow_price_display: shadowPriceDisplay,
-    items: finalItems,
-  };
-}
+    const pacingState = DualMirrorBudgetPacer.getPacingState(options.tenantId || 'merchant_default');
+    const lagrangianTargetPaise = Math.round(pacingState.lambda * 400);
+
+    return {
+      capacity,
+      total_opportunities: allOpps.length,
+      eligible_count: eligibleList.length,
+      abstained_count: abstainedList.length,
+      accepted_count: Math.min(capacity, eligibleList.length),
+      deferred_count: Math.max(0, eligibleList.length - capacity),
+      shadow_price_paise: shadowPricePaise,
+      shadow_price_display: shadowPriceDisplay,
+      items: finalItems,
+      lagrangian_shadow_multiplier: pacingState.lambda,
+      lagrangian_target_shadow_price_paise: lagrangianTargetPaise,
+      budget_pacing_burn_rate: Number((pacingState.spent_today_paise / (pacingState.daily_budget_paise || 1)).toFixed(4)),
+    };
+  }

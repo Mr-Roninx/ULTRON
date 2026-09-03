@@ -7,10 +7,11 @@ export const executionRouter = Router();
 // POST /execution/run
 executionRouter.post('/run', async (req: Request, res: Response) => {
   try {
+    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
     const maxLinks = req.body.maxLinks !== undefined ? Number(req.body.maxLinks) : undefined;
     const capacity = req.body.capacity !== undefined ? Number(req.body.capacity) : undefined;
 
-    const result = await executeAuthorizedBatch({ maxLinks, capacity });
+    const result = await executeAuthorizedBatch({ maxLinks, capacity, tenantId });
     res.json(result);
   } catch (error: any) {
     console.error('Failed to execute authorized batch:', error);

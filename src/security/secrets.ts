@@ -111,17 +111,69 @@ export class SecretsManager {
         now,
       ]
     );
+
+    // 2. Permanently sync and persist encrypted credentials to Supabase
+    try {
+      const { SupabaseStore } = await import('./supabase_store.js');
+      await SupabaseStore.saveCredential({
+        id,
+        tenant_id: params.tenantId,
+        provider: params.provider,
+        environment: params.environment,
+        credential_reference: params.credentialReference,
+        encrypted_blob: encryptedData,
+        iv,
+        auth_tag: authTag,
+      });
+    } catch (sbErr: any) {
+      console.warn('⚠️ Supabase credential sync warning:', sbErr.message);
+    }
   }
 
   /**
-   * Retrieves and decrypts a tenant credential from the database.
+   * Retrieves and decrypts a tenant credential from the database (with Supabase fallback).
    */
   public static async getTenantCredential(tenantId: string, credentialReference: string): Promise<string | null> {
     const db = DatabaseAdapter.getInstance();
-    const rows = await db.query(
+    let rows = await db.query(
       `SELECT encrypted_data, iv, auth_tag FROM tenant_credentials WHERE tenant_id = ? AND credential_reference = ? LIMIT 1;`,
       [tenantId, credentialReference]
     );
+
+    // If not in local SQLite, attempt to fetch from Supabase
+    if (!rows || rows.length === 0) {
+      try {
+        const { SupabaseStore } = await import('./supabase_store.js');
+        const sbCred = await SupabaseStore.fetchCredential(tenantId, credentialReference);
+        if (sbCred) {
+          // Hydrate local SQLite
+          await db.execute(
+            `INSERT OR REPLACE INTO tenant_credentials (id, tenant_id, provider, environment, credential_reference, encrypted_data, iv, auth_tag, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+            [
+              sbCred.id,
+              sbCred.tenant_id,
+              sbCred.provider,
+              sbCred.environment,
+              sbCred.credential_reference,
+              sbCred.encrypted_blob,
+              sbCred.iv,
+              sbCred.auth_tag,
+              sbCred.created_at || new Date().toISOString(),
+              sbCred.updated_at || new Date().toISOString(),
+            ]
+          ).catch(() => {});
+
+          rows = [{
+            encrypted_data: sbCred.encrypted_blob,
+            iv: sbCred.iv,
+            auth_tag: sbCred.auth_tag,
+          }];
+        }
+      } catch (err: any) {
+        // ignore Supabase fetch error
+      }
+    }
 
     if (!rows || rows.length === 0) return null;
     const { encrypted_data, iv, auth_tag } = rows[0];
@@ -135,19 +187,55 @@ export class SecretsManager {
   }
 
   /**
-   * Lists all credential references and metadata for a given tenant.
+   * Lists all credential references and metadata for a given tenant (hydrating from Supabase).
    */
   public static async listTenantCredentials(tenantId: string): Promise<Array<{ id: string; provider: string; environment: string; credentialReference: string; createdAt: string; updatedAt: string }>> {
     const db = DatabaseAdapter.getInstance();
-    const rows = await db.query(
+    let rows = await db.query(
       `SELECT id, provider, environment, credential_reference, created_at, updated_at 
        FROM tenant_credentials 
        WHERE tenant_id = ? 
        ORDER BY created_at DESC;`,
       [tenantId]
     );
+
+    if (!rows || rows.length === 0) {
+      try {
+        const { SupabaseStore } = await import('./supabase_store.js');
+        const sbCreds = await SupabaseStore.listCredentials(tenantId);
+        if (sbCreds.length > 0) {
+          for (const c of sbCreds) {
+            await db.execute(
+              `INSERT OR REPLACE INTO tenant_credentials (id, tenant_id, provider, environment, credential_reference, encrypted_data, iv, auth_tag, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+              [
+                c.id,
+                c.tenant_id,
+                c.provider,
+                c.environment,
+                c.credential_reference,
+                c.encrypted_blob,
+                c.iv,
+                c.auth_tag,
+                c.created_at || new Date().toISOString(),
+                c.updated_at || new Date().toISOString(),
+              ]
+            ).catch(() => {});
+          }
+          rows = await db.query(
+            `SELECT id, provider, environment, credential_reference, created_at, updated_at 
+             FROM tenant_credentials 
+             WHERE tenant_id = ? 
+             ORDER BY created_at DESC;`,
+            [tenantId]
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }
     
-    return rows.map((row: any) => ({
+    return (rows || []).map((row: any) => ({
       id: row.id,
       provider: row.provider,
       environment: row.environment,

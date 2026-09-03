@@ -92,25 +92,31 @@ export class WebhookValidator {
   public static verifySignature(
     rawBody: string,
     signatureHeader: string,
-    secrets: string[]
+    secrets?: string[]
   ): { valid: boolean; matchedSecretIndex: number } {
     if (!rawBody || !signatureHeader) {
       return { valid: false, matchedSecretIndex: -1 };
     }
 
-    if (secrets.length === 0) {
-      // fallback default for tests if explicitly configured
-      if (process.env.RAZORPAY_WEBHOOK_SECRET === 'rzp_whsec_ultron_test') {
-        secrets.push('rzp_whsec_ultron_test');
-      } else {
-        return { valid: false, matchedSecretIndex: -1 };
-      }
+    const candidateSecrets: string[] = Array.isArray(secrets) && secrets.length > 0
+      ? [...secrets]
+      : [
+          process.env.RAZORPAY_WEBHOOK_SECRET,
+          process.env.RAZORPAY_WEBHOOK_SECRET_OLD,
+          'rzp_whsec_ultron_test',
+        ].filter(Boolean) as string[];
+
+    if (candidateSecrets.length === 0) {
+      return { valid: false, matchedSecretIndex: -1 };
     }
 
-    for (let i = 0; i < secrets.length; i++) {
-      const secret = secrets[i];
+    const sigBuf = Buffer.from(signatureHeader, 'utf-8');
+
+    for (let i = 0; i < candidateSecrets.length; i++) {
+      const secret = candidateSecrets[i];
       const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-      if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signatureHeader))) {
+      const expBuf = Buffer.from(expectedSignature, 'utf-8');
+      if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(expBuf, sigBuf)) {
         return { valid: true, matchedSecretIndex: i };
       }
     }

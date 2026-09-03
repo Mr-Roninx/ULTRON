@@ -65,27 +65,47 @@ export const OutreachReviewSchema = z.object({
 export const CanonicalPaymentEventSchema = z.object({
   event_id: z.string().min(1, 'event_id is required'),
   tenant_id: z.string().min(1, 'tenant_id is required'),
-  source: z.enum(['ODOOX_EVENT', 'RAZORPAY_WEBHOOK', 'RAZORPAY_API_FETCH', 'ULTRON_RECONCILIATION', 'SYNTHETIC_SIMULATION']),
-  provider: z.enum(['razorpay', 'stripe', 'manual']),
-  environment: z.enum(['live', 'test']),
-  payment_id: z.string().min(1).optional(),
-  order_id: z.string().min(1).optional(),
-  payment_link_id: z.string().min(1).optional(),
-  amount_paise: z.number().int().positive('amount_paise must be a positive integer'),
+  source: z.enum([
+    'ODOOX_EVENT',
+    'RAZORPAY_WEBHOOK',
+    'RAZORPAY_API_FETCH',
+    'ULTRON_RECONCILIATION',
+    'SYNTHETIC_SIMULATION',
+    'CLIENT_SDK',
+    'WEB_APP',
+    'SDK_INTERCEPTOR',
+  ]),
+  provider: z.enum(['razorpay', 'stripe', 'manual']).default('razorpay'),
+  environment: z.enum(['live', 'test']).default('test'),
+  payment_id: z.string().nullable().optional(),
+  order_id: z.string().nullable().optional(),
+  payment_link_id: z.string().nullable().optional(),
+  amount_paise: z.coerce.number().int().positive('amount_paise must be a positive integer'),
   currency: z.string().length(3).default('INR'),
-  method: z.string().optional(),
+  method: z.string().nullable().optional(),
   status: z.enum(['created', 'authorized', 'failed', 'captured', 'paid', 'cancelled', 'expired']),
-  failure_code: z.string().optional(),
-  failure_description: z.string().optional(),
-  failure_type: z.enum(['hard', 'soft', 'unknown']).optional(),
-  attempt_number: z.number().int().positive().default(1),
+  failure_code: z.string().nullable().optional(),
+  failure_description: z.string().nullable().optional(),
+  failure_type: z.enum(['hard', 'soft', 'unknown']).nullable().optional(),
+  attempt_number: z.coerce.number().int().positive().default(1),
   customer_reference: z.string().min(1, 'customer_reference is required'),
-  customer_email: z.string().email().optional(),
-  customer_phone: z.string().optional(),
-  occurred_at: z.string().optional(),
-  received_at: z.string().optional(),
-  correlation_id: z.string().min(1).default(() => `corr_${Date.now()}`),
-  metadata: z.record(z.any()).optional(),
+  customer_email: z.string().email().nullable().optional().or(z.literal('')),
+  customer_phone: z.string().nullable().optional(),
+  occurred_at: z.string().nullable().optional(),
+  received_at: z.string().nullable().optional(),
+  correlation_id: z.string().default(() => `corr_${Date.now()}`),
+  metadata: z.record(z.any()).nullable().optional(),
+});
+
+// Schema for Web App Connection Heartbeat / Ping
+export const WebAppPingSchema = z.object({
+  app_origin: z.string().min(1, 'app_origin is required'),
+  app_url: z.string().nullable().optional(),
+  app_name: z.string().nullable().optional(),
+  sdk_version: z.string().nullable().optional().default('6.1.0'),
+  user_agent: z.string().nullable().optional(),
+  timestamp: z.string().nullable().optional(),
+  metadata: z.record(z.any()).nullable().optional(),
 });
 
 /**
@@ -108,3 +128,4 @@ export function validateBody(schema: z.ZodSchema<any>) {
     next();
   };
 }
+

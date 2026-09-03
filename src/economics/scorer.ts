@@ -1,10 +1,14 @@
 import { RecoveryOpportunity, Score, ConfidenceLevel } from '../types/index.js';
 import { upsertScore, updateOpportunityStatus } from '../db/database.js';
+import { BayesianProbabilityCalibrator } from './bayesian_calibration.js';
+import { ThompsonSamplingBandit } from './bandit_policy.js';
 
 export interface ProbabilityEstimate {
   natural_recovery_prob: number;
   intervention_recovery_prob: number;
   incremental_prob: number;
+  source?: 'STATIC' | 'CALIBRATED';
+  credible_interval_95?: [number, number];
 }
 
 export interface CostBreakdown {
@@ -14,54 +18,24 @@ export interface CostBreakdown {
 }
 
 /**
- * Starter hand-coded probability tables
+ * Probabilities estimated via Bayesian Calibration engine.
+ * Reads from Beta-Binomial posterior distributions with sample-size gated auto-promotion.
  * Note: All probabilities are model-estimated counterfactuals.
  */
 export function estimateProbabilities(opp: RecoveryOpportunity): ProbabilityEstimate {
   const reason = (opp.reason_code || '').toLowerCase();
   const declineType = opp.decline_type;
 
-  let natural = 0.10;
-  let intervention = 0.10;
+  // Query Bayesian Calibration engine (hot cache / Beta posterior)
+  const bayes = BayesianProbabilityCalibrator.getEffectiveProbabilitiesSync(reason, declineType);
 
+  let natural = bayes.p_natural;
+  let intervention = bayes.p_intervention;
+
+  // Invariant: Hard declines strictly have 0 incremental recovery probability
   if (declineType === 'hard') {
-    // Hard declines have near-zero natural or intervention recovery
     natural = 0.02;
     intervention = 0.02;
-  } else if (reason.includes('insufficient_funds')) {
-    // Insufficient funds: customers often fund account after notification
-    natural = 0.35;
-    intervention = 0.55;
-  } else if (reason.includes('expired_card') || reason.includes('card_expired')) {
-    // Expired card: low natural auto-recovery, very high with direct payment link
-    natural = 0.05;
-    intervention = 0.60;
-  } else if (
-    reason.includes('generic_decline') ||
-    reason.includes('do_not_honor') ||
-    reason.includes('transaction_not_permitted') ||
-    reason.includes('declined_by_bank')
-  ) {
-    // Generic bank blocks / do not honor
-    natural = 0.25;
-    intervention = 0.45;
-  } else if (
-    reason.includes('timeout') ||
-    reason.includes('network') ||
-    reason.includes('gateway') ||
-    reason.includes('bank_gateway_timeout')
-  ) {
-    // Bank timeouts: high natural recovery (system comes back up)
-    natural = 0.60;
-    intervention = 0.70;
-  } else if (declineType === 'unknown') {
-    // Unknown unmapped decline
-    natural = 0.10;
-    intervention = 0.10;
-  } else {
-    // Default soft decline fallback
-    natural = 0.25;
-    intervention = 0.45;
   }
 
   const incremental = Math.max(0, Number((intervention - natural).toFixed(4)));
@@ -70,6 +44,8 @@ export function estimateProbabilities(opp: RecoveryOpportunity): ProbabilityEsti
     natural_recovery_prob: natural,
     intervention_recovery_prob: intervention,
     incremental_prob: incremental,
+    source: bayes.source,
+    credible_interval_95: bayes.credible_interval_95,
   };
 }
 
@@ -127,12 +103,31 @@ export function determineConfidence(opp: RecoveryOpportunity): ConfidenceLevel {
   return 'medium';
 }
 
+export interface ScoreOptions {
+  useBanditSampling?: boolean;
+  tenantId?: string;
+}
+
 /**
  * Full scoring calculation for an opportunity
  * Computes IVEN (Expected Incremental Value) = incremental_prob * amount - costs
  */
-export function calculateScore(opp: RecoveryOpportunity): Score {
-  const probs = estimateProbabilities(opp);
+export function calculateScore(opp: RecoveryOpportunity, options?: ScoreOptions): Score {
+  let probs: ProbabilityEstimate;
+
+  if (options?.useBanditSampling || process.env.ENABLE_THOMPSON_SAMPLING === 'true') {
+    const bandit = ThompsonSamplingBandit.getInstance();
+    const sample = bandit.sampleProbabilities(opp, options?.tenantId || opp.tenant_id);
+    probs = {
+      natural_recovery_prob: sample.p_natural,
+      intervention_recovery_prob: sample.p_intervention,
+      incremental_prob: sample.p_incremental,
+      source: 'CALIBRATED',
+    };
+  } else {
+    probs = estimateProbabilities(opp);
+  }
+
   const costs = calculateCosts(opp.attempt_count || 1);
   const confidence = determineConfidence(opp);
 
@@ -144,6 +139,7 @@ export function calculateScore(opp: RecoveryOpportunity): Score {
 
   return {
     opportunity_id: opp.id,
+    tenant_id: opp.tenant_id,
     natural_recovery_prob: probs.natural_recovery_prob,
     intervention_recovery_prob: probs.intervention_recovery_prob,
     incremental_prob: probs.incremental_prob,
@@ -157,8 +153,8 @@ export function calculateScore(opp: RecoveryOpportunity): Score {
 /**
  * Scores an opportunity, saves to SQLite scores table, and updates opportunity status
  */
-export function scoreOpportunity(opp: RecoveryOpportunity): Score {
-  const score = calculateScore(opp);
+export function scoreOpportunity(opp: RecoveryOpportunity, options?: ScoreOptions): Score {
+  const score = calculateScore(opp, options);
   upsertScore(score);
 
   if (opp.status === 'pending') {

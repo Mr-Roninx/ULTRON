@@ -52,6 +52,7 @@ export interface RecoveryOpportunity {
 
 export interface Score {
   opportunity_id: string;
+  tenant_id?: string;
   natural_recovery_prob: number;
   intervention_recovery_prob: number;
   incremental_prob: number;

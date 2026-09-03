@@ -11,9 +11,22 @@ interface Connection {
   environment: "test" | "live";
 }
 
+interface WebAppConnectionItem {
+  id: string;
+  app_origin: string;
+  app_url?: string;
+  app_name?: string;
+  sdk_version?: string;
+  status: "ONLINE" | "IDLE" | "OFFLINE";
+  last_ping_at: string;
+  first_connected_at: string;
+}
+
 export default function IntegrationsPage() {
   const { tenant, user } = useAuth();
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [webApps, setWebApps] = useState<WebAppConnectionItem[]>([]);
+  const [webAppsLoading, setWebAppsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ 
@@ -46,7 +59,24 @@ export default function IntegrationsPage() {
     }
   };
 
-  useEffect(() => { fetchConnections(); }, []);
+  const fetchWebApps = async () => {
+    setWebAppsLoading(true);
+    try {
+      const data = await api<{ connected: boolean; total_apps: number; apps: WebAppConnectionItem[] }>("/v1/integrations/web-apps");
+      setWebApps(data.apps || []);
+    } catch {
+      setWebApps([]);
+    } finally {
+      setWebAppsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConnections();
+    fetchWebApps();
+    const interval = setInterval(fetchWebApps, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCopyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
@@ -92,7 +122,7 @@ export default function IntegrationsPage() {
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Integrations & Payment Gateways</h1>
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-          Connect your Razorpay Live or Test merchant accounts. Credentials are encrypted in AES-256-GCM storage and resolved per-tenant.
+          Connect your Razorpay Live or Test merchant accounts and track client web applications streaming telemetry.
         </p>
       </div>
 
@@ -105,6 +135,77 @@ export default function IntegrationsPage() {
           <CheckCircle2 size={15} /> {success}
         </div>
       )}
+
+      {/* Live Web App Connections Card */}
+      <div className="card" style={{ padding: 20, background: "rgba(16,185,129,0.03)", border: "1px solid rgba(16,185,129,0.25)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Zap size={16} color="var(--emerald)" />
+              <h2 style={{ fontSize: 15, fontWeight: 600 }}>Live Web Application Connections (SDK Status)</h2>
+              <span style={{
+                fontSize: 10, padding: "2px 8px", borderRadius: 10, fontWeight: 700,
+                background: webApps.some(a => a.status === 'ONLINE') ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.08)",
+                color: webApps.some(a => a.status === 'ONLINE') ? "var(--emerald)" : "var(--text-muted)",
+              }}>
+                {webApps.some(a => a.status === 'ONLINE') ? "● LIVE ACTIVE" : "○ DISCONNECTED"}
+              </span>
+            </div>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              Websites and checkout pages currently integrated with <code>ultron.js</code> sending live heartbeats and failure telemetry.
+            </p>
+          </div>
+          <button className="btn btn-ghost" onClick={fetchWebApps} style={{ padding: "6px 12px", fontSize: 12, gap: 6 }}>
+            <RefreshCw size={13} className={webAppsLoading ? "animate-spin" : ""} /> Refresh
+          </button>
+        </div>
+
+        {webAppsLoading && webApps.length === 0 ? (
+          <div style={{ padding: 16, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>
+            Checking connected web applications…
+          </div>
+        ) : webApps.length === 0 ? (
+          <div style={{
+            padding: "20px 16px", textAlign: "center",
+            background: "var(--bg-surface)", border: "1px dashed var(--border)", borderRadius: 8,
+          }}>
+            <Code size={22} color="var(--text-muted)" style={{ marginBottom: 6 }} />
+            <div style={{ fontSize: 13, fontWeight: 500 }}>No Web Applications Connected Yet</div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+              Add the script tag below to your checkout webpage. Once the page loads, it will automatically appear here.
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {webApps.map((app) => (
+              <div key={app.id} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "10px 14px", borderRadius: 8,
+                background: "var(--bg-card)", border: "1px solid var(--border)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: app.status === 'ONLINE' ? 'var(--emerald)' : (app.status === 'IDLE' ? 'var(--amber)' : 'var(--text-muted)'),
+                    boxShadow: app.status === 'ONLINE' ? '0 0 6px var(--emerald)' : 'none',
+                  }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "monospace" }}>
+                      {app.app_origin}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                      App: {app.app_name || 'Client Web Checkout'} · SDK v{app.sdk_version || '6.1.0'} · Last ping: {new Date(app.last_ping_at).toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
+                <span className={`badge ${app.status === 'ONLINE' ? 'badge-green' : (app.status === 'IDLE' ? 'badge-amber' : 'badge-gray')}`}>
+                  {app.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Tenant Webhook Ingress URL Card */}
       <div className="card" style={{ padding: 20, background: "rgba(59,130,246,0.03)", border: "1px solid rgba(59,130,246,0.2)" }}>
@@ -205,6 +306,7 @@ export default function IntegrationsPage() {
             {showForm ? "Cancel" : "Connect Razorpay Account"}
           </button>
         </div>
+
 
         {loading ? (
           <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>

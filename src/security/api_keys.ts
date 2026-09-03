@@ -92,6 +92,24 @@ export class ApiKeyService {
       ]
     );
 
+    // Permanently sync and persist API key to Supabase
+    try {
+      const { SupabaseStore } = await import('./supabase_store.js');
+      await SupabaseStore.saveApiKey({
+        id,
+        tenant_id: params.tenantId,
+        name: params.name,
+        key_prefix: keyPrefix,
+        key_hash: secretHash,
+        scopes: params.scopes,
+        status: 'ACTIVE',
+        created_at: now,
+        expires_at: expiresAt,
+      });
+    } catch (sbErr: any) {
+      console.warn('⚠️ Supabase API key sync warning:', sbErr.message);
+    }
+
     const record: ApiKeyRecord = {
       id,
       tenant_id: params.tenantId,
@@ -116,7 +134,7 @@ export class ApiKeyService {
   }
 
   /**
-   * Authenticates a raw Bearer API key token.
+   * Authenticates a raw Bearer API key token (with Supabase fallback).
    */
   public static async authenticateKey(rawKey: string): Promise<{
     valid: boolean;
@@ -137,12 +155,55 @@ export class ApiKeyService {
     const prefixAndId = rawKey.substring(0, dotIndex);
     const rawSecret = rawKey.substring(dotIndex + 1);
     const keyId = prefixAndId.replace(/^ul_(live|test)_/, '');
+    const computedHash = crypto.createHash('sha256').update(rawSecret).digest('hex');
 
     const db = DatabaseAdapter.getInstance();
-    const rows = await db.query<any>(
+    let rows = await db.query<any>(
       `SELECT * FROM api_keys WHERE key_id = ?;`,
       [keyId]
     );
+
+    // If not found locally, query Supabase
+    if (rows.length === 0) {
+      try {
+        const { SupabaseStore } = await import('./supabase_store.js');
+        const sbKey = await SupabaseStore.fetchApiKeyByHash(computedHash);
+        if (sbKey) {
+          const now = new Date().toISOString();
+          await db.execute(
+            `INSERT OR REPLACE INTO api_keys (id, tenant_id, name, key_prefix, key_id, secret_hash, environment, scopes, created_at, expires_at)
+             VALUES (?, ?, ?, ?, ?, ?, 'test', ?, ?, ?);`,
+            [
+              sbKey.id,
+              sbKey.tenant_id,
+              sbKey.name,
+              sbKey.key_prefix,
+              keyId,
+              sbKey.key_hash,
+              JSON.stringify(sbKey.scopes),
+              sbKey.created_at || now,
+              sbKey.expires_at || null,
+            ]
+          ).catch(() => {});
+
+          rows = [{
+            id: sbKey.id,
+            tenant_id: sbKey.tenant_id,
+            name: sbKey.name,
+            key_prefix: sbKey.key_prefix,
+            key_id: keyId,
+            secret_hash: sbKey.key_hash,
+            environment: 'test',
+            scopes: sbKey.scopes,
+            created_at: sbKey.created_at || now,
+            expires_at: sbKey.expires_at || null,
+            revoked_at: sbKey.status === 'REVOKED' ? now : null,
+          }];
+        }
+      } catch {
+        // ignore
+      }
+    }
 
     if (rows.length === 0) {
       return { valid: false, errorReason: 'API key not found' };
@@ -161,7 +222,6 @@ export class ApiKeyService {
     }
 
     // Verify secret hash
-    const computedHash = crypto.createHash('sha256').update(rawSecret).digest('hex');
     const computedBuf = Buffer.from(computedHash, 'utf-8');
     const storedBuf = Buffer.from(record.secret_hash, 'utf-8');
 
@@ -182,7 +242,7 @@ export class ApiKeyService {
     return {
       valid: true,
       tenantId: record.tenant_id,
-      environment: record.environment,
+      environment: record.environment || 'test',
       scopes,
     };
   }
@@ -197,23 +257,70 @@ export class ApiKeyService {
       `UPDATE api_keys SET revoked_at = ? WHERE tenant_id = ? AND (key_id = ? OR id = ?) AND revoked_at IS NULL;`,
       [now, tenantId, keyIdentifier, keyIdentifier]
     );
+
+    try {
+      const { SupabaseStore } = await import('./supabase_store.js');
+      await SupabaseStore.revokeApiKey(tenantId, keyIdentifier);
+    } catch {}
+
     return (result?.rowCount ?? 0) > 0;
   }
 
   /**
-   * Lists all API keys for a tenant (without returning raw secret).
+   * Lists all API keys for a tenant (without returning raw secret, hydratable from Supabase).
    */
   public static async listApiKeys(tenantId: string): Promise<ApiKeyRecord[]> {
     const db = DatabaseAdapter.getInstance();
-    const rows = await db.query<any>(
+    let rows = await db.query<any>(
       `SELECT id, tenant_id, name, key_prefix, key_id, secret_hash, environment, scopes, created_at, last_used_at, expires_at, revoked_at
        FROM api_keys WHERE tenant_id = ? ORDER BY created_at DESC;`,
       [tenantId]
     );
 
-    return rows.map((r) => ({
-      ...r,
+    if (!rows || rows.length === 0) {
+      try {
+        const { SupabaseStore } = await import('./supabase_store.js');
+        const sbKeys = await SupabaseStore.listApiKeys(tenantId);
+        if (sbKeys.length > 0) {
+          for (const k of sbKeys) {
+            await db.execute(
+              `INSERT OR REPLACE INTO api_keys (id, tenant_id, name, key_prefix, key_id, secret_hash, environment, scopes, created_at, expires_at)
+               VALUES (?, ?, ?, ?, ?, ?, 'test', ?, ?, ?);`,
+              [
+                k.id,
+                k.tenant_id,
+                k.name,
+                k.key_prefix,
+                k.id.slice(0, 12),
+                k.key_hash,
+                JSON.stringify(k.scopes),
+                k.created_at || new Date().toISOString(),
+                k.expires_at || null,
+              ]
+            ).catch(() => {});
+          }
+          rows = await db.query<any>(
+            `SELECT id, tenant_id, name, key_prefix, key_id, secret_hash, environment, scopes, created_at, last_used_at, expires_at, revoked_at
+             FROM api_keys WHERE tenant_id = ? ORDER BY created_at DESC;`,
+            [tenantId]
+          );
+        }
+      } catch {}
+    }
+
+    return (rows || []).map((r: any) => ({
+      id: r.id,
+      tenant_id: r.tenant_id,
+      name: r.name,
+      key_prefix: r.key_prefix,
+      key_id: r.key_id,
+      secret_hash: r.secret_hash,
+      environment: r.environment,
       scopes: typeof r.scopes === 'string' ? JSON.parse(r.scopes) : r.scopes,
+      created_at: r.created_at,
+      last_used_at: r.last_used_at,
+      expires_at: r.expires_at,
+      revoked_at: r.revoked_at,
     }));
   }
 }

@@ -44,21 +44,11 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>(() => {
-    if (typeof window === "undefined") {
-      return { token: null, user: null, tenant: null, loading: true };
-    }
-    const token = localStorage.getItem(TOKEN_KEY);
-    let user: AuthUser | null = null;
-    let tenant: AuthTenant | null = null;
-    try {
-      const storedUser = localStorage.getItem(USER_KEY);
-      if (storedUser) user = JSON.parse(storedUser);
-      const storedTenant = localStorage.getItem(TENANT_KEY);
-      if (storedTenant) tenant = JSON.parse(storedTenant);
-    } catch {}
-
-    return { token, user, tenant, loading: !token };
+  const [state, setState] = useState<AuthState>({
+    token: null,
+    user: null,
+    tenant: null,
+    loading: true,
   });
 
   const saveToStorage = useCallback((token: string | null, user: AuthUser | null, tenant: AuthTenant | null) => {
@@ -444,11 +434,13 @@ export async function api<T = any>(
     const err = await res.json().catch(() => ({ message: res.statusText }));
     const errorMessage = err.message || err.error || err.details || `API error ${res.status}`;
 
-    // Only redirect on genuine 401 Unauthorized if not already on auth pages
-    if (res.status === 401) {
+    // Handle expired or unauthorized sessions
+    if (res.status === 401 || res.status === 403) {
       if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/signup") {
-        console.warn("Session expired. Redirecting to login...");
+        console.warn("Session expired or invalid. Redirecting to login...");
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(TENANT_KEY);
         window.location.href = "/login";
       }
     }

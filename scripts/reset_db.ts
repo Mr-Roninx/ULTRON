@@ -1,23 +1,23 @@
 import { db, initDatabase } from '../src/db/database.js';
+import { DatabaseAdapter } from '../src/db/adapter.js';
+import { MigrationRunner } from '../src/db/migrations/runner.js';
 
-export function resetDatabase(): void {
+export async function resetDatabase(): Promise<void> {
   console.log('🔄 Resetting ULTRON database to empty clean state...');
 
   // Disable foreign keys temporarily for clean cascade drops
-  db.exec(`
-    PRAGMA foreign_keys = OFF;
-    DROP TABLE IF EXISTS authority_checks;
-    DROP TABLE IF EXISTS execution_records;
-    DROP TABLE IF EXISTS ledger_entries;
-    DROP TABLE IF EXISTS scores;
-    DROP TABLE IF EXISTS allocation_decisions;
-    DROP TABLE IF EXISTS recovery_opportunities;
-    DROP TABLE IF EXISTS customers;
-    PRAGMA foreign_keys = ON;
-  `);
+  db.exec('PRAGMA foreign_keys = OFF;');
+  const existingTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all() as { name: string }[];
+  for (const table of existingTables) {
+    db.exec(`DROP TABLE IF EXISTS "${table.name}";`);
+  }
+  db.exec('PRAGMA foreign_keys = ON;');
 
   // Recreate all tables
   initDatabase();
+
+  const adapter = DatabaseAdapter.getInstance();
+  await MigrationRunner.migrateUp(adapter);
 
   const tables = db.prepare(`
     SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'

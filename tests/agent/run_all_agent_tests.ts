@@ -26,11 +26,15 @@ import { runPlanMonitorTests } from './test_plan_monitor.js';
 import { runPortfolioAgentTests } from './test_portfolio_agent.js';
 import { runConcurrencyTests } from './test_concurrency.js';
 import { runReplayTests } from './test_replay.js';
+import { seedSyntheticData } from '../../scripts/seed_synthetic.js';
 
 async function runAllAgentTests() {
   console.log('======================================================================');
   console.log('🚀 ULTRON-AGENT MASTER TEST SUITE EXECUTION');
   console.log('======================================================================\n');
+
+  // Guarantee test database contains synthetic fixtures
+  seedSyntheticData();
 
   let passed = 0;
   let failed = 0;

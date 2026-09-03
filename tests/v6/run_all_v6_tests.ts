@@ -42,6 +42,10 @@ const v6Suites = [
   // Phase 12: Simulation Harness
   'tests/v6/test_synthetic_generator.ts',
   'tests/v6/test_simulation_scenarios.ts',
+
+  // Phase 13: Enterprise Pacing, Anti-Blast & Provider Routing
+  'tests/v6/test_enterprise_pacing_and_antiblast.ts',
+  'tests/v6/test_provider_routing.ts',
 ];
 
 async function runSuite(suite: string): Promise<boolean> {

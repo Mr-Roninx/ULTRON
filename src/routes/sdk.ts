@@ -3,47 +3,126 @@ import { Router, Request, Response } from 'express';
 export const sdkRouter = Router();
 
 const ULTRON_SDK_JS = `/**
- * ULTRON Autonomous Payment Recovery - Zero-Code Client Interceptor
+ * ULTRON Autonomous Payment Recovery - Zero-Code Client Interceptor (v6.1.0)
  * https://github.com/Mr-Roninx/ULTRON
  */
 (function() {
   if (window.__ULTRON_INITIALIZED__) return;
   window.__ULTRON_INITIALIZED__ = true;
 
-  var currentScript = document.currentScript || (function() {
+  function findCurrentScript() {
+    if (document.currentScript) return document.currentScript;
     var scripts = document.getElementsByTagName('script');
     for (var i = 0; i < scripts.length; i++) {
-      if (scripts[i].src && scripts[i].src.indexOf('ultron.js') !== -1) {
+      var src = scripts[i].src || '';
+      if (src.indexOf('ultron.js') !== -1) {
         return scripts[i];
       }
     }
     return null;
-  })();
+  }
 
+  var currentScript = findCurrentScript();
   var apiKey = currentScript ? currentScript.getAttribute('data-api-key') : (window.__ULTRON_API_KEY__ || null);
-  var apiUrl = currentScript ? (currentScript.getAttribute('data-api-url') || currentScript.src.replace(/\\/sdk\\/ultron\\.js.*$/, '')) : (window.__ULTRON_API_URL__ || window.location.origin);
+  
+  function resolveApiUrl() {
+    if (window.__ULTRON_API_URL__) return window.__ULTRON_API_URL__.replace(/\\/+$/, '');
+    if (currentScript && currentScript.getAttribute('data-api-url')) {
+      return currentScript.getAttribute('data-api-url').replace(/\\/+$/, '');
+    }
+    if (currentScript && currentScript.src) {
+      try {
+        var parsed = new URL(currentScript.src);
+        return parsed.origin;
+      } catch(e) {
+        return currentScript.src.replace(/\\/(sdk\\/)?ultron\\.js(\\?.*)?$/i, '');
+      }
+    }
+    return window.location.origin;
+  }
 
-  function reportPaymentFailure(details) {
+  var apiUrl = resolveApiUrl();
+  var isConnected = false;
+  var tenantId = null;
+
+  // 1. Connection Handshake & Periodic Heartbeat
+  function sendPing(callback) {
     if (!apiKey) {
-      console.warn('[ULTRON] Cannot report payment failure: data-api-key not provided.');
+      console.warn('⚠️ [ULTRON] data-api-key attribute missing on <script src=".../ultron.js"> tag.');
+      if (typeof callback === 'function') callback(false, { error: 'Missing API key' });
       return;
     }
-    var endpoint = apiUrl.replace(/\\/$/, '') + '/v1/events';
+
+    var pingEndpoint = apiUrl + '/v1/events/ping';
+    var payload = {
+      app_origin: window.location.origin,
+      app_url: window.location.href,
+      app_name: document.title || window.location.hostname,
+      sdk_version: '6.1.0',
+      user_agent: navigator.userAgent,
+      timestamp: new Date().toISOString(),
+      metadata: {
+        title: document.title,
+        referrer: document.referrer,
+        screen: window.screen ? (window.screen.width + 'x' + window.screen.height) : 'unknown'
+      }
+    };
+
+    try {
+      fetch(pingEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey
+        },
+        body: JSON.stringify(payload)
+      }).then(function(res) {
+        return res.json().then(function(data) {
+          if (res.ok && data.connected) {
+            isConnected = true;
+            tenantId = data.tenant_id;
+            console.log('🟢 [ULTRON] Web app connection verified with Control Plane (Tenant: ' + data.tenant_id + ').');
+            if (typeof callback === 'function') callback(true, data);
+          } else {
+            console.warn('⚠️ [ULTRON] Connection ping rejected (' + res.status + '):', data.error || data.message);
+            if (typeof callback === 'function') callback(false, data);
+          }
+        });
+      }).catch(function(err) {
+        console.warn('⚠️ [ULTRON] Connection handshake error:', err.message);
+        if (typeof callback === 'function') callback(false, { error: err.message });
+      });
+    } catch(e) {}
+  }
+
+  // 2. Dispatch Payment Failure
+  function reportPaymentFailure(details) {
+    if (!apiKey) {
+      console.warn('⚠️ [ULTRON] Cannot report payment failure: data-api-key not provided.');
+      return;
+    }
+    var endpoint = apiUrl + '/v1/events';
+    var amount = details.amount_paise || details.amount;
+    var parsedAmount = Number(amount);
+    if (!parsedAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      parsedAmount = 10000; // default 100 INR if missing
+    }
+
     var payload = {
       event_id: 'evt_client_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      source: 'ODOOX_EVENT',
+      source: 'CLIENT_SDK',
       provider: 'razorpay',
       environment: apiKey.indexOf('ul_live_') === 0 ? 'live' : 'test',
       payment_id: details.payment_id || ('pay_fe_' + Date.now()),
-      order_id: details.order_id || null,
-      amount_paise: Number(details.amount_paise || details.amount) || 0,
+      order_id: details.order_id || undefined,
+      amount_paise: Math.round(parsedAmount),
       currency: details.currency || 'INR',
       status: 'failed',
       failure_code: details.error_code || 'BAD_REQUEST_PAYMENT_FAILED',
       failure_description: details.error_description || 'Payment failed on client checkout',
       customer_reference: details.customer_id || details.email || details.contact || 'cust_anonymous',
-      customer_email: details.email || null,
-      customer_phone: details.contact || null,
+      customer_email: details.email || undefined,
+      customer_phone: details.contact || undefined,
       occurred_at: new Date().toISOString(),
       metadata: details.metadata || { url: window.location.href, title: document.title }
     };
@@ -58,25 +137,83 @@ const ULTRON_SDK_JS = `/**
         body: JSON.stringify(payload),
         keepalive: true
       }).then(function(res) {
-        if (res.ok) {
-          console.log('🛡️ [ULTRON] Payment failure successfully captured and sent to Control Plane.');
-        }
+        return res.json().then(function(data) {
+          if (res.ok) {
+            console.log('🛡️ [ULTRON] Payment failure successfully captured and sent to Control Plane (Opportunity: ' + (data.opportunity_id || 'created') + ').');
+          } else {
+            console.warn('⚠️ [ULTRON] Gateway rejected failure event (' + res.status + '):', data.error || data.message || data.details);
+          }
+        });
       }).catch(function(e) {
         console.warn('⚠️ [ULTRON] Background dispatch error:', e.message);
       });
-    } catch(err) {
-      // Non-blocking fail-safe: never disrupt merchant checkout flow
-    }
+    } catch(err) {}
   }
 
+  // 3. Dispatch Payment Success (Reconciliation)
+  function reportPaymentSuccess(details) {
+    if (!apiKey) return;
+    var endpoint = apiUrl + '/v1/events';
+    var payload = {
+      event_id: 'evt_succ_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      source: 'CLIENT_SDK',
+      provider: 'razorpay',
+      environment: apiKey.indexOf('ul_live_') === 0 ? 'live' : 'test',
+      payment_id: details.payment_id || details.razorpay_payment_id,
+      order_id: details.order_id || details.razorpay_order_id,
+      payment_link_id: details.payment_link_id,
+      amount_paise: Math.round(Number(details.amount_paise || details.amount) || 10000),
+      currency: details.currency || 'INR',
+      status: 'paid',
+      customer_reference: details.customer_id || details.email || details.contact || 'cust_anonymous',
+      customer_email: details.email || undefined,
+      customer_phone: details.contact || undefined,
+      occurred_at: new Date().toISOString(),
+      metadata: { url: window.location.href, title: document.title }
+    };
+
+    try {
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey
+        },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(function() {});
+    } catch(e) {}
+  }
+
+  // 4. Wrap window.Razorpay checkout
   function wrapRazorpay() {
     if (!window.Razorpay || window.Razorpay.__ultron_wrapped__) return;
     
     var OriginalRazorpay = window.Razorpay;
     function UltronRazorpay(options) {
       options = options || {};
+
+      // Wrap success handler
+      var originalHandler = options.handler;
+      options.handler = function(response) {
+        try {
+          reportPaymentSuccess({
+            payment_id: response ? response.razorpay_payment_id : undefined,
+            order_id: response ? response.razorpay_order_id : options.order_id,
+            amount_paise: options.amount,
+            currency: options.currency,
+            email: options.prefill ? options.prefill.email : null,
+            contact: options.prefill ? options.prefill.contact : null,
+          });
+        } catch(e) {}
+        if (typeof originalHandler === 'function') {
+          return originalHandler.apply(this, arguments);
+        }
+      };
+
       var instance = new OriginalRazorpay(options);
 
+      // Attach failure listener
       if (typeof instance.on === 'function') {
         instance.on('payment.failed', function(response) {
           try {
@@ -97,7 +234,9 @@ const ULTRON_SDK_JS = `/**
               customer_id: options.customer_id,
               metadata: {
                 notes: options.notes,
-                page_url: window.location.href
+                page_url: window.location.href,
+                error_step: err.step,
+                error_source: err.source
               }
             });
           } catch(e) {}
@@ -113,6 +252,15 @@ const ULTRON_SDK_JS = `/**
     console.log('🛡️ [ULTRON] Autonomous Payment Interceptor active on page.');
   }
 
+  // Initial connection ping
+  sendPing();
+
+  // Periodic heartbeat every 45s
+  setInterval(function() {
+    sendPing();
+  }, 45000);
+
+  // Hook Razorpay instance
   if (window.Razorpay) {
     wrapRazorpay();
   } else {
@@ -122,14 +270,29 @@ const ULTRON_SDK_JS = `/**
         clearInterval(checkInterval);
       }
     }, 200);
-    setTimeout(function() { clearInterval(checkInterval); }, 30000);
+    setTimeout(function() { clearInterval(checkInterval); }, 60000);
   }
 
+  // Public Developer Interface
   window.Ultron = {
+    version: '6.1.0',
     reportFailure: reportPaymentFailure,
+    reportSuccess: reportPaymentSuccess,
+    ping: sendPing,
+    status: function() {
+      return {
+        initialized: true,
+        connected: isConnected,
+        tenantId: tenantId,
+        apiUrl: apiUrl,
+        hasApiKey: Boolean(apiKey),
+        origin: window.location.origin,
+      };
+    },
     init: function(opts) {
       if (opts && opts.apiKey) apiKey = opts.apiKey;
-      if (opts && opts.apiUrl) apiUrl = opts.apiUrl;
+      if (opts && opts.apiUrl) apiUrl = opts.apiUrl.replace(/\/+$/, '');
+      sendPing();
       wrapRazorpay();
     }
   };
@@ -141,3 +304,5 @@ sdkRouter.get('/ultron.js', (_req: Request, res: Response) => {
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.send(ULTRON_SDK_JS);
 });
+
+

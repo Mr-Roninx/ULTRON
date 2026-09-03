@@ -8,7 +8,9 @@ import {
   updateOutreachDraftStatus,
   getAllAgentOutcomes,
   getMemories,
+  getDaemonSweepLogs,
 } from '../db/database.js';
+import { AutonomousRecoveryDaemon } from '../agents/daemon.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { AgentTelemetry } from '../agents/telemetry.js';
 import { AgentToolRegistry } from '../agents/tool_registry.js';
@@ -32,6 +34,74 @@ agentsRouter.get('/runs', (_req: Request, res: Response) => {
     res.status(500).json({ error: error.message || 'Failed to fetch agent runs' });
   }
 });
+
+// ========================================================
+// AUTONOMOUS DAEMON CONTROL API
+// ========================================================
+
+const daemon = AutonomousRecoveryDaemon.getInstance();
+
+// GET daemon status
+agentsRouter.get('/daemon/status', (_req: Request, res: Response) => {
+  try {
+    res.json(daemon.getStatus());
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch daemon status' });
+  }
+});
+
+// POST start daemon
+agentsRouter.post('/daemon/start', (req: Request, res: Response) => {
+  try {
+    const { interval_seconds, capacity } = req.body;
+    daemon.start({ interval_seconds, capacity });
+    res.json({ success: true, status: daemon.getStatus() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to start daemon' });
+  }
+});
+
+// POST stop daemon
+agentsRouter.post('/daemon/stop', (_req: Request, res: Response) => {
+  try {
+    daemon.stop();
+    res.json({ success: true, status: daemon.getStatus() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to stop daemon' });
+  }
+});
+
+// POST trigger manual sweep
+agentsRouter.post('/daemon/sweep', async (_req: Request, res: Response) => {
+  try {
+    await daemon.sweepOnce();
+    res.json({ success: true, status: daemon.getStatus() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to run sweep' });
+  }
+});
+
+// POST update daemon config
+agentsRouter.post('/daemon/config', (req: Request, res: Response) => {
+  try {
+    const { interval_seconds, capacity } = req.body;
+    daemon.updateConfig({ interval_seconds, capacity });
+    res.json({ success: true, status: daemon.getStatus() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to update config' });
+  }
+});
+
+// GET daemon activity logs
+agentsRouter.get('/daemon/activity', (_req: Request, res: Response) => {
+  try {
+    const logs = getDaemonSweepLogs(50);
+    res.json({ count: logs.length, logs });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch daemon activity logs' });
+  }
+});
+
 
 // GET full trace for a single run
 agentsRouter.get('/runs/:id/trace', (req: Request, res: Response) => {
