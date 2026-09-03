@@ -28,12 +28,23 @@ import {
 } from '../agents/types.js';
 import { getSupabaseClient } from '../security/supabase.js';
 
+let lastSupabaseWarn = 0;
 function syncToSupabase(table: string, payload: Record<string, any>, onConflictKey: string = 'id'): void {
   try {
     const sb = getSupabaseClient();
     Promise.resolve(
       sb.from(table).upsert(payload, { onConflict: onConflictKey })
-    ).catch(() => {});
+    )
+      .then(({ error }) => {
+        if (error) {
+          const now = Date.now();
+          if (now - lastSupabaseWarn > 30000) {
+            lastSupabaseWarn = now;
+            console.warn(`⚠️ [SUPABASE SYNC] Remote sync notice for '${table}': ${error.message}`);
+          }
+        }
+      })
+      .catch(() => {});
   } catch {}
 }
 

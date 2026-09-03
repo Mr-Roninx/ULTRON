@@ -192,13 +192,49 @@ integrationsRouter.get(
       const cred = await SecretsManager.getTenantCredential(tenantContext.tenantId, credRef);
       const hasEnvKeys = Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
 
-      const isConnected = Boolean(cred || hasEnvKeys);
+      let parsedCred: any = null;
+      if (cred) {
+        try {
+          parsedCred = JSON.parse(cred);
+        } catch {}
+      }
+
+      // Retrieve or automatically provision an active integration API key for this merchant
+      const { ApiKeyService } = await import('../security/api_keys.js');
+      const apiKeys = await ApiKeyService.listApiKeys(tenantContext.tenantId);
+      let activeKey = apiKeys.length > 0
+        ? (apiKeys[0].key_prefix ? `${apiKeys[0].key_prefix}${apiKeys[0].key_id}` : apiKeys[0].id)
+        : null;
+
+      if (!activeKey) {
+        const created = await ApiKeyService.createApiKey({
+          tenantId: tenantContext.tenantId,
+          name: 'Default Drop-In Key',
+          environment: 'test',
+          scopes: ['events:write', 'events:read', 'payments:read', 'recoveries:read', 'integrations:read', 'integrations:write'],
+        });
+        activeKey = created.rawKey;
+      }
+
+      const keyId = parsedCred?.key_id || (hasEnvKeys ? process.env.RAZORPAY_KEY_ID : null);
+      const isConnected = Boolean(keyId);
+      const apiBase = process.env.APP_URL || 'http://localhost:3001';
 
       res.json({
         connected: isConnected,
         tenant_id: tenantContext.tenantId,
         provider: 'razorpay',
-        environment: 'test',
+        environment: parsedCred?.environment || 'test',
+        key_id: keyId,
+        masked_key_secret: parsedCred?.key_secret
+          ? `••••••••••••${parsedCred.key_secret.slice(-4)}`
+          : (hasEnvKeys ? `••••••••••••${(process.env.RAZORPAY_KEY_SECRET || '').slice(-4)}` : null),
+        webhook_secret_configured: Boolean(parsedCred?.webhook_secret || process.env.RAZORPAY_WEBHOOK_SECRET),
+        webhook_url: `${apiBase}/webhooks/razorpay/${tenantContext.tenantId}`,
+        script_key: activeKey,
+        script_url: `${apiBase}/sdk/ultron.js`,
+        download_url: `${apiBase}/sdk/download?api_key=${activeKey}&api_url=${encodeURIComponent(apiBase)}`,
+        script_tag: `<script src="${apiBase}/sdk/ultron.js" data-api-key="${activeKey}" defer></script>`,
         persisted_in_supabase: true,
         capabilities: [
           'PAYMENT_LINKS_CREATE',

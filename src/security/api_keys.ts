@@ -148,7 +148,38 @@ export class ApiKeyService {
     }
 
     const dotIndex = rawKey.indexOf('.');
+    const db = DatabaseAdapter.getInstance();
+
     if (dotIndex === -1) {
+      // Client-side Publishable Key format for ultron.js browser interceptors (e.g. ul_test_key_...)
+      const cleanKeyId = rawKey.replace(/^ul_(live|test)_/, '');
+      const pubRows = await db.query<any>(
+        `SELECT * FROM api_keys WHERE key_id = ? OR id = ? OR id LIKE ? OR key_id LIKE ?;`,
+        [cleanKeyId, cleanKeyId, `${cleanKeyId}%`, `${cleanKeyId}%`]
+      );
+
+      if (pubRows && pubRows.length > 0) {
+        const record = pubRows[0];
+        if (record.revoked_at) return { valid: false, errorReason: 'API key has been revoked' };
+        if (record.expires_at && new Date(record.expires_at).getTime() < Date.now()) {
+          return { valid: false, errorReason: 'API key has expired' };
+        }
+
+        let scopes: ApiKeyScope[] = [];
+        try {
+          scopes = typeof record.scopes === 'string' ? JSON.parse(record.scopes) : record.scopes;
+        } catch {
+          scopes = ['events:write', 'events:read'];
+        }
+
+        return {
+          valid: true,
+          tenantId: record.tenant_id,
+          environment: record.environment || 'test',
+          scopes,
+        };
+      }
+
       return { valid: false, errorReason: 'Missing API key secret component' };
     }
 
@@ -157,7 +188,6 @@ export class ApiKeyService {
     const keyId = prefixAndId.replace(/^ul_(live|test)_/, '');
     const computedHash = crypto.createHash('sha256').update(rawSecret).digest('hex');
 
-    const db = DatabaseAdapter.getInstance();
     let rows = await db.query<any>(
       `SELECT * FROM api_keys WHERE key_id = ?;`,
       [keyId]

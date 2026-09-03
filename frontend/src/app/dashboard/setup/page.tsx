@@ -48,6 +48,9 @@ export default function StreamlinedIntegrationHubPage() {
     setTimeout(() => setter(false), 2000);
   };
 
+  const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
+  const [savedKeyId, setSavedKeyId] = useState("");
+
   const loadConfigStatus = useCallback(async () => {
     try {
       const [integrationsRes, keysRes] = await Promise.all([
@@ -56,8 +59,13 @@ export default function StreamlinedIntegrationHubPage() {
       ]);
 
       if (integrationsRes && integrationsRes.connected) {
-        if (!keyId) {
-          setKeyId("rzp_test_TVWDFQCezsOvv2");
+        setHasSavedCredentials(true);
+        if (integrationsRes.key_id) {
+          setKeyId(integrationsRes.key_id);
+          setSavedKeyId(integrationsRes.key_id);
+        }
+        if (integrationsRes.script_key) {
+          setActiveApiKey(integrationsRes.script_key);
         }
       }
 
@@ -68,7 +76,7 @@ export default function StreamlinedIntegrationHubPage() {
     } catch (err) {
       console.error("Failed to load integration status:", err);
     }
-  }, [keyId]);
+  }, []);
 
   useEffect(() => {
     loadConfigStatus();
@@ -207,6 +215,13 @@ export default function StreamlinedIntegrationHubPage() {
               Keys are encrypted at rest with AES-256. Tested strictly against Razorpay Test Mode with 5 payment links cap.
             </p>
 
+            {hasSavedCredentials && savedKeyId && (
+              <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 8, background: "var(--google-blue-light)", border: "1px solid rgba(26,115,232,0.2)", fontSize: 12, color: "var(--google-blue)", display: "flex", alignItems: "center", gap: 8 }}>
+                <ShieldCheck size={16} />
+                <span>Connected & Stored in Supabase: <strong>{savedKeyId}</strong></span>
+              </div>
+            )}
+
             <form onSubmit={handleSaveCredentials} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>
@@ -228,11 +243,11 @@ export default function StreamlinedIntegrationHubPage() {
                 </label>
                 <input
                   type="password"
-                  placeholder="••••••••••••••••••••"
+                  placeholder={hasSavedCredentials ? "•••••••••••••••••••• (Encrypted in Supabase)" : "rzp_secret_..."}
                   value={keySecret}
                   onChange={(e) => setKeySecret(e.target.value)}
                   className="input"
-                  required
+                  required={!hasSavedCredentials}
                 />
               </div>
 

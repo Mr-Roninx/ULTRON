@@ -157,6 +157,38 @@ authRouter.post('/verify-otp', async (req: Request, res: Response): Promise<void
         );
       });
 
+      // Permanently sync new tenant and user to Supabase
+      try {
+        const { getSupabaseClient } = await import('../security/supabase.js');
+        const sb = getSupabaseClient();
+        await sb.from('tenants').upsert({
+          id: tenantId,
+          name: businessName,
+          slug,
+          environment: 'test',
+          status: 'ACTIVE',
+          created_at: now,
+        }, { onConflict: 'id' });
+
+        await sb.from('users').upsert({
+          id: userId,
+          email: cleanEmail,
+          name: businessName,
+          created_at: now,
+        }, { onConflict: 'id' });
+
+        // Auto-provision initial integration key for the merchant's ultron.js embed
+        const { ApiKeyService } = await import('../security/api_keys.js');
+        await ApiKeyService.createApiKey({
+          tenantId,
+          name: 'Default Drop-In Key',
+          environment: 'test',
+          scopes: ['events:write', 'events:read', 'payments:read', 'recoveries:read', 'integrations:read', 'integrations:write'],
+        });
+      } catch (sbErr: any) {
+        console.warn('⚠️ Supabase onboarding sync warning:', sbErr.message);
+      }
+
       user = { id: userId, email: cleanEmail, name: businessName, role: 'Owner' };
       tenantName = businessName;
     }

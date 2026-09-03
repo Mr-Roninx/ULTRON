@@ -275,7 +275,7 @@ eventsRouter.post(
           },
           event.event_id,
           {
-            source: event.environment === 'live' ? 'real' : 'synthetic',
+            source: 'real',
             tenantId: tenantContext.tenantId,
           }
         );
