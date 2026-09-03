@@ -1,18 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Zap,
-  Play,
   CheckCircle2,
   XCircle,
   Clock,
-  Shield,
-  ShieldAlert,
-  BarChart2,
   Activity,
-  Layers,
   Sparkles,
   ExternalLink,
   ChevronRight,
@@ -22,14 +17,11 @@ import {
   Check,
   CreditCard,
   Radio,
-  FileSpreadsheet,
-  AlertTriangle,
   Flame,
-  ArrowRight,
   ShoppingBag,
   RotateCcw,
 } from "lucide-react";
-import { api, useAuth } from "../../../lib/auth";
+import { api } from "../../../lib/auth";
 
 interface PlaygroundConfig {
   tenant_id: string;
@@ -60,7 +52,6 @@ interface SimulationResponse {
 }
 
 export default function RecoveryPlaygroundPage() {
-  const { tenant, token } = useAuth();
   const [config, setConfig] = useState<PlaygroundConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
 

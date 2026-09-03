@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import {
-  TrendingUp, RefreshCw, Play, CheckCircle2, AlertTriangle,
-  HelpCircle, XCircle, Sparkles, Zap, BarChart2, Layers
-} from "lucide-react";
+import { CheckCircle2, Sparkles } from "lucide-react";
 import { api } from "../../../lib/auth";
 
 interface MarketDecision {
@@ -35,12 +31,10 @@ interface MarketRunResponse {
 export default function MarketPage() {
   const [marketData, setMarketData] = useState<MarketRunResponse | null>(null);
   const [banditData, setBanditData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const fetchMarket = useCallback(async () => {
-    setLoading(true);
     try {
       const [data, analytics] = await Promise.all([
         api<MarketRunResponse>("/market/run"),
@@ -52,8 +46,6 @@ export default function MarketPage() {
       }
     } catch {
       setMarketData(null);
-    } finally {
-      setLoading(false);
     }
   }, []);
 

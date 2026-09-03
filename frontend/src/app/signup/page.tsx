@@ -14,7 +14,6 @@ function PasswordStrengthBar({ password }: { password: string }) {
   ];
   const score = checks.filter((c) => c.ok).length;
   const colors = ["var(--rose)", "var(--amber)", "var(--emerald)"];
-  const labels = ["Weak", "Fair", "Strong"];
 
   if (!password) return null;
 

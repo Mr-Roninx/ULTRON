@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  ScrollText, Database, ShieldCheck, CheckCircle2, Clock, Zap,
-  ChevronDown, ChevronRight, Copy, Check, FileSpreadsheet, Download
+  Database, ShieldCheck, CheckCircle2, Clock, Zap,
+  ChevronDown, ChevronRight, FileSpreadsheet, Download
 } from "lucide-react";
 import { api } from "../../../lib/auth";
 
@@ -48,14 +48,11 @@ export default function AuditPage() {
   const [activeTab, setActiveTab] = useState<"ledger" | "access">("ledger");
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [verificationProof, setVerificationProof] = useState<VerificationProof | null>(null);
   const [verifying, setVerifying] = useState(false);
 
   const fetchAudit = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await api<{ records: AuditRecord[]; ledger?: LedgerEntry[] }>("/audit/records");
       setRecords(data.records || []);
@@ -63,8 +60,6 @@ export default function AuditPage() {
     } catch {
       setRecords([]);
       setLedgerEntries([]);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -100,12 +95,6 @@ export default function AuditPage() {
     fetchAudit();
     handleVerifyLedger();
   }, [fetchAudit]);
-
-  const copyPayload = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   const getLedgerBadge = (type: string) => {
     switch (type) {

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth, api } from "../../../lib/auth";
 import {
-  Building2, Shield, Zap, Power, CheckCircle2,
-  Copy, Save, RefreshCw, AlertTriangle, Key, Users, Globe, Lock
+  Building2, Shield, Zap, CheckCircle2,
+  Copy, Save, RefreshCw
 } from "lucide-react";
 
 export default function GeneralSettingsPage() {

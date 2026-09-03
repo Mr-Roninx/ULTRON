@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Users, Mail, Shield, UserPlus, Trash2, ShieldAlert, CheckCircle2, RefreshCw } from "lucide-react";
+import { Mail, Shield, Trash2, CheckCircle2 } from "lucide-react";
 import { api, useAuth } from "../../../../lib/auth";
 
 interface TeamMember {
@@ -17,21 +17,17 @@ interface TeamMember {
 export default function TeamPage() {
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("Analyst");
   const [inviting, setInviting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
   const fetchTeam = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await api<{ members: TeamMember[] }>("/v1/auth/team");
       setMembers(data.members || []);
     } catch {
       setMembers([]);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -72,6 +68,16 @@ export default function TeamPage() {
           Manage who has access to your ULTRON merchant dashboard and their permissions.
         </p>
       </div>
+
+      {success && (
+        <div style={{
+          padding: "12px 16px", borderRadius: 8,
+          background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)",
+          color: "var(--emerald)", fontSize: 13, display: "flex", alignItems: "center", gap: 8
+        }}>
+          <CheckCircle2 size={16} /> {success}
+        </div>
+      )}
 
       {/* Invite Form */}
       <div className="card" style={{ padding: 24 }}>

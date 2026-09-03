@@ -22,7 +22,6 @@ import {
   Terminal,
   RotateCcw,
   Inbox,
-  Layers,
   Sparkles,
   Clock,
 } from "lucide-react";

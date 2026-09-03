@@ -1,53 +1,29 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
-  Sparkles, Key, Webhook, Code, CheckCircle2, XCircle, AlertTriangle,
-  Copy, Check, ChevronRight, RefreshCw, ExternalLink,
-  ShieldCheck, Play, Zap, Layers, ArrowRight, ShoppingCart, Smartphone, Send
+  Sparkles, Key, Webhook, Code, CheckCircle2, AlertTriangle,
+  Copy, Check, ShieldCheck, Play, ShoppingCart, Smartphone
 } from "lucide-react";
 import { api, useAuth } from "../../../lib/auth";
-
-interface Connection {
-  connectionId: string;
-  status: "VERIFIED" | "ERROR";
-  capabilities: Array<{ capability: string; supported: boolean }>;
-  environment: "test" | "live";
-}
-
-interface ApiKeyItem {
-  id: string;
-  name: string;
-  key_prefix?: string;
-  key_id?: string;
-  masked_key?: string;
-  environment: string;
-  status?: string;
-  revoked?: boolean;
-}
 
 export default function StreamlinedIntegrationHubPage() {
   const { tenant, user } = useAuth();
   const [activeStep, setActiveStep] = useState<"connect" | "embed" | "simulator">("connect");
-  const [loading, setLoading] = useState(true);
 
   // Step 1: Razorpay Gateway Credentials
   const [keyId, setKeyId] = useState("");
   const [keySecret, setKeySecret] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
-  const [env, setEnv] = useState<"test" | "live">("test");
+  const [env] = useState<"test" | "live">("test");
   const [savingCreds, setSavingCreds] = useState(false);
   const [credsSuccess, setCredsSuccess] = useState<string | null>(null);
   const [credsError, setCredsError] = useState<string | null>(null);
-  const [connections, setConnections] = useState<Connection[]>([]);
 
   // Step 2: Webhooks & Embed
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
-  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [activeApiKey, setActiveApiKey] = useState<string>("");
-  const [scriptFramework, setScriptFramework] = useState<"html" | "nextjs" | "shopify">("html");
 
   // Step 3: Interactive Store Simulator
   const [simCartAmount, setSimCartAmount] = useState<number>(2500);
@@ -56,7 +32,6 @@ export default function StreamlinedIntegrationHubPage() {
   const [simStep, setSimStep] = useState<"idle" | "failed" | "recovered">("idle");
   const [simulatingPayment, setSimulatingPayment] = useState(false);
   const [simOppData, setSimOppData] = useState<any>(null);
-  const [simPayingLink, setSimPayingLink] = useState(false);
 
   const tenantId = tenant?.id || user?.tenantId || "default_tenant";
   const apiBase = typeof window !== "undefined"
@@ -74,35 +49,23 @@ export default function StreamlinedIntegrationHubPage() {
 
   const loadConfigStatus = useCallback(async () => {
     try {
-      setLoading(true);
       const [integrationsRes, keysRes] = await Promise.all([
         api<any>("/v1/integrations/razorpay/status").catch(() => null),
-        api<{ api_keys: ApiKeyItem[] }>("/v1/api-keys").catch(() => null)
+        api<{ api_keys: Array<{ id: string; key_prefix?: string }> }>("/v1/api-keys").catch(() => null)
       ]);
 
       if (integrationsRes && integrationsRes.connected) {
-        setConnections([
-          {
-            connectionId: "rzp_conn_default",
-            status: "VERIFIED",
-            environment: "test",
-            capabilities: (integrationsRes.capabilities || []).map((c: string) => ({ capability: c, supported: true }))
-          }
-        ]);
         if (!keyId) {
           setKeyId("rzp_test_TVWDFQCezsOvv2");
         }
       }
 
-      if (keysRes && keysRes.api_keys?.length > 0) {
-        setApiKeys(keysRes.api_keys);
+      if (keysRes && keysRes.api_keys && keysRes.api_keys.length > 0) {
         const activeKey = keysRes.api_keys[0];
         setActiveApiKey(activeKey.key_prefix ? `${activeKey.key_prefix}${activeKey.id.slice(0, 12)}` : activeKey.id);
       }
     } catch (err) {
       console.error("Failed to load integration status:", err);
-    } finally {
-      setLoading(false);
     }
   }, [keyId]);
 
@@ -117,7 +80,7 @@ export default function StreamlinedIntegrationHubPage() {
     setCredsError(null);
 
     try {
-      const res = await api<any>("/v1/integrations/razorpay/connect", {
+      await api<any>("/v1/integrations/razorpay/connect", {
         method: "POST",
         body: JSON.stringify({
           key_id: keyId,
@@ -128,19 +91,6 @@ export default function StreamlinedIntegrationHubPage() {
       });
 
       setCredsSuccess("Connected & Permanently Synchronized to Supabase! Razorpay capabilities verified.");
-      setConnections([
-        {
-          connectionId: res.connection_id || "rzp_conn_active",
-          status: "VERIFIED",
-          environment: env,
-          capabilities: [
-            { capability: "PAYMENT_LINKS_CREATE", supported: true },
-            { capability: "WEBHOOK_EVENT_INGESTION", supported: true },
-            { capability: "PAYMENT_STATUS_POLLING", supported: true },
-            { capability: "SUPABASE_PERMANENT_PERSISTENCE", supported: true },
-          ],
-        },
-      ]);
     } catch (err: any) {
       setCredsError(err.message || "Failed to verify Razorpay credentials.");
     } finally {
@@ -156,7 +106,7 @@ export default function StreamlinedIntegrationHubPage() {
 
     try {
       const simPaymentId = `pay_store_sim_${Date.now()}`;
-      const res = await api<any>("/internal/simulate-webhook", {
+      await api<any>("/internal/simulate-webhook", {
         method: "POST",
         body: JSON.stringify({
           event: "payment.failed",

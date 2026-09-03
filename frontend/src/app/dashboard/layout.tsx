@@ -4,9 +4,9 @@ import React, { ReactNode, useEffect, useState, useCallback, useRef } from "reac
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Shield, LayoutDashboard, Zap, Activity, BarChart2, TrendingUp,
+  Shield, LayoutDashboard, Zap, BarChart2, TrendingUp,
   Settings, Key, ScrollText, Power, LogOut, ChevronRight, Cpu, Radio, Sparkles,
-  Bell, CheckCircle2, AlertTriangle, CheckCheck, X, Search, ExternalLink, HelpCircle
+  Bell, CheckCircle2, CheckCheck, Search, HelpCircle
 } from "lucide-react";
 import { useAuth, api } from "../../lib/auth";
 

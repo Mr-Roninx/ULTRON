@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import {
-  TrendingUp, BarChart2, ShieldCheck, Zap, Activity, Clock,
-  Download, Sparkles, CheckCircle2, Landmark
+  TrendingUp, ShieldCheck, Zap, Activity, Clock,
+  Download, Landmark
 } from "lucide-react";
-import { api, useAuth } from "../../../lib/auth";
+import { api } from "../../../lib/auth";
 
 interface BankMetrics {
   bank_name: string;
@@ -51,7 +51,6 @@ interface AnalyticsResponse {
 }
 
 export default function EnterpriseAnalyticsStudioPage() {
-  const { tenant } = useAuth();
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d" | "qtd">("7d");
   const [downloadingCert, setDownloadingCert] = useState(false);
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);

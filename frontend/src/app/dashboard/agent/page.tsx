@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Cpu, Power, Settings, Clock, RefreshCw, BarChart2,
+  Cpu, Power, Settings, Clock, RefreshCw,
   CheckCircle2, XCircle, AlertTriangle, Play, Square, FastForward
 } from "lucide-react";
 import { api } from "../../../lib/auth";

@@ -1,12 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
-  TrendingUp, AlertTriangle, Zap, BarChart2, Shield, Activity,
-  RefreshCw, Power, CheckCircle2, Clock, XCircle, ChevronRight, Cpu, Sparkles,
-  MessageCircle, ExternalLink, ArrowUpRight, Copy, Check, Play, Filter, Info, ShieldCheck,
-  Send, Layers, Radio, HelpCircle, FileText, ArrowRight, Smartphone
+  TrendingUp, AlertTriangle, Zap, Power, CheckCircle2, XCircle,
+  Play, Send, Smartphone, Activity, Clock, Sparkles,
+  BarChart2, ShieldCheck, Layers, ExternalLink
 } from "lucide-react";
 import { useAuth, api } from "../../lib/auth";
 
@@ -80,21 +78,16 @@ export default function UnifiedRecoveryHubPage() {
   const { tenant } = useAuth();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState<string>("ALL");
   const [sourceFilter, setSourceFilter] = useState<"ALL" | "REAL" | "SYNTHETIC">("ALL");
   const [selectedOpp, setSelectedOpp] = useState<OpportunityItem | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [runningSweep, setRunningSweep] = useState(false);
   const [togglingKillSwitch, setTogglingKillSwitch] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   // WhatsApp Preview Modal State
   const [whatsappModalOpp, setWhatsappModalOpp] = useState<OpportunityItem | null>(null);
-  const [whatsappSending, setWhatsappSending] = useState(false);
-  const [whatsappSent, setWhatsappSent] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -110,11 +103,8 @@ export default function UnifiedRecoveryHubPage() {
 
       if (sumData) setSummary(sumData);
       if (oppsData && oppsData.opportunities) setOpportunities(oppsData.opportunities);
-      setLastRefresh(new Date());
     } catch (err) {
       console.error("Error loading dashboard data:", err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -202,12 +192,6 @@ export default function UnifiedRecoveryHubPage() {
     } finally {
       setTogglingKillSwitch(false);
     }
-  };
-
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const filteredOpps = opportunities.filter((o) => {

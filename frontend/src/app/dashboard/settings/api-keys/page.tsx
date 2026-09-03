@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Key, Plus, Trash2, Copy, CheckCircle2, AlertTriangle, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Copy, CheckCircle2, AlertTriangle } from "lucide-react";
 import { api } from "../../../../lib/auth";
 
 interface ApiKey {
@@ -16,22 +16,16 @@ interface ApiKey {
 
 export default function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newEnv, setNewEnv] = useState<"live" | "test">("live");
   const [newKey, setNewKey] = useState<string | null>(null);
 
   const fetchKeys = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await api<{ keys?: ApiKey[]; api_keys?: ApiKey[] }>("/v1/api-keys");
       setKeys(data.api_keys || data.keys || []);
     } catch {
       setKeys([]);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -45,11 +39,10 @@ export default function ApiKeysPage() {
     try {
       const res = await api<{ raw_key: string }>("/v1/api-keys", {
         method: "POST",
-        body: JSON.stringify({ name: newName, environment: newEnv }),
+        body: JSON.stringify({ name: newName, environment: "live" }),
       });
       setNewKey(res.raw_key);
       setNewName("");
-      setShowForm(false);
       fetchKeys();
     } catch (err: any) {
       alert(`Failed to create API key: ${err.message}`);

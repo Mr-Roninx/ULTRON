@@ -416,7 +416,7 @@ export async function api<T = any>(
   let res: Response;
   try {
     res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  } catch (netErr: any) {
+  } catch (_netErr: unknown) {
     // Graceful fallback for IPv6 vs IPv4 localhost resolution during server reload
     if (API_BASE.includes("localhost")) {
       const fallbackBase = API_BASE.replace("localhost", "127.0.0.1");
