@@ -382,51 +382,6 @@ export default function UnifiedRecoveryHubPage() {
         </div>
       </div>
 
-      {/* 5-Stage Visual Lifecycle Progress Bar */}
-      <div className="card" style={{ padding: "16px 20px", marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Layers size={16} color="var(--google-blue)" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
-              ULTRON Deterministic Recovery Pipeline
-            </span>
-          </div>
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Zero LLM on financial path • 100% Deterministic
-          </span>
-        </div>
-
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 10, background: "var(--bg-hover)", padding: 8, borderRadius: 8
-        }}>
-          {[
-            { step: "1", title: "Ingress", desc: "Webhook Ingestion" },
-            { step: "2", title: "IVEN Score", desc: "Causal Lift Math" },
-            { step: "3", title: "Market", desc: "Knapsack Budget" },
-            { step: "4", title: "Authority", desc: "Compliance Gate" },
-            { step: "5", title: "Execution", desc: "Razorpay Link & WhatsApp" },
-          ].map((s) => (
-            <div key={s.step} style={{
-              background: "#ffffff", padding: "10px 12px", borderRadius: 6,
-              border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: 10
-            }}>
-              <div style={{
-                width: 22, height: 22, borderRadius: "50%",
-                background: "var(--google-blue-light)", color: "var(--google-blue)",
-                fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center"
-              }}>
-                {s.step}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{s.title}</div>
-                <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{s.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Main Filter Chips & Live Opportunity Table */}
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {/* Table Filter Bar */}

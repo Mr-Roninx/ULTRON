@@ -4,8 +4,7 @@ import React, { ReactNode, useEffect, useState, useCallback, useRef } from "reac
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Shield, LayoutDashboard, Zap, BarChart2, TrendingUp,
-  Settings, Key, ScrollText, Power, LogOut, ChevronRight, Cpu, Radio, Sparkles,
+  Shield, LayoutDashboard, Settings, Power, LogOut, ChevronRight, Sparkles,
   Bell, CheckCircle2, CheckCheck, Search, HelpCircle
 } from "lucide-react";
 import { useAuth, api } from "../../lib/auth";
@@ -21,20 +20,10 @@ interface NotificationItem {
   created_at: string;
 }
 
-const PRIMARY_NAV = [
+const NAV_ITEMS = [
   { href: "/dashboard", label: "Recovery Hub", icon: LayoutDashboard, exact: true, badge: "LIVE" },
-  { href: "/dashboard/setup", label: "Integration Hub", icon: Sparkles, exact: true, highlight: true },
-  { href: "/dashboard/analytics", label: "Bank Analytics", icon: TrendingUp },
-  { href: "/dashboard/market", label: "Economics & AI", icon: BarChart2 },
-  { href: "/dashboard/audit", label: "Audit & Ledger", icon: ScrollText },
-];
-
-const SECONDARY_NAV = [
-  { href: "/dashboard/playground", label: "Simulation & Chaos", icon: Zap },
-  { href: "/dashboard/events", label: "Live Events Stream", icon: Radio },
-  { href: "/dashboard/agent", label: "Autonomous Agent", icon: Cpu },
-  { href: "/dashboard/settings/api-keys", label: "API Keys", icon: Key },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings, exact: true },
+  { href: "/dashboard/setup", label: "Integration Hub", icon: Sparkles, exact: false, highlight: true },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -195,17 +184,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Navigation Items */}
-        <nav style={{ flex: 1, padding: "12px 12px", overflowY: "auto" }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.5px", padding: "4px 8px 8px", textTransform: "uppercase" }}>
-            Recovery Operations
+        <nav style={{ flex: 1, padding: "16px 12px", overflowY: "auto" }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.5px", padding: "4px 8px 10px", textTransform: "uppercase" }}>
+            Workspace
           </div>
-          {PRIMARY_NAV.map(({ href, label, icon: Icon, exact, badge, highlight }) => {
+          {NAV_ITEMS.map(({ href, label, icon: Icon, exact, badge, highlight }) => {
             const active = isActive(href, exact);
             return (
               <Link key={href} href={href} style={{ textDecoration: "none" }}>
                 <div style={{
                   display: "flex", alignItems: "center", gap: 12,
-                  padding: "9px 14px", borderRadius: 20, marginBottom: 4,
+                  padding: "10px 14px", borderRadius: 12, marginBottom: 6,
                   background: active
                     ? "var(--google-blue-light)"
                     : highlight
@@ -220,7 +209,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   transition: "all 0.15s ease",
                   cursor: "pointer",
                 }}>
-                  <Icon size={17} />
+                  <Icon size={18} />
                   <span>{label}</span>
                   {badge && (
                     <span style={{
@@ -231,31 +220,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     </span>
                   )}
                   {active && !badge && <ChevronRight size={14} style={{ marginLeft: "auto" }} />}
-                </div>
-              </Link>
-            );
-          })}
-
-          <div style={{ height: 1, background: "var(--border-subtle)", margin: "14px 4px 12px" }} />
-
-          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.5px", padding: "4px 8px 8px", textTransform: "uppercase" }}>
-            Tools & Management
-          </div>
-          {SECONDARY_NAV.map(({ href, label, icon: Icon, exact }) => {
-            const active = isActive(href, exact);
-            return (
-              <Link key={href} href={href} style={{ textDecoration: "none" }}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "8px 14px", borderRadius: 20, marginBottom: 3,
-                  background: active ? "var(--google-blue-light)" : "transparent",
-                  color: active ? "var(--google-blue)" : "var(--text-secondary)",
-                  fontSize: 13, fontWeight: active ? 600 : 400,
-                  transition: "all 0.15s ease",
-                  cursor: "pointer",
-                }}>
-                  <Icon size={16} />
-                  <span>{label}</span>
                 </div>
               </Link>
             );

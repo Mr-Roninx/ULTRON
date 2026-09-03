@@ -73,6 +73,13 @@ export function initDatabase(): void {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS auth_otps (
+      email TEXT PRIMARY KEY,
+      otp TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS recovery_opportunities (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',

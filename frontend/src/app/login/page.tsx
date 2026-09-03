@@ -1,19 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, Eye, EyeOff, Zap, TrendingUp, Lock, Sparkles } from "lucide-react";
+import { Shield, Mail, KeyRound, ArrowRight, ArrowLeft, Sparkles, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginAsDemo, token, loading: authLoading } = useAuth();
+  const { sendOtp, verifyOtp, loginAsDemo, token, loading: authLoading } = useAuth();
+
+  const [step, setStep] = useState<"EMAIL" | "OTP">("EMAIL");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   // Auto-redirect to dashboard if session token already exists
   useEffect(() => {
@@ -22,182 +26,197 @@ export default function LoginPage() {
     }
   }, [token, authLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Resend countdown timer
+  useEffect(() => {
+    if (resendCountdown > 0) {
+      const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCountdown]);
+
+  // Step 1: Request OTP
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid work email address.");
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+    const res = await sendOtp(email.trim());
+    setLoading(false);
+
+    if (res.success) {
+      setStep("OTP");
+      setResendCountdown(45);
+      if (res.dev_otp) {
+        setDevOtpHint(res.dev_otp);
+      }
+      // Auto-focus first OTP input after state update
+      setTimeout(() => {
+        otpInputsRef.current[0]?.focus();
+      }, 100);
+    } else {
+      setError(res.error || "Failed to send verification code. Please try again.");
+    }
+  };
+
+  // Step 2: Handle OTP input changes & auto-focus next digit
+  const handleOtpChange = (index: number, val: string) => {
+    const char = val.slice(-1); // Take last typed char
+    if (char && !/^[0-9]$/.test(char)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = char;
+    setOtp(newOtp);
+    setError(null);
+
+    // Auto-focus next input
+    if (char && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+
+    // If all 6 digits filled, auto-verify
+    const fullCode = newOtp.join("");
+    if (fullCode.length === 6) {
+      handleVerifyCode(fullCode);
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpInputsRef.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
-    const result = await login(email, password);
-    setLoading(false);
-    if (result.success) {
-      router.push("/dashboard");
-    } else {
-      setError(result.error || "Login failed");
+    const pasteData = e.clipboardData.getData("text").trim().slice(0, 6);
+    if (/^[0-9]+$/.test(pasteData)) {
+      const digits = pasteData.split("");
+      const newOtp = ["", "", "", "", "", ""];
+      digits.forEach((d, i) => {
+        if (i < 6) newOtp[i] = d;
+      });
+      setOtp(newOtp);
+      if (pasteData.length === 6) {
+        handleVerifyCode(pasteData);
+      } else {
+        const nextIdx = Math.min(pasteData.length, 5);
+        otpInputsRef.current[nextIdx]?.focus();
+      }
     }
   };
 
-  const handleDemoLogin = async () => {
+  // Step 2: Verify OTP
+  const handleVerifyCode = async (codeToVerify?: string) => {
+    const finalOtp = codeToVerify || otp.join("");
+    if (finalOtp.length < 6) {
+      setError("Please enter the complete 6-digit verification code.");
+      return;
+    }
+
     setError(null);
     setLoading(true);
-    const result = await loginAsDemo();
+    const res = await verifyOtp(email.trim(), finalOtp);
     setLoading(false);
-    if (result.success) {
+
+    if (res.success) {
       router.push("/dashboard");
     } else {
-      setError(result.error || "Demo login failed");
+      setError(res.error || "Invalid verification code. Please check and try again.");
     }
   };
 
-  const handlePrefillDemo = () => {
-    setEmail("demo@ultron.app");
-    setPassword("Ultron@2026");
+  // 1-Click Instant Demo Login for Hackathon & Quick Preview
+  const handleInstantDemoLogin = async () => {
+    setError(null);
+    setLoading(true);
+    const res = await loginAsDemo();
+    setLoading(false);
+    if (res.success) {
+      router.push("/dashboard");
+    } else {
+      setError(res.error || "Demo login failed");
+    }
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--gradient-bg)" }}>
-      {/* ── Left Panel: Brand ── */}
-      <div
-        style={{
-          flex: "0 0 55%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "60px",
-          background: "linear-gradient(135deg, #060b18 0%, #0a0520 50%, #060b18 100%)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Animated grid background */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(59,130,246,0.08) 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }} />
-
-        {/* Glow orbs */}
-        <div style={{
-          position: "absolute", width: 400, height: 400, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)",
-          top: "20%", left: "10%",
-        }} />
-        <div style={{
-          position: "absolute", width: 300, height: 300, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(139,92,246,0.10) 0%, transparent 70%)",
-          bottom: "20%", right: "15%",
-        }} />
-
-        {/* Content */}
-        <div style={{ position: "relative", textAlign: "center", maxWidth: 440 }}>
-          {/* Logo */}
-          <div style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 72, height: 72, borderRadius: 20,
-            background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2))",
-            border: "1px solid rgba(59,130,246,0.3)",
-            marginBottom: 24,
-            boxShadow: "0 0 30px rgba(59,130,246,0.2)",
-          }}>
-            <Shield size={36} color="#3b82f6" />
-          </div>
-
-          <h1 style={{ fontSize: 42, fontWeight: 800, letterSpacing: "-1px", marginBottom: 12 }}>
-            <span className="gradient-text">ULTRON</span>
-          </h1>
-          <p style={{ fontSize: 16, color: "var(--text-secondary)", marginBottom: 48, lineHeight: 1.6 }}>
-            Autonomous economic control plane for<br />failed-payment recovery on Razorpay
-          </p>
-
-          {/* Stats card */}
-          <div className="glass animate-float" style={{
-            borderRadius: 16, padding: "24px 32px",
-            border: "1px solid rgba(59,130,246,0.2)",
-            boxShadow: "0 0 40px rgba(59,130,246,0.1)",
-          }}>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 16 }}>
-              Platform Recovery Stats (model-estimated)
-            </p>
-            <div style={{ display: "flex", gap: 32, justifyContent: "center" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <TrendingUp size={14} color="var(--emerald)" />
-                  <span style={{ fontSize: 26, fontWeight: 800, color: "var(--text-primary)" }}>₹2.4Cr</span>
-                </div>
-                <p style={{ fontSize: 11, color: "var(--text-muted)" }}>Recovered this month</p>
-              </div>
-              <div style={{ width: 1, background: "var(--border)" }} />
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <Zap size={14} color="var(--electric-blue)" />
-                  <span style={{ fontSize: 26, fontWeight: 800, color: "var(--text-primary)" }}>94.3%</span>
-                </div>
-                <p style={{ fontSize: 11, color: "var(--text-muted)" }}>Recovery rate</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 12, textAlign: "left" }}>
-            {[
-              { icon: "🧮", text: "Incremental IVEN scoring — not raw probability" },
-              { icon: "🏛️", text: "Portfolio-level allocation with shadow price" },
-              { icon: "🛡️", text: "2-stage compliance gate before any execution" },
-            ].map(({ icon, text }) => (
-              <div key={text} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 18 }}>{icon}</span>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right Panel: Login Form ── */}
+    <div style={{
+      display: "flex",
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #090d16 0%, #0f172a 50%, #0a0f1d 100%)",
+      color: "#f8fafc",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      position: "relative",
+      overflow: "hidden"
+    }}>
+      {/* Background glowing ambient light effects */}
       <div style={{
-        flex: 1,
+        position: "absolute", top: "-10%", left: "20%", width: "500px", height: "500px",
+        background: "radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(0,0,0,0) 70%)",
+        borderRadius: "50%", pointerEvents: "none"
+      }} />
+      <div style={{
+        position: "absolute", bottom: "-10%", right: "20%", width: "500px", height: "500px",
+        background: "radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(0,0,0,0) 70%)",
+        borderRadius: "50%", pointerEvents: "none"
+      }} />
+
+      {/* Main Container */}
+      <div style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "60px 40px",
-        background: "var(--bg-card)",
+        width: "100%",
+        padding: "40px 20px",
+        zIndex: 10
       }}>
-        <div className="animate-fade-in" style={{ width: "100%", maxWidth: 380 }}>
-          {/* Header */}
-          <div style={{ marginBottom: 36 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-              <Shield size={20} color="var(--electric-blue)" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--electric-blue)" }}>ULTRON</span>
-            </div>
-            <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 8 }}>Welcome back</h2>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-              Sign in to your merchant control plane
-            </p>
+        {/* Logo & Brand Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 14px rgba(37,99,235,0.4)"
+          }}>
+            <Shield size={20} color="#ffffff" />
           </div>
-
-          {/* Error */}
-          {error && (
-            <div style={{
-              padding: "12px 16px", marginBottom: 20, borderRadius: 8,
-              background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)",
-              color: "var(--rose)", fontSize: 13,
-            }}>
-              {error}
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px", color: "#ffffff" }}>
+              ULTRON
             </div>
-          )}
+            <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, letterSpacing: "0.2px" }}>
+              Autonomous Revenue Recovery Engine
+            </div>
+          </div>
+        </div>
 
-          {/* 1-Click Demo Access Button */}
+        {/* Card */}
+        <div style={{
+          width: "100%",
+          maxWidth: 420,
+          background: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 16,
+          padding: "36px 32px",
+          boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.05)"
+        }}>
+          {/* 1-Click Instant Demo Login Banner */}
           <button
             type="button"
-            onClick={handleDemoLogin}
+            onClick={handleInstantDemoLogin}
             disabled={loading}
-            className="btn btn-secondary"
             style={{
-              width: "100%", padding: "12px 16px", fontSize: 14, fontWeight: 700,
-              marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              border: "1px solid rgba(59,130,246,0.4)", background: "linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12))",
-              color: "#60a5fa", cursor: "pointer", borderRadius: 8,
-              boxShadow: "0 2px 10px rgba(59,130,246,0.15)",
+              width: "100%", padding: "12px 16px", fontSize: 13, fontWeight: 700,
+              marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              border: "1px solid rgba(59,130,246,0.35)",
+              background: "linear-gradient(135deg, rgba(37,99,235,0.18) 0%, rgba(124,58,237,0.18) 100%)",
+              color: "#93c5fd", cursor: "pointer", borderRadius: 10,
+              boxShadow: "0 2px 12px rgba(37,99,235,0.15)",
               transition: "all 0.2s ease"
             }}
           >
@@ -205,121 +224,218 @@ export default function LoginPage() {
             <span>🚀 1-Click Instant Demo Login</span>
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5 }}>or sign in with password</span>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(255, 255, 255, 0.08)" }} />
+            <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+              {step === "EMAIL" ? "or continue with email" : "verification"}
+            </span>
+            <div style={{ flex: 1, height: 1, background: "rgba(255, 255, 255, 0.08)" }} />
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text-secondary)" }}>
-                Email address
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                className="input"
-                placeholder="merchant@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
+          {/* Error Banner */}
+          {error && (
+            <div style={{
+              padding: "12px 16px", marginBottom: 20, borderRadius: 8,
+              background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.25)",
+              color: "#fb7185", fontSize: 13, lineHeight: 1.5
+            }}>
+              {error}
             </div>
+          )}
 
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text-secondary)" }}>
-                Password
-              </label>
-              <div style={{ position: "relative" }}>
-                <input
-                  id="login-password"
-                  type={showPassword ? "text" : "password"}
-                  className="input"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  style={{ paddingRight: 44 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                    background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)",
-                    padding: 2,
-                  }}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+          {/* STEP 1: Enter Email */}
+          {step === "EMAIL" && (
+            <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <div>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>
+                  Sign in or Sign up
+                </h2>
+                <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
+                  Enter your email address. We'll send a 6-digit verification code to sign in or create your account.
+                </p>
               </div>
-            </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: -4 }}>
-              <span style={{ color: "var(--text-muted)" }}>Demo: <code style={{ color: "var(--text-secondary)" }}>demo@ultron.app</code></span>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#cbd5e1", marginBottom: 8 }}>
+                  Work Email Address
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Mail size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    placeholder="merchant@yourbrand.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={{
+                      width: "100%", padding: "12px 14px 12px 42px",
+                      background: "rgba(30, 41, 59, 0.6)",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                      borderRadius: 10, color: "#ffffff", fontSize: 14,
+                      outline: "none", boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+              </div>
+
               <button
-                type="button"
-                onClick={handlePrefillDemo}
+                type="submit"
+                disabled={loading || !email.trim()}
                 style={{
-                  background: "none", border: "none", color: "var(--electric-blue)",
-                  cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0
+                  width: "100%", padding: "12px 16px",
+                  background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                  color: "#ffffff", border: "none", borderRadius: 10,
+                  fontSize: 14, fontWeight: 600, cursor: loading ? "wait" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  boxShadow: "0 4px 14px rgba(37,99,235,0.35)", marginTop: 4
                 }}
               >
-                Auto-fill credentials
+                {loading ? (
+                  <>
+                    <RefreshCw size={16} className="spin" />
+                    <span>Sending code…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Verification Code</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
               </button>
-            </div>
+            </form>
+          )}
 
-            <button
-              id="login-submit"
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-              style={{ width: "100%", padding: "12px", fontSize: 15, marginTop: 4 }}
-            >
-              {loading ? (
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ width: 16, height: 16, border: "2px solid white", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-                  Signing in…
-                </span>
-              ) : (
-                <>
-                  <Lock size={15} />
-                  Sign in
-                </>
+          {/* STEP 2: Enter OTP */}
+          {step === "OTP" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setStep("EMAIL")}
+                  style={{
+                    background: "none", border: "none", color: "#94a3b8", cursor: "pointer",
+                    fontSize: 12, display: "flex", alignItems: "center", gap: 6, padding: 0, marginBottom: 12
+                  }}
+                >
+                  <ArrowLeft size={14} />
+                  <span>Change email</span>
+                </button>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>
+                  Enter verification code
+                </h2>
+                <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
+                  We sent a 6-digit code to <strong style={{ color: "#e2e8f0" }}>{email}</strong>
+                </p>
+              </div>
+
+              {/* Dev hint banner if available */}
+              {devOtpHint && (
+                <div style={{
+                  padding: "10px 14px", borderRadius: 8,
+                  background: "rgba(37,99,235,0.12)", border: "1px dashed rgba(59,130,246,0.4)",
+                  color: "#93c5fd", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "space-between"
+                }}>
+                  <span>Code: <strong>{devOtpHint}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const digits = devOtpHint.split("");
+                      setOtp(digits);
+                      handleVerifyCode(devOtpHint);
+                    }}
+                    style={{
+                      background: "rgba(59,130,246,0.25)", border: "none", borderRadius: 4,
+                      color: "#ffffff", padding: "3px 8px", cursor: "pointer", fontSize: 11, fontWeight: 600
+                    }}
+                  >
+                    Auto-fill & Submit
+                  </button>
+                </div>
               )}
-            </button>
-          </form>
 
-          {/* Footer */}
-          <div style={{ marginTop: 28, textAlign: "center" }}>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-              New to ULTRON?{" "}
-              <Link href="/signup" style={{ color: "var(--electric-blue)", fontWeight: 600, textDecoration: "none" }}>
-                Create account
-              </Link>
-            </p>
-          </div>
+              {/* 6 Digit Input Boxes */}
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                {otp.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => { otpInputsRef.current[idx] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    onPaste={handleOtpPaste}
+                    style={{
+                      width: 48, height: 54, textAlign: "center",
+                      fontSize: 22, fontWeight: 700, color: "#ffffff",
+                      background: "rgba(30, 41, 59, 0.7)",
+                      border: digit ? "1.5px solid #3b82f6" : "1px solid rgba(255, 255, 255, 0.15)",
+                      borderRadius: 8, outline: "none",
+                      boxShadow: digit ? "0 0 10px rgba(59,130,246,0.25)" : "none",
+                      transition: "all 0.15s ease"
+                    }}
+                  />
+                ))}
+              </div>
 
-          <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--border)" }}>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", lineHeight: 1.6 }}>
-              ULTRON operates in <strong style={{ color: "var(--amber)" }}>Razorpay Test Mode</strong> only.<br />
-              All recovery statistics are <strong>model-estimated</strong>, not measured fact.
-            </p>
-          </div>
+              {/* Verify Button */}
+              <button
+                type="button"
+                onClick={() => handleVerifyCode()}
+                disabled={loading || otp.join("").length < 6}
+                style={{
+                  width: "100%", padding: "12px 16px",
+                  background: otp.join("").length === 6
+                    ? "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)"
+                    : "rgba(37,99,235,0.4)",
+                  color: "#ffffff", border: "none", borderRadius: 10,
+                  fontSize: 14, fontWeight: 600, cursor: loading ? "wait" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  boxShadow: otp.join("").length === 6 ? "0 4px 14px rgba(37,99,235,0.35)" : "none"
+                }}
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw size={16} className="spin" />
+                    <span>Verifying…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Verify & Enter Dashboard</span>
+                    <CheckCircle2 size={16} />
+                  </>
+                )}
+              </button>
+
+              {/* Resend Link */}
+              <div style={{ textAlign: "center", fontSize: 12, color: "#94a3b8" }}>
+                {resendCountdown > 0 ? (
+                  <span>Resend code in <strong style={{ color: "#e2e8f0" }}>{resendCountdown}s</strong></span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSendOtp()}
+                    disabled={loading}
+                    style={{
+                      background: "none", border: "none", color: "#60a5fa",
+                      cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0
+                    }}
+                  >
+                    Didn't receive code? Resend OTP
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer info */}
+        <div style={{ marginTop: 24, fontSize: 12, color: "#64748b", textAlign: "center" }}>
+          Razorpay Integration • Test Mode • Zero LLM on Financial Path
         </div>
       </div>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-          .auth-left { display: none !important; }
-        }
-      `}</style>
     </div>
   );
 }
