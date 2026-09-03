@@ -222,6 +222,117 @@ export async function sendMagicLinkEmail(recipientEmail: string, magicLinkUrl: s
   });
 }
 
+export interface SendOtpEmailOptions {
+  to: string;
+  otp: string;
+  expiresInMinutes?: number;
+}
+
+/**
+ * Builds HTML template for Merchant OTP Verification Code Email.
+ * Compatible with Resend HTML, Webhook dispatch, and direct SMTP.
+ */
+export function buildOtpVerificationHtml(options: { otp: string; expiresInMinutes?: number }): string {
+  const expiry = options.expiresInMinutes || 10;
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your ULTRON Verification Code</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 16px;">
+          <tr>
+            <td align="center">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);">
+                
+                <!-- Brand Header -->
+                <tr>
+                  <td style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #f1f5f9; text-align: left;">
+                    <table border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="width: 32px; height: 32px; background: #1a73e8; border-radius: 8px; text-align: center; vertical-align: middle; color: #ffffff; font-weight: 800; font-size: 16px;">
+                          U
+                        </td>
+                        <td style="padding-left: 12px; font-size: 17px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px;">
+                          ULTRON
+                        </td>
+                        <td style="padding-left: 8px;">
+                          <span style="font-size: 11px; font-weight: 600; color: #1a73e8; background: #e8f0fe; padding: 3px 8px; border-radius: 12px;">Security</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Code Body -->
+                <tr>
+                  <td style="padding: 32px 32px 24px 32px; text-align: left;">
+                    <h1 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px;">
+                      Verification Code
+                    </h1>
+                    <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b; line-height: 1.6;">
+                      Use this 6-digit one-time code to sign in to your ULTRON merchant dashboard. It expires in <strong>${expiry} minutes</strong>.
+                    </p>
+
+                    <!-- Large OTP Code Container -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 0 0 24px 0;">
+                      <tr>
+                        <td align="center" style="background: #f1f5f9; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 22px 16px;">
+                          <span style="font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace; font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #1a73e8; display: inline-block;">
+                            ${options.otp}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Security Alert Callout -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 12px 14px; margin-bottom: 24px;">
+                      <tr>
+                        <td style="font-size: 13px; color: #92400e; line-height: 1.5;">
+                          🔒 <strong>Security Warning:</strong> Never share this code with anyone. ULTRON support engineers will never ask for your verification code.
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                      If you did not initiate this request, you can safely disregard this email. Your account remains protected.
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 16px 32px; background: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center;">
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                      ULTRON Autonomous Recovery Engine • Deterministic Safety Controls
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Sends a 6-digit OTP verification email to the user.
+ */
+export async function sendOtpEmail(options: SendOtpEmailOptions) {
+  const html = buildOtpVerificationHtml({ otp: options.otp, expiresInMinutes: options.expiresInMinutes });
+  return sendEmail({
+    to: options.to,
+    subject: `${options.otp} is your ULTRON verification code`,
+    html,
+  });
+}
+
 export interface SendSignupConfirmationOptions {
   email: string;
   businessName: string;

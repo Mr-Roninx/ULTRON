@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'node:crypto';
 import { DatabaseAdapter } from '../db/adapter.js';
-import { sendEmail, sendTeamInviteEmail, sendSignupConfirmationEmail } from '../notifications/email.js';
+import { sendEmail, sendOtpEmail, sendTeamInviteEmail, sendSignupConfirmationEmail } from '../notifications/email.js';
 import { SessionAuthService } from '../security/session_auth.js';
 import { PasswordService } from '../security/password.js';
 import { TenancyEnforcer, TenantScopedRequest } from '../security/tenancy.js';
@@ -42,30 +42,11 @@ authRouter.post('/send-otp', async (req: Request, res: Response): Promise<void> 
 
     console.log(`🔐 [AUTH OTP] Verification code for ${cleanEmail}: ${otp} (expires in 10m)`);
 
-    // Dispatch email asynchronously
-    const emailHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1e293b; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
-          <div style="width: 28px; height: 28px; border-radius: 6px; background: #1a73e8; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">U</div>
-          <span style="font-weight: 700; font-size: 16px; color: #0f172a; letter-spacing: -0.3px;">ULTRON</span>
-        </div>
-        <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 12px;">Your ULTRON Verification Code</h2>
-        <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 24px;">
-          Enter the following 6-digit code to securely sign in or create your ULTRON merchant workspace. This code will expire in 10 minutes.
-        </p>
-        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px 24px; text-align: center; margin-bottom: 24px;">
-          <span style="font-family: monospace; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #1a73e8;">${otp}</span>
-        </div>
-        <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-          If you didn't request this code, you can safely ignore this email.
-        </p>
-      </div>
-    `;
-
-    const emailResult = await sendEmail({
+    // Dispatch email asynchronously using unified Resend template
+    const emailResult = await sendOtpEmail({
       to: cleanEmail,
-      subject: `${otp} is your ULTRON verification code`,
-      html: emailHtml,
+      otp,
+      expiresInMinutes: 10,
     });
 
     res.json({
