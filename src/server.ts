@@ -418,23 +418,20 @@ app.get('/demo-store', (_req, res) => {
 });
 
 // Start server if run directly
-const isDirectRun = process.argv[1] && (
-  process.argv[1].endsWith('server.ts') || 
-  process.argv[1].endsWith('server.js') ||
-  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
-);
+const isDirectRun = process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE && !process.env.SUPPRESS_LISTEN;
 
-if (isDirectRun && process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
+if (isDirectRun) {
   app.listen(PORT, () => {
+    console.log(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
     logger.info(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
     logger.info(`📡 Real Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
     logger.info(`🧪 Simulation Webhook endpoint: POST http://localhost:${PORT}/internal/simulate-webhook`);
     logger.info(`📊 Opportunities endpoint: GET http://localhost:${PORT}/opportunities`);
-    logger.info(`🏛️ Recovery Market endpoint: GET/POST http://localhost:${PORT}/market/run`);
-    logger.info(`🛡️ Action Authority endpoint: GET/POST http://localhost:${PORT}/authority/run`);
-    logger.info(`⚡ Execution endpoint: POST http://localhost:${PORT}/execution/run`);
     logger.info(`📈 Dashboard summary: GET http://localhost:${PORT}/dashboard/summary`);
     
-    logger.info(`💡 Note: Background workers are now decoupled. Run 'npm run worker' to start them.`);
+    // Automatically start 24/7 Autonomous Background Recovery Engine
+    AutonomousRecoveryDaemon.getInstance().start({ interval_seconds: 10, capacity: 5 });
+    console.log(`🤖 24/7 Autonomous Recovery Engine ACTIVE: auto-sweeping every 10s without manual intervention`);
+    logger.info(`🤖 24/7 Autonomous Recovery Engine ACTIVE: auto-sweeping every 10s without manual intervention`);
   });
 }

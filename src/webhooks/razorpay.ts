@@ -9,6 +9,7 @@ import {
   getAllExecutionRecords,
 } from '../db/database.js';
 import { normalizeOpportunity } from '../perception/normalizer.js';
+import { AutonomousRecoveryDaemon } from '../agents/daemon.js';
 
 export function verifyWebhookSignature(
   rawBody: string | Buffer,
@@ -226,6 +227,11 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
       // Insert normalized opportunity
       insertOpportunity(opportunity);
 
+      // Trigger instantaneous autonomous recovery sweep in background
+      AutonomousRecoveryDaemon.getInstance().sweepOnce().catch((err: any) => {
+        console.warn('⚠️ Auto-recovery trigger error:', err.message);
+      });
+
       // Audit trail in ledger
       insertLedgerEntry({
         id: `led_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -402,6 +408,11 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
 
       // Insert synthetic opportunity
       insertOpportunity(opportunity);
+
+      // Trigger instantaneous autonomous recovery sweep in background
+      AutonomousRecoveryDaemon.getInstance().sweepOnce().catch((err: any) => {
+        console.warn('⚠️ Auto-recovery trigger error:', err.message);
+      });
 
       // Audit trail in ledger
       insertLedgerEntry({

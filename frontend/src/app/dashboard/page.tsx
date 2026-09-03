@@ -271,16 +271,29 @@ export default function UnifiedRecoveryHubPage() {
             <span>{simulating ? "Simulating..." : "Simulate Payment Failure"}</span>
           </button>
 
-          {/* Run Sweep */}
-          <button
-            onClick={handleRunSweep}
-            disabled={runningSweep}
-            className="btn btn-primary"
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
+          {/* Automatic 24/7 Recovery Live Status */}
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "7px 14px", borderRadius: 20,
+              background: summary?.kill_switch_active ? "var(--google-red-light)" : "var(--google-blue-light)",
+              border: summary?.kill_switch_active ? "1px solid #fad2cf" : "1px solid rgba(26,115,232,0.25)",
+              color: summary?.kill_switch_active ? "var(--google-red)" : "var(--google-blue)",
+              fontSize: 12, fontWeight: 600,
+            }}
+            title="ULTRON continuously scans, scores, and recovers failed payments automatically every 10s"
           >
+            <span
+              style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: summary?.kill_switch_active ? "var(--google-red)" : "var(--google-green)",
+                boxShadow: summary?.kill_switch_active ? "none" : "0 0 8px var(--google-green)",
+                display: "inline-block"
+              }}
+            />
             <Sparkles size={14} />
-            <span>{runningSweep ? "Executing Sweep..." : "Run Autonomous Sweep"}</span>
-          </button>
+            <span>{summary?.kill_switch_active ? "Auto-Recovery Paused" : "Auto-Recovery Active (Continuous 10s Sweep)"}</span>
+          </div>
 
           {/* Emergency Kill Switch */}
           <button
