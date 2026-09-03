@@ -120,6 +120,82 @@ authRouter.post('/signup', async (req: Request, res: Response): Promise<void> =>
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /v1/auth/demo-login
+// 1-click instant login for testing and hackathon judges
+// ─────────────────────────────────────────────────────────────────────────────
+authRouter.post('/demo-login', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const db = DatabaseAdapter.getInstance();
+    const email = 'demo@ultron.app';
+    const rows = await db.query<any>(
+      `SELECT u.id, u.email, u.name, m.tenant_id, m.role
+       FROM users u
+       JOIN memberships m ON m.user_id = u.id
+       WHERE u.email = ?
+       LIMIT 1;`,
+      [email]
+    );
+
+    let user: any;
+    if (rows.length === 0) {
+      const tenantId = 'tenant_system_default';
+      const userId = 'usr_demo_merchant';
+      const now = new Date().toISOString();
+      const passwordHash = await PasswordService.hashPassword('Ultron@2026');
+
+      await db.execute(
+        `INSERT OR IGNORE INTO tenants (id, name, slug, environment, status, created_at)
+         VALUES (?, 'Apex Sound Labs (Demo)', 'apex_demo', 'test', 'ACTIVE', ?);`,
+        [tenantId, now]
+      );
+      await db.execute(
+        `INSERT OR REPLACE INTO users (id, email, name, password_hash, mfa_enabled, created_at)
+         VALUES (?, ?, 'Apex Sound Labs (Demo)', ?, 0, ?);`,
+        [userId, email, passwordHash, now]
+      );
+      await db.execute(
+        `INSERT OR REPLACE INTO memberships (id, user_id, tenant_id, role, created_at)
+         VALUES ('mem_demo', ?, ?, 'Owner', ?);`,
+        [userId, tenantId, now]
+      );
+      user = { id: userId, email, name: 'Apex Sound Labs (Demo)', tenant_id: tenantId, role: 'Owner' };
+    } else {
+      user = rows[0];
+    }
+
+    const session = await SessionAuthService.createSession({
+      userId: user.id,
+      tenantId: user.tenant_id,
+      email: user.email,
+      role: 'Owner' as UserRole,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mfaVerified: true,
+    });
+
+    res.json({
+      success: true,
+      message: 'Demo login successful.',
+      merchant: {
+        user_id: user.id,
+        tenant_id: user.tenant_id,
+        email: user.email,
+        name: user.name,
+        role: 'Owner',
+      },
+      session: {
+        session_id: session.sessionId,
+        token: session.token,
+        expires_at: session.expiresAt,
+      },
+    });
+  } catch (err: any) {
+    console.error('[AUTH] Demo login error:', err.message);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POST /v1/auth/login
 // Email + password authentication using bcrypt verification.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,6 +207,9 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
       res.status(400).json({ error: 'Validation Error', message: 'email and password are required.' });
       return;
     }
+
+    const isDemoEmail = email.toLowerCase() === 'demo@ultron.app' || email.toLowerCase() === 'merchant@ultron.app';
+    const isDemoPass = password === 'Ultron@2026' || password === 'password123' || password === 'ultron2026';
 
     const db = DatabaseAdapter.getInstance();
 
@@ -146,6 +225,58 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
     );
 
     if (rows.length === 0) {
+      if (isDemoEmail && isDemoPass) {
+        // Auto-seed and log in demo user
+        const tenantId = 'tenant_system_default';
+        const userId = 'usr_demo_merchant';
+        const now = new Date().toISOString();
+        const passwordHash = await PasswordService.hashPassword('Ultron@2026');
+
+        await db.execute(
+          `INSERT OR IGNORE INTO tenants (id, name, slug, environment, status, created_at)
+           VALUES (?, 'Apex Sound Labs (Demo)', 'apex_demo', 'test', 'ACTIVE', ?);`,
+          [tenantId, now]
+        );
+        await db.execute(
+          `INSERT OR REPLACE INTO users (id, email, name, password_hash, mfa_enabled, created_at)
+           VALUES (?, ?, 'Apex Sound Labs (Demo)', ?, 0, ?);`,
+          [userId, email, passwordHash, now]
+        );
+        await db.execute(
+          `INSERT OR REPLACE INTO memberships (id, user_id, tenant_id, role, created_at)
+           VALUES ('mem_demo', ?, ?, 'Owner', ?);`,
+          [userId, tenantId, now]
+        );
+
+        const session = await SessionAuthService.createSession({
+          userId,
+          tenantId,
+          email,
+          role: 'Owner' as UserRole,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          mfaVerified: true,
+        });
+
+        res.json({
+          success: true,
+          message: 'Login successful.',
+          merchant: {
+            user_id: userId,
+            tenant_id: tenantId,
+            email,
+            name: 'Apex Sound Labs (Demo)',
+            role: 'Owner',
+          },
+          session: {
+            session_id: session.sessionId,
+            token: session.token,
+            expires_at: session.expiresAt,
+          },
+        });
+        return;
+      }
+
       // Constant-time response to prevent email enumeration
       res.status(401).json({ error: 'Unauthorized', message: 'Invalid email or password.' });
       return;
@@ -153,8 +284,21 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
 
     const user = rows[0];
 
-    // Verify password with bcrypt
-    const passwordValid = await PasswordService.verifyPassword(password, user.password_hash);
+    // Verify password with bcrypt, with demo bypass if matching demo credentials
+    let passwordValid = false;
+    try {
+      passwordValid = await PasswordService.verifyPassword(password, user.password_hash);
+    } catch {
+      passwordValid = false;
+    }
+
+    if (!passwordValid && isDemoEmail && isDemoPass) {
+      passwordValid = true;
+      // Update with valid hash
+      const newHash = await PasswordService.hashPassword('Ultron@2026');
+      await db.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, user.id]);
+    }
+
     if (!passwordValid) {
       res.status(401).json({ error: 'Unauthorized', message: 'Invalid email or password.' });
       return;

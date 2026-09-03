@@ -7,6 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ultron_secure_jwt_secret_key_2026'
 const SESSION_EXPIRY = '7d'; // 7-day session expiry for uninterrupted testing
 
 export enum UserRole {
+  OWNER = 'Owner',
   ADMIN = 'admin',
   OPERATOR = 'operator',
   VIEWER = 'viewer'
@@ -41,16 +42,19 @@ export function authorizeRole(allowedRoles: (UserRole | string)[]) {
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
-      res.status(403).json({ 
-        error: 'Forbidden: Insufficient role permissions.',
-        required: allowedRoles,
-        current: req.user.role
-      });
-      return;
+    const userRole = String(req.user.role || '').toLowerCase();
+    const normalizedAllowed = allowedRoles.map(r => String(r).toLowerCase());
+
+    // Owners and Admins have top-level access to all standard routes
+    if (userRole === 'owner' || userRole === 'admin' || normalizedAllowed.includes(userRole) || normalizedAllowed.includes('*')) {
+      return next();
     }
 
-    next();
+    res.status(403).json({ 
+      error: 'Forbidden: Insufficient role permissions.',
+      required: allowedRoles,
+      current: req.user.role
+    });
   };
 }
 

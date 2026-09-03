@@ -1,19 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shield, Eye, EyeOff, Zap, TrendingUp, Lock } from "lucide-react";
+import { Shield, Eye, EyeOff, Zap, TrendingUp, Lock, Sparkles } from "lucide-react";
 import { useAuth } from "../../lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginAsDemo, token, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-redirect to dashboard if session token already exists
+  useEffect(() => {
+    if (token && !authLoading) {
+      router.replace("/dashboard");
+    }
+  }, [token, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +33,23 @@ export default function LoginPage() {
     } else {
       setError(result.error || "Login failed");
     }
+  };
+
+  const handleDemoLogin = async () => {
+    setError(null);
+    setLoading(true);
+    const result = await loginAsDemo();
+    setLoading(false);
+    if (result.success) {
+      router.push("/dashboard");
+    } else {
+      setError(result.error || "Demo login failed");
+    }
+  };
+
+  const handlePrefillDemo = () => {
+    setEmail("demo@ultron.app");
+    setPassword("Ultron@2026");
   };
 
   return (
@@ -162,6 +186,31 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* 1-Click Demo Access Button */}
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={loading}
+            className="btn btn-secondary"
+            style={{
+              width: "100%", padding: "12px 16px", fontSize: 14, fontWeight: 700,
+              marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              border: "1px solid rgba(59,130,246,0.4)", background: "linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12))",
+              color: "#60a5fa", cursor: "pointer", borderRadius: 8,
+              boxShadow: "0 2px 10px rgba(59,130,246,0.15)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <Sparkles size={16} color="#60a5fa" />
+            <span>🚀 1-Click Instant Demo Login</span>
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+            <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5 }}>or sign in with password</span>
+            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+          </div>
+
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
@@ -209,6 +258,20 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, marginTop: -4 }}>
+              <span style={{ color: "var(--text-muted)" }}>Demo: <code style={{ color: "var(--text-secondary)" }}>demo@ultron.app</code></span>
+              <button
+                type="button"
+                onClick={handlePrefillDemo}
+                style={{
+                  background: "none", border: "none", color: "var(--electric-blue)",
+                  cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0
+                }}
+              >
+                Auto-fill credentials
+              </button>
             </div>
 
             <button
