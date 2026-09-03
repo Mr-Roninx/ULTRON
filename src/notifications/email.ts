@@ -191,7 +191,114 @@ export async function sendMagicLinkEmail(recipientEmail: string, magicLinkUrl: s
   });
 }
 
-export interface SendCustomerRecoveryEmailOptions {
+export interface SendSignupConfirmationOptions {
+  email: string;
+  businessName: string;
+  userName?: string;
+  loginUrl?: string;
+}
+
+/**
+ * Builds HTML template for Merchant Signup Confirmation / Welcome Email.
+ */
+export function buildSignupConfirmationHtml(options: SendSignupConfirmationOptions): string {
+  const name = options.userName || options.businessName || 'Valued Merchant';
+  const loginUrl = options.loginUrl || `${process.env.APP_URL || 'http://localhost:3000'}/dashboard`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to ULTRON</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #060b18; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f1f5f9;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #060b18; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 560px; background: linear-gradient(135deg, #0d1527 0%, #111a33 100%); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <!-- Header / Brand -->
+                <tr>
+                  <td style="padding: 36px 36px 20px 36px; text-align: center;">
+                    <div style="display: inline-block; padding: 10px 18px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 12px; margin-bottom: 12px;">
+                      <span style="font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #38bdf8;">🛡️ ULTRON</span>
+                    </div>
+                    <h1 style="margin: 12px 0 6px 0; font-size: 22px; font-weight: 700; color: #ffffff;">Welcome to ULTRON, ${name}!</h1>
+                    <p style="margin: 0; font-size: 14px; color: #94a3b8;">Your Autonomous Economic Control Plane is Ready</p>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 10px 36px 28px 36px;">
+                    <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px;">
+                      Your merchant workspace for <strong>${options.businessName}</strong> has been successfully initialized. ULTRON is now ready to autonomously recover failed payments on your Razorpay gateway using incremental economic reasoning.
+                    </p>
+
+                    <!-- Workspace Info Box -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; margin-bottom: 24px;">
+                      <tr>
+                        <td style="padding: 16px 20px;">
+                          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #38bdf8; letter-spacing: 1px; margin-bottom: 8px;">Workspace Details</div>
+                          <div style="font-size: 13px; color: #e2e8f0; margin-bottom: 4px;"><strong>Account Email:</strong> ${options.email}</div>
+                          <div style="font-size: 13px; color: #e2e8f0; margin-bottom: 4px;"><strong>Merchant Tenant:</strong> ${options.businessName}</div>
+                          <div style="font-size: 13px; color: #e2e8f0; margin-bottom: 4px;"><strong>Gateway:</strong> Razorpay (Test Mode)</div>
+                          <div style="font-size: 13px; color: #e2e8f0;"><strong>Default Policy:</strong> Scored Allocation &bull; Deterministic Authority Gate</div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- CTA Button -->
+                    <table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 24px auto;">
+                      <tr>
+                        <td align="center" style="border-radius: 10px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
+                          <a href="${loginUrl}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px; letter-spacing: 0.3px;">
+                            Launch Workspace Dashboard →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="font-size: 12px; line-height: 1.5; color: #64748b; margin: 0; text-align: center;">
+                      Or sign in via: <a href="${loginUrl}" style="color: #38bdf8; text-decoration: underline;">${loginUrl}</a>
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 20px 36px; background: rgba(15, 23, 42, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">
+                      This confirmation was sent because you registered an account on ULTRON.
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #475569;">
+                      ULTRON Control Plane &bull; Autonomous Economic Recovery on Razorpay
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Service 1: Sends Merchant Signup Confirmation / Welcome Email.
+ */
+export async function sendSignupConfirmationEmail(options: SendSignupConfirmationOptions) {
+  const html = buildSignupConfirmationHtml(options);
+  return sendEmail({
+    to: options.email,
+    subject: `Welcome to ULTRON - Your Recovery Workspace is Active (${options.businessName})`,
+    html,
+  });
+}
+
+export interface SendPaymentRelinkOptions {
   to: string;
   customerName?: string;
   amountPaise: number;
@@ -202,10 +309,13 @@ export interface SendCustomerRecoveryEmailOptions {
   merchantName?: string;
 }
 
+// Backward-compatible alias
+export type SendCustomerRecoveryEmailOptions = SendPaymentRelinkOptions;
+
 /**
- * Dispatches a customer payment recovery email with 1-click Razorpay payment link.
+ * Builds HTML template for Customer Payment Relink Email.
  */
-export async function sendCustomerRecoveryEmail(options: SendCustomerRecoveryEmailOptions) {
+export function buildPaymentRelinkHtml(options: SendPaymentRelinkOptions): string {
   const amountRupees = (options.amountPaise / 100).toLocaleString('en-IN', {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
@@ -214,7 +324,7 @@ export async function sendCustomerRecoveryEmail(options: SendCustomerRecoveryEma
   const name = options.customerName || 'Valued Customer';
   const reason = (options.reasonCode || 'a temporary bank network timeout').replace(/_/g, ' ').toLowerCase();
 
-  const html = `
+  return `
     <!DOCTYPE html>
     <html>
       <head>
@@ -284,6 +394,18 @@ export async function sendCustomerRecoveryEmail(options: SendCustomerRecoveryEma
       </body>
     </html>
   `;
+}
+
+/**
+ * Service 2: Sends Customer Recovery Payment Relink Email.
+ */
+export async function sendPaymentRelinkEmail(options: SendPaymentRelinkOptions) {
+  const amountRupees = (options.amountPaise / 100).toLocaleString('en-IN', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  });
+  const merchant = options.merchantName || 'Our Merchant Checkout';
+  const html = buildPaymentRelinkHtml(options);
 
   return sendEmail({
     to: options.to,
@@ -291,4 +413,10 @@ export async function sendCustomerRecoveryEmail(options: SendCustomerRecoveryEma
     html,
   });
 }
+
+/**
+ * Backward-compatible alias for sendPaymentRelinkEmail
+ */
+export const sendCustomerRecoveryEmail = sendPaymentRelinkEmail;
+
 

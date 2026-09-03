@@ -113,29 +113,42 @@ export interface ScoreOptions {
  * Computes IVEN (Expected Incremental Value) = incremental_prob * amount - costs
  */
 export function calculateScore(opp: RecoveryOpportunity, options?: ScoreOptions): Score {
+  // Input Sanitization & Boundary Defenses
+  const safeAmount = Math.max(0, Number.isFinite(opp.amount_paise) ? Math.floor(opp.amount_paise) : 0);
+  const safeAttempts = Math.max(1, Math.min(20, Number.isFinite(opp.attempt_count) ? Math.floor(opp.attempt_count) : 1));
+
   let probs: ProbabilityEstimate;
 
   if (options?.useBanditSampling || process.env.ENABLE_THOMPSON_SAMPLING === 'true') {
     const bandit = ThompsonSamplingBandit.getInstance();
     const sample = bandit.sampleProbabilities(opp, options?.tenantId || opp.tenant_id);
     probs = {
-      natural_recovery_prob: sample.p_natural,
-      intervention_recovery_prob: sample.p_intervention,
-      incremental_prob: sample.p_incremental,
+      natural_recovery_prob: Math.max(0, Math.min(1, sample.p_natural)),
+      intervention_recovery_prob: Math.max(0, Math.min(1, sample.p_intervention)),
+      incremental_prob: Math.max(0, Math.min(1, sample.p_incremental)),
       source: 'CALIBRATED',
     };
   } else {
     probs = estimateProbabilities(opp);
   }
 
-  const costs = calculateCosts(opp.attempt_count || 1);
+  // Ensure incremental probability strictly reflects intervention minus natural
+  const boundedIncremental = Math.max(0, Number((probs.intervention_recovery_prob - probs.natural_recovery_prob).toFixed(4)));
+  probs.incremental_prob = boundedIncremental;
+
+  const costs = calculateCosts(safeAttempts);
   const confidence = determineConfidence(opp);
 
   // IVEN = (incremental_prob * amount_paise) - operational_cost - fatigue_cost
-  const expectedIncrementalGross = probs.incremental_prob * opp.amount_paise;
-  const expected_incremental_value_paise = Math.round(
+  const expectedIncrementalGross = probs.incremental_prob * safeAmount;
+  let expected_incremental_value_paise = Math.round(
     expectedIncrementalGross - costs.operational_cost_paise - costs.fatigue_cost_paise
   );
+
+  // Invariant Guard: Hard decline strictly cannot yield positive IVEN
+  if (opp.decline_type === 'hard') {
+    expected_incremental_value_paise = Math.min(0, expected_incremental_value_paise);
+  }
 
   return {
     opportunity_id: opp.id,
@@ -147,6 +160,8 @@ export function calculateScore(opp: RecoveryOpportunity, options?: ScoreOptions)
     fatigue_cost_paise: costs.fatigue_cost_paise,
     expected_incremental_value_paise,
     confidence,
+    probability_disclaimer: 'All probabilities are model-estimated counterfactuals. The true counterfactual is never observed for any real payment.',
+    probability_source: probs.source || 'STATIC',
   };
 }
 

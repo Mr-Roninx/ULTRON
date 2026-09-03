@@ -79,7 +79,14 @@ export class SemanticEconomicsBridge {
     );
 
     // 2. Compute Bounded Modifiers
-    const modifiers = this.calculateModifiers(signals);
+    const llmInfluenceDisabled = process.env.DISABLE_LLM_SCORING_INFLUENCE === 'true';
+    const modifiers = llmInfluenceDisabled
+      ? { incremental_prob_modifier: 0, fatigue_cost_modifier_paise: 0, operational_cost_modifier_paise: 0, calibrated_signals: {} }
+      : this.calculateModifiers(signals);
+
+    if (!llmInfluenceDisabled && (modifiers.incremental_prob_modifier !== 0 || modifiers.fatigue_cost_modifier_paise !== 0)) {
+      console.log(`📐 SemanticBridge: Applied modifiers to ${opp.id}: prob_mod=${modifiers.incremental_prob_modifier}, fatigue_mod=${modifiers.fatigue_cost_modifier_paise}p`);
+    }
 
     // Hard rule: Hard declines can NEVER receive positive incremental probability
     let finalIncrementalProb = baselineProbs.incremental_prob;
@@ -108,6 +115,8 @@ export class SemanticEconomicsBridge {
       fatigue_cost_paise: finalFatigueCostPaise,
       expected_incremental_value_paise: finalIvenPaise,
       confidence: baselineConfidence,
+      probability_disclaimer: 'All probabilities are model-estimated counterfactuals. The true counterfactual is never observed for any real payment.',
+      probability_source: baselineProbs.source || 'STATIC',
     };
 
     return {

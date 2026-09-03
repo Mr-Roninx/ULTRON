@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'node:crypto';
 import { DatabaseAdapter } from '../db/adapter.js';
-import { sendTeamInviteEmail } from '../notifications/email.js';
+import { sendTeamInviteEmail, sendSignupConfirmationEmail } from '../notifications/email.js';
 import { SessionAuthService } from '../security/session_auth.js';
 import { PasswordService } from '../security/password.js';
 import { TenancyEnforcer, TenantScopedRequest } from '../security/tenancy.js';
@@ -84,6 +84,16 @@ authRouter.post('/signup', async (req: Request, res: Response): Promise<void> =>
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
       mfaVerified: true,
+    });
+
+    // Asynchronously dispatch Signup Confirmation / Welcome Email via Resend
+    sendSignupConfirmationEmail({
+      email,
+      businessName: business_name,
+      userName: business_name,
+      loginUrl: `${process.env.APP_URL || 'http://localhost:3000'}/login`,
+    }).catch((mailErr: any) => {
+      console.warn('[AUTH] Signup confirmation email dispatch warning:', mailErr.message);
     });
 
     res.status(201).json({

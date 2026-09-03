@@ -60,6 +60,8 @@ export interface Score {
   fatigue_cost_paise: number;
   expected_incremental_value_paise: number;
   confidence: ConfidenceLevel;
+  probability_disclaimer?: string;
+  probability_source?: 'STATIC' | 'CALIBRATED';
 }
 
 export interface AllocationDecision {

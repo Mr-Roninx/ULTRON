@@ -6,9 +6,15 @@ import { ApiKeyService } from './api_keys.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'ultron_secure_jwt_secret_key_2026';
 const SESSION_EXPIRY = '7d'; // 7-day session expiry for uninterrupted testing
 
+export enum UserRole {
+  ADMIN = 'admin',
+  OPERATOR = 'operator',
+  VIEWER = 'viewer'
+}
+
 export interface AuthUser {
   userId: string;
-  role: string;
+  role: UserRole | string;
   merchant_id?: string;
   tenantId?: string;
 }
@@ -22,6 +28,30 @@ export interface AuthenticatedRequest extends Request {
  */
 export function generateSessionToken(payload: AuthUser, expiresIn: string = SESSION_EXPIRY): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn as any });
+}
+
+/**
+ * Middleware to strictly enforce Role-Based Access Control (RBAC).
+ * Expects `authenticateJWT` to have run first.
+ */
+export function authorizeRole(allowedRoles: (UserRole | string)[]) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized: No user session found.' });
+      return;
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      res.status(403).json({ 
+        error: 'Forbidden: Insufficient role permissions.',
+        required: allowedRoles,
+        current: req.user.role
+      });
+      return;
+    }
+
+    next();
+  };
 }
 
 /**
@@ -39,7 +69,7 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
   if (process.env.AUTH_REQUIRED === 'false' && !req.headers.authorization) {
     req.user = {
       userId: 'dev_operator',
-      role: 'admin',
+      role: UserRole.ADMIN,
       merchant_id: 'merchant_default',
       tenantId: 'tenant_system_default',
     };
@@ -55,7 +85,7 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
     // Fallback for dev mode
     req.user = {
       userId: 'dev_operator',
-      role: 'admin',
+      role: UserRole.ADMIN,
       merchant_id: 'merchant_default',
       tenantId: 'tenant_system_default',
     };
@@ -70,7 +100,7 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
     if (keyAuth.valid && keyAuth.tenantId) {
       req.user = {
         userId: `key_${keyAuth.tenantId.slice(0, 8)}`,
-        role: 'admin',
+        role: UserRole.ADMIN, // API keys have admin rights by default
         tenantId: keyAuth.tenantId,
         merchant_id: keyAuth.tenantId,
       };
@@ -83,7 +113,7 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
     const user = verifySessionToken(token) as any;
     req.user = {
       userId: user.userId || user.id || 'dev_operator',
-      role: user.role || 'admin',
+      role: user.role || UserRole.ADMIN,
       tenantId: user.tenantId || user.merchant_id || 'tenant_system_default',
       merchant_id: user.merchant_id || user.tenantId || 'tenant_system_default',
     };
@@ -109,7 +139,7 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
     if (process.env.AUTH_REQUIRED !== 'true') {
       req.user = {
         userId: 'dev_operator',
-        role: 'admin',
+        role: UserRole.ADMIN,
         merchant_id: 'tenant_system_default',
         tenantId: 'tenant_system_default',
       };

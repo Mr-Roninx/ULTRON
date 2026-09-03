@@ -93,6 +93,11 @@ export function runMarketAllocation(options: { capacity?: number; opportunities?
         item: entry,
         reason: `abstained — non-positive expected incremental value (₹${(score.expected_incremental_value_paise / 100).toFixed(2)})`,
       });
+    } else if (AntiBlastEngine.isSyntheticHoldout(opportunity.id)) {
+      abstainedList.push({
+        item: entry,
+        reason: `abstained — counterfactual holdout (5% deterministic control group)`,
+      });
     } else {
       eligibleList.push(entry);
     }

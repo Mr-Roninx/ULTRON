@@ -193,3 +193,149 @@ notificationsRouter.post(
   }
 );
 
+// 7. POST /v1/notifications/email/signup-confirm - Dispatch Signup Confirmation Email
+notificationsRouter.post(
+  '/email/signup-confirm',
+  TenancyEnforcer.authenticateTenant(),
+  async (req: TenantScopedRequest, res: Response): Promise<void> => {
+    try {
+      const { sendSignupConfirmationEmail } = await import('../notifications/email.js');
+      const email = req.body.email || req.tenantContext?.user?.email;
+      const businessName = req.body.business_name || req.tenantContext?.tenantId || 'Your Business';
+      const userName = req.body.user_name || (req.tenantContext?.user as any)?.name || businessName;
+      const loginUrl = req.body.login_url || `${process.env.APP_URL || 'http://localhost:3000'}/login`;
+
+      if (!email) {
+        res.status(400).json({ error: 'Validation Error', message: 'email is required.' });
+        return;
+      }
+
+      const result = await sendSignupConfirmationEmail({
+        email,
+        businessName,
+        userName,
+        loginUrl,
+      });
+
+      res.json({
+        success: result.success,
+        id: result.id,
+        service: 'confirm_signup',
+        recipient: email,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error', details: err.message });
+    }
+  }
+);
+
+// 8. POST /v1/notifications/email/relink - Dispatch Payment Recovery Relink Email
+notificationsRouter.post(
+  '/email/relink',
+  TenancyEnforcer.authenticateTenant(),
+  async (req: TenantScopedRequest, res: Response): Promise<void> => {
+    try {
+      const { sendPaymentRelinkEmail } = await import('../notifications/email.js');
+      const { getOpportunityById, getExecutionRecordByOpportunityId } = await import('../db/database.js');
+
+      let to = req.body.to;
+      let customerName = req.body.customer_name;
+      let amountPaise = req.body.amount_paise;
+      let recoveryUrl = req.body.recovery_url;
+      const opportunityId = req.body.opportunity_id;
+      let reasonCode = req.body.reason_code;
+      const merchantName = req.body.merchant_name || 'ULTRON Recovery';
+
+      // Auto-populate from DB if opportunity_id is given
+      if (opportunityId) {
+        const opp = getOpportunityById(opportunityId);
+        if (opp) {
+          amountPaise = amountPaise ?? opp.amount_paise;
+          reasonCode = reasonCode ?? opp.reason_code;
+          const exec = getExecutionRecordByOpportunityId(opportunityId);
+          if (exec && !recoveryUrl) {
+            recoveryUrl = exec.link_url;
+          }
+        }
+      }
+
+      if (!to) {
+        res.status(400).json({ error: 'Validation Error', message: 'Recipient email (to) is required.' });
+        return;
+      }
+
+      recoveryUrl = recoveryUrl || 'https://rzp.io/i/plink_demo';
+      amountPaise = amountPaise || 50000;
+
+      const result = await sendPaymentRelinkEmail({
+        to,
+        customerName: customerName || 'Valued Customer',
+        amountPaise,
+        currency: req.body.currency || 'INR',
+        recoveryUrl,
+        opportunityId: opportunityId || `opp_rel_${Date.now()}`,
+        reasonCode: reasonCode || 'payment_failed',
+        merchantName,
+      });
+
+      res.json({
+        success: result.success,
+        id: result.id,
+        service: 'send_relink_to_pay',
+        recipient: to,
+        recovery_url: recoveryUrl,
+        amount_paise: amountPaise,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error', details: err.message });
+    }
+  }
+);
+
+// 9. POST /v1/notifications/email/preview - Preview Template for Signup or Relink
+notificationsRouter.post(
+  '/email/preview',
+  TenancyEnforcer.authenticateTenant(),
+  async (req: TenantScopedRequest, res: Response): Promise<void> => {
+    try {
+      const { buildSignupConfirmationHtml, buildPaymentRelinkHtml } = await import('../notifications/email.js');
+      const type = req.body.type || 'relink'; // 'signup' | 'relink'
+
+      if (type === 'signup') {
+        const html = buildSignupConfirmationHtml({
+          email: req.body.email || 'merchant@example.com',
+          businessName: req.body.business_name || 'Acme Corporation',
+          userName: req.body.user_name || 'Acme Merchant',
+          loginUrl: req.body.login_url || 'https://ultron.internal/login',
+        });
+        res.json({
+          success: true,
+          type: 'confirm_signup',
+          preview_html: html,
+        });
+        return;
+      }
+
+      const html = buildPaymentRelinkHtml({
+        to: req.body.to || 'customer@example.com',
+        customerName: req.body.customer_name || 'Rahul Sharma',
+        amountPaise: req.body.amount_paise || 499900,
+        currency: req.body.currency || 'INR',
+        recoveryUrl: req.body.recovery_url || 'https://rzp.io/i/plink_preview_123',
+        opportunityId: req.body.opportunity_id || 'opp_preview_888',
+        reasonCode: req.body.reason_code || 'insufficient_funds',
+        merchantName: req.body.merchant_name || 'Acme Merchant',
+      });
+
+      res.json({
+        success: true,
+        type: 'send_relink_to_pay',
+        preview_html: html,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error', details: err.message });
+    }
+  }
+);
+
+

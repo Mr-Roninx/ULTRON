@@ -114,6 +114,16 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
       if (oppId) {
         const opp = getOpportunityById(oppId);
         if (opp) {
+          if (opp.status === 'recovered') {
+            res.status(200).json({
+              received: true,
+              reconciled: true,
+              status: 'recovered',
+              idempotent: true,
+              opportunity_id: oppId,
+            });
+            return;
+          }
           updateOpportunityStatus(oppId, 'recovered');
           const now = new Date().toISOString();
           insertLedgerEntry({
@@ -324,6 +334,16 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
       if (oppId) {
         const opp = getOpportunityById(oppId);
         if (opp) {
+          if (opp.status === 'recovered') {
+            res.status(200).json({
+              received: true,
+              reconciled: true,
+              status: 'recovered',
+              idempotent: true,
+              opportunity_id: oppId,
+            });
+            return;
+          }
           updateOpportunityStatus(oppId, 'recovered');
           const now = new Date().toISOString();
           insertLedgerEntry({
