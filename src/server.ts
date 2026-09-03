@@ -34,16 +34,17 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+import { logger } from './observability/logger.js';
 import { MigrationRunner } from './db/migrations/runner.js';
 
 // Initialize database schema & run auto-migrations
 initDatabase();
 MigrationRunner.migrateUp().then(({ applied }) => {
   if (applied.length > 0) {
-    console.log(`🚀 DatabaseAdapter: Applied ${applied.length} schema migrations successfully.`);
+    logger.info(`🚀 DatabaseAdapter: Applied ${applied.length} schema migrations successfully.`);
   }
 }).catch((err) => {
-  console.warn('⚠️ Migration warning:', err.message);
+  logger.warn({ err }, '⚠️ Migration warning');
 });
 
 // Auto-Sync and Permanently Seed Default Tenant Credentials & API Keys to Supabase
@@ -75,9 +76,9 @@ MigrationRunner.migrateUp().then(({ applied }) => {
         scopes: ['events:write', 'events:read', 'payments:read', 'recoveries:read', 'analytics:read', 'agent:read', 'integrations:read', 'integrations:write'],
       });
     }
-    console.log('⚡ SupabaseStore: Synced and verified permanent credentials with Supabase.');
+    logger.info('⚡ SupabaseStore: Synced and verified permanent credentials with Supabase.');
   } catch (err: any) {
-    console.warn('⚠️ SupabaseStore auto-seed warning:', err.message);
+    logger.warn({ err }, '⚠️ SupabaseStore auto-seed warning');
   }
 })();
 
@@ -86,7 +87,7 @@ const PORT = process.env.PORT || 3001;
 
 import helmet from 'helmet';
 import { DistributedRateLimiter } from './cache/rate_limiter.js';
-import { authenticateJWT } from './security/auth.js';
+import { authenticateJWT, authorizeRole, UserRole } from './security/auth.js';
 import { DatabaseAdapter } from './db/adapter.js';
 import { CacheManager } from './cache/redis.js';
 import { isKillSwitchActive } from './authority/gate.js';
@@ -362,48 +363,54 @@ app.post('/v1/webhooks/whatsapp', handleWhatsAppWebhookEvent);
 app.use('/opportunities', authenticateJWT, auditLogger('access_opportunities', 'opportunities'), opportunitiesRouter);
 
 // Recovery Market endpoints (Feature 4)
-app.use('/market', authenticateJWT, auditLogger('access_market', 'market'), marketRouter);
+app.use('/market', authenticateJWT, authorizeRole([UserRole.ADMIN, UserRole.OPERATOR]), auditLogger('access_market', 'market'), marketRouter);
 
 // Action Authority endpoints (Feature 5)
-app.use('/authority', authenticateJWT, auditLogger('access_authority', 'authority'), authorityRouter);
+app.use('/authority', authenticateJWT, authorizeRole([UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER]), auditLogger('access_authority', 'authority'), authorityRouter);
 
-// Execution endpoints (Feature 6 with strict rate limiter)
-app.use('/execution', authenticateJWT, auditLogger('access_execution', 'execution'), executionLimiter, executionRouter);
+// Execution endpoints (Feature 6 with strict rate limiter) - Requires Operator or Admin
+app.use('/execution', authenticateJWT, authorizeRole([UserRole.ADMIN, UserRole.OPERATOR]), auditLogger('access_execution', 'execution'), executionLimiter, executionRouter);
 
-// Dashboard endpoints (Feature 7)
-app.use('/dashboard', authenticateJWT, dashboardRouter);
+// Dashboard endpoints (Feature 7) - Requires at least Operator role
+app.use('/dashboard', authenticateJWT, authorizeRole([UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER]), dashboardRouter);
 
-// Agent Control Plane endpoints (ULTRON AI Agent)
-app.use('/agents', authenticateJWT, agentsRouter);
+// Agent Control Plane endpoints (ULTRON AI Agent) - strictly Admin only
+app.use('/agents', authenticateJWT, authorizeRole([UserRole.ADMIN]), agentsRouter);
 
 // Canonical Event Ingestion Gateway (v6)
-app.use('/v1/events', eventsRouter);
+app.use('/v1/events', webhookLimiter, eventsRouter);
 
 // Provider Integration & Capability Discovery (v6)
-app.use('/v1/integrations', integrationsRouter);
+app.use('/v1/integrations', generalLimiter, integrationsRouter);
 
 // Authentication & Merchant Onboarding (v6)
-app.use('/v1/auth', authRouter);
+app.use('/v1/auth', generalLimiter, authRouter);
 
-// API Key Management (v6)
-app.use('/v1/api-keys', apiKeysRouter);
+// API Key Management (v6) - strictly Admin only
+app.use('/v1/api-keys', authenticateJWT, authorizeRole([UserRole.ADMIN]), executionLimiter, apiKeysRouter);
 
 // Audit & Ledger Logs
 app.use('/audit', authenticateJWT, auditRouter);
 app.use('/v1/audit', auditExportRouter);
 
 // Recovery Activity Notifications (v6)
-app.use('/v1/notifications', notificationsRouter);
+app.use('/v1/notifications', executionLimiter, notificationsRouter);
 
 // Webhook Delivery Queue & Replay (v6)
-app.use('/v1/webhooks/queue', webhooksQueueRouter);
+app.use('/v1/webhooks/queue', webhookLimiter, webhooksQueueRouter);
 
 // Recovery Playground & Real-Time Visualization (v6)
-app.use('/v1/playground', playgroundRouter);
+app.use('/v1/playground', executionLimiter, playgroundRouter);
 
 // Zero-Code Drop-In Client SDK
 app.use('/sdk', sdkRouter);
 app.use('/ultron.js', sdkRouter);
+
+// Demo Merchant Storefront (for live testing & merchant verification)
+app.use('/demo', express.static(path.resolve(process.cwd(), 'public')));
+app.get('/demo-store', (_req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'demo_merchant_store.html'));
+});
 
 // Start server if run directly
 const isDirectRun = process.argv[1] && (
@@ -414,22 +421,15 @@ const isDirectRun = process.argv[1] && (
 
 if (isDirectRun && process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE) {
   app.listen(PORT, () => {
-    console.log(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
-    console.log(`📡 Real Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
-    console.log(`🧪 Simulation Webhook endpoint: POST http://localhost:${PORT}/internal/simulate-webhook`);
-    console.log(`📊 Opportunities endpoint: GET http://localhost:${PORT}/opportunities`);
-    console.log(`🏛️ Recovery Market endpoint: GET/POST http://localhost:${PORT}/market/run`);
-    console.log(`🛡️ Action Authority endpoint: GET/POST http://localhost:${PORT}/authority/run`);
-    console.log(`⚡ Execution endpoint: POST http://localhost:${PORT}/execution/run`);
-    console.log(`📈 Dashboard summary: GET http://localhost:${PORT}/dashboard/summary`);
+    logger.info(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
+    logger.info(`📡 Real Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
+    logger.info(`🧪 Simulation Webhook endpoint: POST http://localhost:${PORT}/internal/simulate-webhook`);
+    logger.info(`📊 Opportunities endpoint: GET http://localhost:${PORT}/opportunities`);
+    logger.info(`🏛️ Recovery Market endpoint: GET/POST http://localhost:${PORT}/market/run`);
+    logger.info(`🛡️ Action Authority endpoint: GET/POST http://localhost:${PORT}/authority/run`);
+    logger.info(`⚡ Execution endpoint: POST http://localhost:${PORT}/execution/run`);
+    logger.info(`📈 Dashboard summary: GET http://localhost:${PORT}/dashboard/summary`);
     
-    // Start Webhook Queue Retry Worker
-    WebhookQueueEngine.getInstance().startWorker(10000);
-
-    // Auto-start autonomous daemon if enabled
-    if (process.env.AUTONOMOUS_AGENT_ENABLED === 'true') {
-      console.log(`🤖 Starting Autonomous Recovery Agent Daemon (24/7 Background Sweep)`);
-      AutonomousRecoveryDaemon.getInstance().start();
-    }
+    logger.info(`💡 Note: Background workers are now decoupled. Run 'npm run worker' to start them.`);
   });
 }

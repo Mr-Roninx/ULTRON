@@ -1,0 +1,276 @@
+<!-- Standalone Merchant Store Demo -->
+<!-- Same as public/demo_merchant_store.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Sound Labs - Official Checkout (Demo Store)</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Razorpay Official Checkout -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- ULTRON Autonomous Payment Interceptor (Single File Drop-In) -->
+  <script src="http://localhost:3001/sdk/ultron.js" data-api-url="http://localhost:3001" data-api-key="ul_test_live_key_demo" defer></script>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-hover: #1557b0;
+      --surface: #ffffff;
+      --bg: #f8fafc;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --danger: #ef4444;
+      --shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: #0f172a; }
+    .brand-logo { width: 32px; height: 32px; background: #0f172a; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+      border-radius: 999px; background: #eff6ff; border: 1px solid #bfdbfe;
+      color: #1d4ed8; font-size: 12px; font-weight: 600;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    main { flex: 1; max-width: 960px; margin: 40px auto; padding: 0 20px; width: 100%; }
+    .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 32px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px; box-shadow: var(--shadow);
+    }
+    h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+
+    .product-box { display: flex; gap: 18px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .product-img {
+      width: 88px; height: 88px; border-radius: 12px; background: #e0f2fe;
+      display: flex; align-items: center; justify-content: center; font-size: 36px;
+    }
+    .product-name { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+    .product-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+    .product-price { font-size: 20px; font-weight: 800; color: #0f172a; }
+
+    .line-item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: var(--text-muted); }
+    .line-item.total { font-size: 18px; font-weight: 800; color: var(--text); border-top: 1px dashed var(--border); padding-top: 14px; margin-top: 14px; }
+
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    input {
+      width: 100%; padding: 11px 14px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.15s;
+    }
+    input:focus { border-color: var(--primary); ring: 2px solid rgba(26, 115, 232, 0.2); }
+
+    .btn-pay {
+      width: 100%; padding: 15px; background: #1a73e8; border: none;
+      border-radius: 10px; color: white; font-size: 15px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3); transition: all 0.15s;
+    }
+    .btn-pay:hover { background: #1557b0; transform: translateY(-1px); }
+
+    .btn-fail-sim {
+      width: 100%; padding: 11px; background: #fff1f2; border: 1px solid #fecdd3;
+      border-radius: 8px; color: #e11d48; font-size: 13px; font-weight: 600;
+      cursor: pointer; margin-top: 10px; transition: all 0.15s;
+    }
+    .btn-fail-sim:hover { background: #ffe4e6; }
+
+    .ultron-badge {
+      margin-top: 18px; padding: 12px 14px; border-radius: 8px;
+      background: #f1f5f9; border: 1px solid #cbd5e1; font-size: 12px;
+      color: #334155; display: flex; align-items: center; gap: 8px;
+    }
+
+    #recoveryAlert {
+      display: none; margin-top: 20px; padding: 18px; border-radius: 12px;
+      background: #eff6ff; border: 1px solid #bfdbfe; animation: slideDown 0.3s ease;
+    }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .alert-title { font-weight: 700; font-size: 14px; color: #1e40af; margin-bottom: 4px; }
+    .alert-desc { font-size: 13px; color: #3b82f6; margin-bottom: 12px; }
+    .recovery-link-btn {
+      display: inline-block; padding: 10px 18px; background: #10b981;
+      color: white; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-logo">⚡</div>
+      <span>Apex Sound Labs</span>
+    </div>
+    <div class="status-pill">
+      <span class="status-dot"></span>
+      <span>ULTRON Interceptor Attached</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- Checkout Form -->
+      <div class="card">
+        <h2>Customer Delivery & Details</h2>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="custName" value="Rohan Verma">
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="custEmail" value="rohan@example.com">
+        </div>
+        <div class="form-group">
+          <label>Mobile / WhatsApp Number</label>
+          <input type="text" id="custPhone" value="+919876543210">
+        </div>
+        <div class="form-group">
+          <label>Shipping Address</label>
+          <input type="text" value="Flat 402, Highline Towers, Indiranagar, Bengaluru 560038">
+        </div>
+
+        <button class="btn-pay" id="payBtn" onclick="launchRazorpayCheckout()">
+          <span>Pay ₹1,499 via Razorpay</span>
+          <span>&rarr;</span>
+        </button>
+
+        <button class="btn-fail-sim" onclick="simulatePaymentFailure()">
+          🧪 Test Trigger: Simulate Bank 3DS Failure
+        </button>
+
+        <div class="ultron-badge">
+          <span>🛡️</span>
+          <span><strong>Protected by ULTRON:</strong> If payment fails due to bank timeout, your order & address are held securely.</span>
+        </div>
+
+        <div id="recoveryAlert">
+          <div class="alert-title">
+            <span>🛡️ ULTRON Auto-Recovery Triggered!</span>
+          </div>
+          <div class="alert-desc" id="alertMessage">
+            Payment failed due to bank timeout. ULTRON calculated positive recovery value and generated a 1-click Razorpay payment link.
+          </div>
+          <a href="#" id="recoveryLink" class="recovery-link-btn" target="_blank">
+            Complete Order via 1-Click Link &rarr;
+          </a>
+        </div>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="card" style="height: fit-content;">
+        <h2>Order Summary</h2>
+        <div class="product-box">
+          <div class="product-img">🎧</div>
+          <div>
+            <div class="product-name">Apex Pro Wireless Headphones</div>
+            <div class="product-desc">Matte Black • Active Noise Cancellation</div>
+            <div class="product-price">₹1,499.00</div>
+          </div>
+        </div>
+
+        <div class="line-item">
+          <span>Subtotal</span>
+          <span>₹1,499.00</span>
+        </div>
+        <div class="line-item">
+          <span>Express Delivery</span>
+          <span style="color: #10b981;">FREE</span>
+        </div>
+        <div class="line-item">
+          <span>GST (18% Included)</span>
+          <span>₹228.66</span>
+        </div>
+        <div class="line-item total">
+          <span>Total Payable</span>
+          <span>₹1,499.00</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function launchRazorpayCheckout() {
+      const name = document.getElementById('custName').value;
+      const email = document.getElementById('custEmail').value;
+      const phone = document.getElementById('custPhone').value;
+
+      const options = {
+        key: 'rzp_test_TVWDFQCezsOvv2',
+        amount: 149900,
+        currency: 'INR',
+        name: 'Apex Sound Labs',
+        description: 'Apex Pro Wireless Headphones',
+        prefill: { name: name, email: email, contact: phone },
+        theme: { color: '#1a73e8' },
+        handler: function (response) {
+          alert('✅ Payment Successful! Payment ID: ' + response.razorpay_payment_id);
+        }
+      };
+
+      if (!window.Razorpay) {
+        alert('Razorpay Checkout SDK is loading... please retry in 2 seconds.');
+        return;
+      }
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    }
+
+    async function simulatePaymentFailure() {
+      const name = document.getElementById('custName').value;
+      const email = document.getElementById('custEmail').value;
+      const phone = document.getElementById('custPhone').value;
+
+      if (window.Ultron && typeof window.Ultron.reportFailure === 'function') {
+        window.Ultron.reportFailure({
+          payment_id: 'pay_sim_' + Date.now(),
+          order_id: 'ord_sim_' + Date.now(),
+          amount_paise: 149900,
+          currency: 'INR',
+          error_code: 'BAD_REQUEST_PAYMENT_FAILED',
+          error_description: 'Bank server communication timeout during 3DS OTP verification',
+          email: email,
+          contact: phone,
+          metadata: {
+            store: 'Apex Sound Labs',
+            product: 'Apex Pro Wireless Headphones',
+            url: window.location.href
+          }
+        });
+
+        setTimeout(async () => {
+          try {
+            const res = await fetch('http://localhost:3001/dashboard/summary');
+            const data = await res.json();
+            const recent = (data.opportunities || [])[0];
+            
+            document.getElementById('recoveryAlert').style.display = 'block';
+            if (recent && recent.execution_link) {
+              document.getElementById('recoveryLink').href = recent.execution_link;
+              document.getElementById('alertMessage').innerText = 'Payment recovered! ULTRON evaluated IVEN (Incremental Value) and generated a Razorpay link: ' + recent.execution_link;
+            } else {
+              document.getElementById('recoveryLink').href = 'http://localhost:3000/dashboard';
+              document.getElementById('alertMessage').innerText = 'ULTRON intercepted the failure! View decision and shadow price on the dashboard.';
+            }
+          } catch(e) {
+            document.getElementById('recoveryAlert').style.display = 'block';
+          }
+        }, 1500);
+      } else {
+        alert('ULTRON SDK not loaded yet. Make sure ULTRON backend is running on port 3001.');
+      }
+    }
+  </script>
+</body>
+</html>

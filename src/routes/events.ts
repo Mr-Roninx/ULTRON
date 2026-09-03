@@ -319,6 +319,29 @@ eventsRouter.post(
 
         console.log(`📥 [ULTRON Gateway] Ingested failed payment opportunity ${opportunity.id} (₹${(opportunity.amount_paise / 100).toFixed(2)}) for tenant ${tenantContext.tenantId}`);
 
+        // Automatically trigger recovery control plane for this opportunity
+        setImmediate(async () => {
+          try {
+            const { scoreOpportunity } = await import('../economics/scorer.js');
+            const { runMarketAllocation } = await import('../market/allocator.js');
+            const { executeOpportunity } = await import('../execution/executor.js');
+            
+            // 1. Deterministic Economic Scoring
+            scoreOpportunity(opportunity);
+
+            // 2. Recovery Market Allocation under portfolio capacity
+            runMarketAllocation({ tenantId: tenantContext.tenantId, capacity: 5 });
+
+            // 3. Action Authority Compliance Check & Razorpay Link Generation
+            const execResult = await executeOpportunity(opportunity.id);
+            if (execResult.success && execResult.record) {
+              console.log(`⚡ [ULTRON Autonomous Engine] Generated recovery payment link for ${opportunity.id}: ${execResult.record.link_url}`);
+            }
+          } catch (sweepErr: any) {
+            console.warn('⚠️ Automatic recovery trigger:', sweepErr?.message);
+          }
+        });
+
         res.status(201).json({
           received: true,
           opportunity_id: opportunity.id,

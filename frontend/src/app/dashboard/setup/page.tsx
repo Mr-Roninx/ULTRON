@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Sparkles, Key, Webhook, Code, CheckCircle2, AlertTriangle,
-  Copy, Check, ShieldCheck, Play, ShoppingCart, Smartphone
+  Copy, Check, ShieldCheck, Play, ShoppingCart, Smartphone,
+  Download, ExternalLink, ArrowRight, FileCode
 } from "lucide-react";
 import { api, useAuth } from "../../../lib/auth";
 
@@ -308,65 +309,139 @@ export default function StreamlinedIntegrationHubPage() {
 
       {/* STEP 2: EMBED SDK & WEBHOOKS */}
       {activeStep === "embed" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          {/* Webhook Configuration */}
-          <div className="card" style={{ padding: "24px 28px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <Webhook size={18} color="var(--google-blue)" />
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Razorpay Webhook Endpoint</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {/* Top Banner: Success & Guidance */}
+          <div style={{
+            background: "var(--google-green-light)", border: "1px solid #ceead6",
+            borderRadius: 10, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <CheckCircle2 size={22} color="var(--google-green)" />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--google-green-hover)" }}>
+                  Razorpay Credentials Active
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                  Your Webhook Endpoint and Single-File Interceptor are generated and ready for your website.
+                </div>
+              </div>
             </div>
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 }}>
-              Add this endpoint in your Razorpay Dashboard under <strong>Settings → Webhooks</strong> for event <code>payment.failed</code>:
-            </p>
-
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <input
-                type="text"
-                readOnly
-                value={webhookUrl}
-                className="input"
-                style={{ fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-hover)" }}
-              />
-              <button
-                onClick={() => copyToClipboard(webhookUrl, setCopiedWebhook)}
-                className="btn btn-secondary"
-                style={{ padding: "8px 14px" }}
-              >
-                {copiedWebhook ? <Check size={14} color="var(--google-green)" /> : <Copy size={14} />}
-                <span>{copiedWebhook ? "Copied" : "Copy"}</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setActiveStep("simulator")}
+              className="btn btn-primary"
+              style={{ padding: "8px 16px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <span>Test Live Store Simulator</span>
+              <ArrowRight size={14} />
+            </button>
           </div>
 
-          {/* 2-Line Client SDK */}
-          <div className="card" style={{ padding: "24px 28px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <Code size={18} color="var(--google-purple)" />
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Zero-Code Drop-In SDK</h2>
-            </div>
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 }}>
-              Add this single script tag right before <code>&lt;/body&gt;</code> on your merchant checkout page:
-            </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            {/* 1. Webhook Configuration */}
+            <div className="card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <Webhook size={20} color="var(--google-blue)" />
+                  <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>1. Razorpay Webhook URL</h2>
+                </div>
+                <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, lineHeight: 1.5 }}>
+                  Add this webhook in your <strong>Razorpay Dashboard &rarr; Settings &rarr; Webhooks &rarr; Add New Webhook</strong>:
+                </p>
 
-            <div style={{
-              background: "#202124", color: "#f1f3f4", padding: "12px 16px",
-              borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 12,
-              marginBottom: 16, wordBreak: "break-all"
-            }}>
-              {rawScriptTag}
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={webhookUrl}
+                    className="input"
+                    style={{ fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-hover)" }}
+                  />
+                  <button
+                    onClick={() => copyToClipboard(webhookUrl, setCopiedWebhook)}
+                    className="btn btn-secondary"
+                    style={{ padding: "8px 16px", display: "flex", alignItems: "center", gap: 6 }}
+                  >
+                    {copiedWebhook ? <Check size={14} color="var(--google-green)" /> : <Copy size={14} />}
+                    <span>{copiedWebhook ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+
+                <div style={{ background: "var(--bg-hover)", borderRadius: 8, padding: "12px 16px", fontSize: 12, color: "var(--text-secondary)" }}>
+                  <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>Events to Select in Razorpay:</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
+                    <li><code style={{ fontWeight: 700, color: "var(--google-blue)" }}>payment.failed</code> (Ingests failed attempts for recovery)</li>
+                    <li><code style={{ fontWeight: 700, color: "var(--google-green)" }}>payment_link.paid</code> (Reconciles recovery payments)</li>
+                    <li><code style={{ fontWeight: 700, color: "var(--google-purple)" }}>order.paid</code> (Validates original settlements)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border-subtle)", fontSize: 11, color: "var(--text-muted)" }}>
+                HMAC-SHA256 signature verification active on all deliveries.
+              </div>
             </div>
 
-            <button
-              onClick={() => copyToClipboard(rawScriptTag, setCopiedScript)}
-              className="btn btn-secondary"
-              style={{ width: "100%" }}
-            >
-              {copiedScript ? <Check size={14} color="var(--google-green)" /> : <Copy size={14} />}
-              <span>{copiedScript ? "Script Tag Copied!" : "Copy Embed Script"}</span>
-            </button>
+            {/* 2. Single-File Drop-In (ultron.js) */}
+            <div className="card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <FileCode size={20} color="var(--google-purple)" />
+                  <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>2. Single-File Drop-In (<code style={{ color: "var(--google-purple)" }}>ultron.js</code>)</h2>
+                </div>
+                <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, lineHeight: 1.5 }}>
+                  Download this single pre-configured file, drop it into your website folder, and re-launch your site:
+                </p>
+
+                {/* Big Download Button */}
+                <a
+                  href={`${apiBase}/sdk/download?api_key=${scriptKey}&api_url=${encodeURIComponent(apiBase)}`}
+                  download="ultron.js"
+                  className="btn btn-primary"
+                  style={{
+                    width: "100%", padding: "12px 18px", marginBottom: 16,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    textDecoration: "none", fontSize: 14, fontWeight: 600
+                  }}
+                >
+                  <Download size={16} />
+                  <span>Download ultron.js (Pre-Configured)</span>
+                </a>
+
+                {/* 3-Step Guide */}
+                <div style={{ background: "var(--bg-hover)", borderRadius: 8, padding: "14px 16px", fontSize: 12 }}>
+                  <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>3-Step Website Setup:</div>
+                  <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8, color: "var(--text-secondary)" }}>
+                    <li>Drop the downloaded <code style={{ color: "var(--google-purple)" }}>ultron.js</code> into your website's folder.</li>
+                    <li>Add this 1 line right before <code style={{ color: "var(--text-muted)" }}>&lt;/body&gt;</code> on your checkout page:
+                      <div style={{
+                        background: "#202124", color: "#8ab4f8", padding: "8px 12px",
+                        borderRadius: 6, fontFamily: "var(--font-mono)", fontSize: 11,
+                        margin: "6px 0", display: "flex", justifyContent: "space-between", alignItems: "center"
+                      }}>
+                        <span>&lt;script src="./ultron.js"&gt;&lt;/script&gt;</span>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard('<script src="./ultron.js"></script>', setCopiedScript)}
+                          style={{ background: "transparent", border: "none", color: "#dadce0", cursor: "pointer", padding: "2px 6px" }}
+                          title="Copy script tag"
+                        >
+                          {copiedScript ? <Check size={12} color="var(--google-green)" /> : <Copy size={12} />}
+                        </button>
+                      </div>
+                    </li>
+                    <li>Re-launch your website! Any failed payment will automatically be intercepted and routed into ULTRON's recovery engine.</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border-subtle)", fontSize: 11, color: "var(--text-muted)" }}>
+                Zero changes to your checkout code required &mdash; wraps Razorpay Standard automatically.
+              </div>
+            </div>
           </div>
         </div>
       )}
+
 
       {/* STEP 3: INTERACTIVE STORE CHECKOUT SIMULATOR */}
       {activeStep === "simulator" && (

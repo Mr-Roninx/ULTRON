@@ -299,10 +299,47 @@ const ULTRON_SDK_JS = `/**
 })();
 `;
 
-sdkRouter.get('/ultron.js', (_req: Request, res: Response) => {
+sdkRouter.get('/ultron.js', (req: Request, res: Response) => {
+  const apiKey = (req.query.api_key as string) || '';
+  const apiUrl = (req.query.api_url as string) || '';
+
+  let scriptContent = ULTRON_SDK_JS;
+  let prefix = '';
+  if (apiKey) {
+    prefix += `window.__ULTRON_API_KEY__ = ${JSON.stringify(apiKey)};\n`;
+  }
+  if (apiUrl) {
+    prefix += `window.__ULTRON_API_URL__ = ${JSON.stringify(apiUrl)};\n`;
+  }
+  scriptContent = prefix + scriptContent;
+
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.send(ULTRON_SDK_JS);
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.send(scriptContent);
 });
+
+sdkRouter.get('/download', (req: Request, res: Response) => {
+  const apiKey = (req.query.api_key as string) || '';
+  const apiUrl = (req.query.api_url as string) || '';
+
+  let scriptContent = ULTRON_SDK_JS;
+  let prefix = `/**
+ * ULTRON Autonomous Payment Interceptor - Pre-Configured Standalone File
+ * Drop this file into your merchant website root folder.
+ * Add to your checkout page: <script src="./ultron.js"></script>
+ */\n`;
+  if (apiKey) {
+    prefix += `window.__ULTRON_API_KEY__ = ${JSON.stringify(apiKey)};\n`;
+  }
+  if (apiUrl) {
+    prefix += `window.__ULTRON_API_URL__ = ${JSON.stringify(apiUrl)};\n`;
+  }
+  scriptContent = prefix + scriptContent;
+
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="ultron.js"');
+  res.send(scriptContent);
+});
+
 
 
