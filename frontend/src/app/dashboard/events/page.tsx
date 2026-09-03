@@ -92,7 +92,9 @@ export default function LiveEventsPage() {
         setLogs(data.logs);
       }
     } catch (err: any) {
-      console.error("Failed to fetch event stream:", err);
+      if (!err?.message?.includes("Rate limit")) {
+        console.error("Failed to fetch event stream:", err);
+      }
     } finally {
       if (!isSilent) {
         setRefreshing(false);
@@ -111,7 +113,9 @@ export default function LiveEventsPage() {
         setQueueDeliveries(data.deliveries);
       }
     } catch (err: any) {
-      console.error("Failed to fetch webhook queue:", err);
+      if (!err?.message?.includes("Rate limit")) {
+        console.error("Failed to fetch webhook queue:", err);
+      }
     } finally {
       setQueueLoading(false);
     }
@@ -181,7 +185,7 @@ export default function LiveEventsPage() {
       } else {
         fetchQueue();
       }
-    }, 3000);
+    }, 6000);
     return () => clearInterval(interval);
   }, [autoRefresh, activeTab, isSseConnected, fetchLogs, fetchQueue]);
 

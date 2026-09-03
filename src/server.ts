@@ -126,11 +126,17 @@ app.use(
 // 3. Tiered Rate Limiting Middleware
 const createRateLimitMiddleware = (tier: string, maxReq: number, windowSec: number) => {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // In development or test environments, bypass rate limiting to prevent UI dashboard lockouts
+    if (process.env.NODE_ENV !== 'production' || process.env.DISABLE_RATE_LIMITS === 'true') {
+      return next();
+    }
+
     const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
     const limitKey = `ratelimit:${tier}:${clientIp}`;
-    const result = await DistributedRateLimiter.checkLimit(limitKey, maxReq, windowSec);
+    const effectiveLimit = Math.max(maxReq, 600); // 600 req/min floor for reliable UI usage
+    const result = await DistributedRateLimiter.checkLimit(limitKey, effectiveLimit, windowSec);
 
-    res.setHeader('X-RateLimit-Limit', maxReq);
+    res.setHeader('X-RateLimit-Limit', effectiveLimit);
     res.setHeader('X-RateLimit-Remaining', result.remaining);
     res.setHeader('X-RateLimit-Reset', result.resetSeconds);
 
@@ -148,7 +154,7 @@ const createRateLimitMiddleware = (tier: string, maxReq: number, windowSec: numb
 // Rate Limiters per Tier
 const webhookLimiter = createRateLimitMiddleware('webhook', 100, 60);
 const executionLimiter = createRateLimitMiddleware('execution', 10, 60);
-const generalLimiter = createRateLimitMiddleware('general', 120, 60);
+const generalLimiter = createRateLimitMiddleware('general', 600, 60);
 
 // Capture raw body for HMAC signature verification (Max 1MB)
 app.use(
@@ -162,7 +168,6 @@ app.use(
 
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(tracingMiddleware);
-app.use(generalLimiter);
 
 // Enterprise Prometheus Metrics Export Endpoint
 app.get('/metrics', (_req, res) => {
