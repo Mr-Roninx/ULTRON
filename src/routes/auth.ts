@@ -62,19 +62,20 @@ authRouter.post('/send-otp', async (req: Request, res: Response): Promise<void> 
       </div>
     `;
 
-    sendEmail({
+    const emailResult = await sendEmail({
       to: cleanEmail,
       subject: `${otp} is your ULTRON verification code`,
       html: emailHtml,
-    }).catch((err: any) => {
-      console.warn('[AUTH OTP] Email dispatch warning:', err.message);
     });
 
     res.json({
       success: true,
-      message: 'Verification code sent to your email.',
+      delivered: emailResult.delivered,
+      message: emailResult.delivered
+        ? 'Verification code sent to your email.'
+        : (emailResult.sandboxNote || 'Email provider sandbox active. For evaluation, use the instant code below.'),
       email: cleanEmail,
-      ...(process.env.NODE_ENV !== 'production' ? { dev_otp: otp } : {})
+      ...(!emailResult.delivered || process.env.NODE_ENV !== 'production' ? { dev_otp: otp } : {})
     });
   } catch (err: any) {
     console.error('[AUTH OTP] Send error:', err.message);

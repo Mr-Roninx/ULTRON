@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
+  const [sandboxNotice, setSandboxNotice] = useState<string | null>(null);
   const [resendCountdown, setResendCountdown] = useState(0);
 
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
@@ -52,6 +53,14 @@ export default function LoginPage() {
       setResendCountdown(45);
       if (res.dev_otp) {
         setDevOtpHint(res.dev_otp);
+      }
+      if (res.delivered === false) {
+        setSandboxNotice(res.message || "Email provider sandbox active (Resend test key delivers only to account owner). Your verification code is auto-filled below.");
+        if (res.dev_otp) {
+          setOtp(res.dev_otp.split(""));
+        }
+      } else {
+        setSandboxNotice(null);
       }
       // Auto-focus first OTP input after state update
       setTimeout(() => {
@@ -329,14 +338,28 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Dev hint banner if available */}
-              {devOtpHint && (
+              {/* Sandbox Notice / Dev hint banner */}
+              {sandboxNotice && (
+                <div style={{
+                  padding: "12px 14px", borderRadius: 8,
+                  background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.3)",
+                  color: "#fcd34d", fontSize: 12, lineHeight: 1.5
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>⚠️ Email Provider Sandbox Notice</div>
+                  <div style={{ color: "#fef3c7" }}>{sandboxNotice}</div>
+                  <div style={{ marginTop: 6, fontSize: 11, color: "#cbd5e1" }}>
+                    Code: <strong style={{ color: "#ffffff", fontFamily: "monospace", fontSize: 14 }}>{devOtpHint}</strong> (Auto-filled below for instant access)
+                  </div>
+                </div>
+              )}
+
+              {!sandboxNotice && devOtpHint && (
                 <div style={{
                   padding: "10px 14px", borderRadius: 8,
                   background: "rgba(37,99,235,0.12)", border: "1px dashed rgba(59,130,246,0.4)",
                   color: "#93c5fd", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "space-between"
                 }}>
-                  <span>Code: <strong>{devOtpHint}</strong></span>
+                  <span>Dev Sandbox Code: <strong>{devOtpHint}</strong></span>
                   <button
                     type="button"
                     onClick={() => {

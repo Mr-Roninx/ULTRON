@@ -37,50 +37,81 @@ export interface SendEmailOptions {
   html: string;
 }
 
+export interface SendEmailResult {
+  success: boolean;
+  delivered: boolean;
+  id?: string;
+  error?: string;
+  sandboxNote?: string;
+}
+
 /**
  * Dispatches an email via SMTP or Resend with graceful console fallback in development.
  */
-export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; id?: string; error?: string }> {
+export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   try {
-    // 1. Prioritize custom SMTP if configured
+    // 1. Prioritize custom SMTP if configured (100% unrestricted delivery to ANY email)
     if (smtpTransporter) {
-      const info = await smtpTransporter.sendMail({
-        from: fromEmail,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
-      return { success: true, id: info.messageId };
-    }
-
-    // 2. Fallback to Resend API
-    if (resendClient) {
       try {
-        const { data, error } = await resendClient.emails.send({
+        const info = await smtpTransporter.sendMail({
           from: fromEmail,
           to: options.to,
           subject: options.subject,
           html: options.html,
         });
+        console.log(`📧 [SMTP SENT] Successfully delivered email to ${options.to} (Message ID: ${info.messageId})`);
+        return { success: true, delivered: true, id: info.messageId };
+      } catch (smtpErr: any) {
+        console.error('❌ [SMTP ERROR] Failed to send via SMTP:', smtpErr.message);
+      }
+    }
+
+    // 2. Fallback to Resend API
+    if (resendClient) {
+      try {
+        const sendPromise = resendClient.emails.send({
+          from: fromEmail,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+        });
+        const timeoutPromise = new Promise<{ data: null; error: any }>((_, reject) =>
+          setTimeout(() => reject(new Error('Resend dispatch timed out after 4000ms')), 4000)
+        );
+        const { data, error } = (await Promise.race([sendPromise, timeoutPromise])) as any;
 
         if (error) {
-          console.log(`📧 [EMAIL SANDBOX FALLBACK] To: ${options.to} | Subject: ${options.subject} (Resend Sandbox Note: ${error.message})`);
-          return { success: true, id: `sim_sandbox_${Date.now()}` };
+          const isSandboxBlocked = error.message?.includes('testing emails to your own email address') || (error as any).statusCode === 403;
+          console.warn(`⚠️ [RESEND SANDBOX RESTRICTION] To: ${options.to} | Reason: ${error.message}`);
+          return {
+            success: true,
+            delivered: false,
+            error: error.message,
+            sandboxNote: isSandboxBlocked
+              ? `Resend free tier requires a verified domain to deliver to ${options.to}. Only the registered owner (recognate.hub@gmail.com) can receive real emails under the free key.`
+              : error.message,
+          };
         }
 
-        return { success: true, id: data?.id };
+        console.log(`📧 [RESEND SENT] Delivered email to ${options.to} (ID: ${data?.id})`);
+        return { success: true, delivered: true, id: data?.id };
       } catch (resendErr: any) {
-        console.log(`📧 [EMAIL SIMULATION] To: ${options.to} | Subject: ${options.subject}`);
-        return { success: true, id: `sim_${Date.now()}` };
+        console.warn(`⚠️ [RESEND EXCEPTION] ${resendErr.message}`);
+        return {
+          success: true,
+          delivered: false,
+          error: resendErr.message,
+          sandboxNote: 'Resend API error; falling back to sandbox mode.',
+        };
       }
     }
 
     // 3. Fallback to Console simulation in dev
     console.log(`📧 [EMAIL SIMULATION] To: ${options.to} | Subject: ${options.subject}`);
-    return { success: true, id: `sim_${Date.now()}` };
+    return { success: true, delivered: false, id: `sim_${Date.now()}`, sandboxNote: 'No SMTP or Resend credentials configured; logged to console.' };
   } catch (err: any) {
     console.error('Error sending email:', err);
-    return { success: false, error: err.message };
+    return { success: false, delivered: false, error: err.message };
   }
 }
 

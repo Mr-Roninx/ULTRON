@@ -38,7 +38,7 @@ interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginAsDemo: () => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, business_name: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  sendOtp: (email: string) => Promise<{ success: boolean; error?: string; dev_otp?: string }>;
+  sendOtp: (email: string) => Promise<{ success: boolean; error?: string; dev_otp?: string; delivered?: boolean; message?: string }>;
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -353,7 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const sendOtp = async (email: string): Promise<{ success: boolean; error?: string; dev_otp?: string }> => {
+  const sendOtp = async (email: string): Promise<{ success: boolean; error?: string; dev_otp?: string; delivered?: boolean; message?: string }> => {
     try {
       const res = await fetch(`${API_BASE}/v1/auth/send-otp`, {
         method: "POST",
@@ -364,7 +364,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok) {
         return { success: false, error: data.message || data.error || "Failed to send verification code." };
       }
-      return { success: true, dev_otp: data.dev_otp };
+      return { success: true, dev_otp: data.dev_otp, delivered: data.delivered, message: data.message };
     } catch (err: any) {
       return { success: false, error: err.message || "Network error connecting to auth service." };
     }

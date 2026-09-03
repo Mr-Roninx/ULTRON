@@ -66,9 +66,11 @@ export class PortfolioAgent {
     const gatewayHealth = params.gatewayHealth ?? this.DEFAULT_GATEWAY_HEALTH;
     const filterStatuses = params.filterStatuses ?? ['pending', 'scored', 'deferred'];
 
-    // 1. Scan all opportunities matching target statuses
+    // 1. Scan all opportunities matching target statuses (bounded batch for real-time responsiveness)
     const allOpps = getAllOpportunities();
-    const candidateOpps = allOpps.filter((o) => filterStatuses.includes(o.status));
+    const candidateOpps = allOpps
+      .filter((o) => filterStatuses.includes(o.status))
+      .slice(0, Math.max(capacity * 5, 25));
 
     // 2. Score and prioritize each candidate
     const priorities: OpportunityPriority[] = [];

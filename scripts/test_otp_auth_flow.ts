@@ -1,11 +1,5 @@
-import { app } from '../src/server.js';
-import http from 'node:http';
-
 async function testOtpFlow() {
-  const server = http.createServer(app);
-  await new Promise<void>((resolve) => server.listen(0, resolve));
-  const port = (server.address() as any).port;
-  const baseUrl = `http://localhost:${port}`;
+  const baseUrl = 'http://127.0.0.1:3001';
 
   try {
     const testEmail = `merchant_otp_${Date.now()}@example.com`;
@@ -79,13 +73,11 @@ async function testOtpFlow() {
     }
 
     console.log('\n🎉 ALL OTP AUTHENTICATION & ONBOARDING CHECKS PASSED PERFECTLY!\n');
-  } finally {
-    server.close();
     process.exit(0);
+  } catch (err) {
+    console.error('❌ Test failed:', err);
+    process.exit(1);
   }
 }
 
-testOtpFlow().catch((err) => {
-  console.error('❌ Test failed:', err);
-  process.exit(1);
-});
+testOtpFlow();

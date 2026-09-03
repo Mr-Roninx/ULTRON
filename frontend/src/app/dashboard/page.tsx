@@ -79,7 +79,7 @@ export default function UnifiedRecoveryHubPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [filterTab, setFilterTab] = useState<string>("ALL");
-  const [sourceFilter, setSourceFilter] = useState<"ALL" | "REAL" | "SYNTHETIC">("ALL");
+  const [sourceFilter, setSourceFilter] = useState<"ALL" | "REAL" | "SYNTHETIC">("REAL");
   const [selectedOpp, setSelectedOpp] = useState<OpportunityItem | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [runningSweep, setRunningSweep] = useState(false);
@@ -260,15 +260,29 @@ export default function UnifiedRecoveryHubPage() {
 
         {/* Action Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Simulate Payment Failure */}
+          {/* Launch Live Store Checkout */}
+          <a
+            href="http://localhost:3001/demo-store"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, textDecoration: "none" }}
+            title="Open customer checkout store with official Razorpay modal to test real-time payment failure and recovery"
+          >
+            <ExternalLink size={14} color="var(--google-blue)" />
+            <span>Open Live Checkout</span>
+          </a>
+
+          {/* Test Event Generator */}
           <button
             onClick={handleSimulateFailure}
             disabled={simulating}
-            className="btn btn-secondary"
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
+            className="btn btn-ghost"
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)", border: "1px dashed var(--border)" }}
+            title="Inject an instant test transaction into the pipeline for evaluation"
           >
-            <Play size={14} color="var(--google-blue)" />
-            <span>{simulating ? "Simulating..." : "Simulate Payment Failure"}</span>
+            <Play size={12} />
+            <span>{simulating ? "Generating..." : "Inject Test Event"}</span>
           </button>
 
           {/* Automatic 24/7 Recovery Live Status */}
@@ -408,9 +422,9 @@ export default function UnifiedRecoveryHubPage() {
             {/* Traffic Source Filter */}
             <div style={{ display: "flex", gap: 4, background: "var(--bg-hover)", padding: 4, borderRadius: 20 }}>
               {[
-                { id: "ALL" as const, label: `All Sources (${opportunities.length})` },
                 { id: "REAL" as const, label: `🟢 Live Gateway (${opportunities.filter((o) => o.source === "real").length})` },
-                { id: "SYNTHETIC" as const, label: `🧪 Test Cohort (${opportunities.filter((o) => o.source === "synthetic").length})` },
+                { id: "ALL" as const, label: `All Transactions (${opportunities.length})` },
+                { id: "SYNTHETIC" as const, label: `🧪 Benchmark Sandbox (${opportunities.filter((o) => o.source === "synthetic").length})` },
               ].map((src) => (
                 <button
                   key={src.id}
@@ -475,10 +489,46 @@ export default function UnifiedRecoveryHubPage() {
             <tbody>
               {filteredOpps.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: "48px 20px", textAlign: "center", color: "var(--text-muted)" }}>
-                    <CheckCircle2 size={32} style={{ margin: "0 auto 8px", color: "var(--google-green)" }} />
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>No opportunities matching criteria</div>
-                    <div style={{ fontSize: 12, marginTop: 4 }}>Toggle between Live Gateway and Test Cohort above.</div>
+                  <td colSpan={6} style={{ padding: "48px 20px", textAlign: "center" }}>
+                    <div style={{
+                      maxWidth: 440, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center"
+                    }}>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: "50%", background: "var(--google-green-light)",
+                        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12
+                      }}>
+                        <CheckCircle2 size={24} color="var(--google-green)" />
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+                        {sourceFilter === "REAL" ? "Live Gateway Active & Protected" : "No Opportunities Found"}
+                      </div>
+                      <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, margin: "0 0 16px" }}>
+                        {sourceFilter === "REAL"
+                          ? "Zero failed payments detected on your connected store. When a customer checkout fails on Razorpay, ULTRON will autonomously intercept, score, and recover it live."
+                          : "No opportunities match the selected filter criteria."}
+                      </p>
+                      {sourceFilter === "REAL" && (
+                        <div style={{ display: "flex", gap: 10 }}>
+                          <a
+                            href="http://localhost:3001/demo-store"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-primary"
+                            style={{ fontSize: 12, padding: "8px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}
+                          >
+                            <ExternalLink size={13} />
+                            <span>Test Live Checkout Store</span>
+                          </a>
+                          <button
+                            onClick={handleSimulateFailure}
+                            className="btn btn-secondary"
+                            style={{ fontSize: 12, padding: "8px 14px" }}
+                          >
+                            Inject Benchmark Test
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (

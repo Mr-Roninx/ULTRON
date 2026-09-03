@@ -9,6 +9,7 @@ import {
   DaemonSweepLog,
   insertNotification,
   getOpportunityById,
+  db,
 } from '../db/database.js';
 import { RealtimeBroadcaster } from '../realtime/broadcaster.js';
 
@@ -36,7 +37,8 @@ export class AutonomousRecoveryDaemon {
   private static instance: AutonomousRecoveryDaemon;
   
   private state: DaemonState = 'IDLE';
-  private config: DaemonConfig = { interval_seconds: 30, capacity: 5 };
+  private isSweeping = false;
+  private config: DaemonConfig = { interval_seconds: 20, capacity: 5 };
   private timer: NodeJS.Timeout | null = null;
   
   private total_sweeps = 0;
@@ -64,10 +66,7 @@ export class AutonomousRecoveryDaemon {
       this.updateConfig(config);
     }
     
-    this.state = 'SLEEPING'; // Will immediately switch to SWEEPING on first tick
-    
-    // Execute first sweep immediately, then on interval
-    this.sweepOnce().catch(console.error);
+    this.state = 'SLEEPING';
     this.scheduleNext();
   }
 
@@ -80,6 +79,7 @@ export class AutonomousRecoveryDaemon {
       this.timer = null;
     }
     this.state = 'STOPPED';
+    this.isSweeping = false;
     this.next_sweep_at = null;
   }
 
@@ -94,7 +94,6 @@ export class AutonomousRecoveryDaemon {
       this.config.capacity = Math.max(1, Math.min(10, newConfig.capacity)); // max 10
     }
     
-    // Reschedule if currently sleeping to apply new interval
     if (this.state === 'SLEEPING') {
       this.scheduleNext();
     }
@@ -123,9 +122,16 @@ export class AutonomousRecoveryDaemon {
     this.next_sweep_at = new Date(Date.now() + intervalMs).toISOString();
     this.state = 'SLEEPING';
     
-    this.timer = setTimeout(() => {
-      this.sweepOnce().catch(console.error);
-      this.scheduleNext();
+    this.timer = setTimeout(async () => {
+      try {
+        await this.sweepOnce();
+      } catch (err) {
+        console.error('Autonomous daemon sweep error:', err);
+      } finally {
+        if (this.state !== 'STOPPED') {
+          this.scheduleNext();
+        }
+      }
     }, intervalMs);
   }
 
@@ -133,11 +139,12 @@ export class AutonomousRecoveryDaemon {
    * Perform one full sweep
    */
   public async sweepOnce(): Promise<void> {
-    if (this.state === 'STOPPED') return;
+    if (this.state === 'STOPPED' || this.isSweeping) return;
     
+    this.isSweeping = true;
+    this.state = 'SWEEPING';
     const sweepId = `sweep_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     const startTime = Date.now();
-    this.state = 'SWEEPING';
     this.total_sweeps++;
     this.last_sweep_at = new Date(startTime).toISOString();
 
@@ -163,6 +170,15 @@ export class AutonomousRecoveryDaemon {
           created_at: new Date().toISOString(),
         });
         throw new Error('Kill switch engaged');
+      }
+
+      // Quick check: if there are no actionable opportunities to process, skip heavy sweep
+      const activeCount = db.prepare(
+        "SELECT COUNT(*) as c FROM recovery_opportunities WHERE status IN ('pending', 'scored', 'deferred', 'allocated', 'executing')"
+      ).get() as { c: number } | undefined;
+
+      if (!activeCount || activeCount.c === 0) {
+        return;
       }
 
       // 2. Portfolio Sweep (scan & rank)
@@ -245,6 +261,7 @@ export class AutonomousRecoveryDaemon {
       if (this.state === 'SWEEPING') {
          this.state = 'SLEEPING';
       }
+      this.isSweeping = false;
     }
   }
 }
