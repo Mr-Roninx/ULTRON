@@ -413,7 +413,22 @@ export async function api<T = any>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  let res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (netErr: any) {
+    // Graceful fallback for IPv6 vs IPv4 localhost resolution during server reload
+    if (API_BASE.includes("localhost")) {
+      const fallbackBase = API_BASE.replace("localhost", "127.0.0.1");
+      try {
+        res = await fetch(`${fallbackBase}${path}`, { ...options, headers });
+      } catch {
+        throw new Error(`Backend connection lost to ${API_BASE}. Server may be restarting.`);
+      }
+    } else {
+      throw new Error(`Backend connection lost to ${API_BASE}. Please check server status.`);
+    }
+  }
 
   // If 401 Unauthorized, attempt a quick session recovery with Supabase before failing
   if (res.status === 401 && typeof window !== "undefined") {

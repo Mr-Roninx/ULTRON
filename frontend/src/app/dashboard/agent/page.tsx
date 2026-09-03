@@ -51,23 +51,30 @@ export default function AgentCommandCenter() {
   const fetchStatus = useCallback(async () => {
     try {
       const data = await api("/agents/daemon/status", { method: 'GET' });
-      setStatus(data);
-      if (!isUpdating) {
-        setIntervalSecs(data.config.interval_seconds);
-        setCapacity(data.config.capacity);
+      if (data) {
+        setStatus(data);
+        setError(null);
+        if (!isUpdating && data.config) {
+          setIntervalSecs(data.config.interval_seconds);
+          setCapacity(data.config.capacity);
+        }
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err.message);
+      // Only show error if no previous status exists to avoid disruption during background polling
+      if (!status) {
+        setError(err.message || 'Connecting to agent daemon...');
+      }
     }
-  }, [isUpdating]);
+  }, [isUpdating, status]);
 
   const fetchLogs = useCallback(async () => {
     try {
       const data = await api("/agents/daemon/activity", { method: 'GET' });
-      setLogs(data.logs || []);
-    } catch (err: any) {
-      console.error(err);
+      if (data?.logs) {
+        setLogs(data.logs);
+      }
+    } catch {
+      // Silent retry on next interval
     }
   }, []);
 
