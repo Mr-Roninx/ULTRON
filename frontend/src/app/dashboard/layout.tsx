@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Shield, LayoutDashboard, Settings, Power, LogOut, ChevronRight, Sparkles,
-  Bell, CheckCircle2, CheckCheck, Search, HelpCircle, Zap
+  Bell, CheckCircle2, CheckCheck, Search, HelpCircle, Zap, Video
 } from "lucide-react";
 import { useAuth, api } from "../../lib/auth";
 
@@ -23,6 +23,7 @@ interface NotificationItem {
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Recovery Hub", icon: LayoutDashboard, exact: true, badge: "LIVE" },
   { href: "/dashboard/setup", label: "Integration Hub", icon: Sparkles, exact: false, highlight: true },
+  { href: "/pitch", label: "5-Min Pitch Studio", icon: Video, exact: false, badge: "CINEMA" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
 ];
 

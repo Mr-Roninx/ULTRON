@@ -1,0 +1,88 @@
+/* ==========================================================================
+   ULTRON: 5-Minute Cinematic Pitch Studio Stylesheet
+   ========================================================================== */
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.2), 0 0 60px rgba(6, 182, 212, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(16, 185, 129, 0.35), 0 0 90px rgba(6, 182, 212, 0.25);
+  }
+}
+
+@keyframes laserScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  30% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translateY(300%); opacity: 0; }
+}
+
+@keyframes radarSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes failShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+@keyframes textShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes hashLock {
+  0% { transform: scale(0.9) translateY(10px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.cinema-canvas-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, #f8fafc 0%, #38bdf8 50%, #f8fafc 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 4s linear infinite;
+}
+
+.laser-scanner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ef4444 20%, #f87171 50%, #ef4444 80%, transparent);
+  box-shadow: 0 0 15px #ef4444, 0 0 30px #f87171;
+  animation: laserScan 2.5s ease-in-out infinite;
+}
+
+.laser-scanner-emerald {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10b981 20%, #34d399 50%, #10b981 80%, transparent);
+  box-shadow: 0 0 15px #10b981, 0 0 30px #34d399;
+  animation: laserScan 2.5s ease-in-out infinite;
+}
+
+.fail-alert-box {
+  animation: failShake 0.6s ease-in-out;
+}
+
+/* Custom Scrollbar for HUD */
+.hud-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.hud-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+.hud-scroll::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+}
