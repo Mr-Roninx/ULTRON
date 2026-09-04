@@ -22,14 +22,15 @@
 <p align="center">
   <a href="#-architecture"><img src="https://img.shields.io/badge/Architecture-7_Stage_Pipeline-0d1117?style=for-the-badge&logo=buffer&logoColor=3b82f6" alt="Architecture" /></a>
   <a href="#-tech-stack"><img src="https://img.shields.io/badge/Stack-TypeScript_+_React_+_SQLite-0d1117?style=for-the-badge&logo=typescript&logoColor=3178C6" alt="Stack" /></a>
-  <a href="#-getting-started"><img src="https://img.shields.io/badge/Razorpay-Test_Mode_Only-0d1117?style=for-the-badge&logo=razorpay&logoColor=528FF0" alt="Razorpay" /></a>
+  <a href="#-real-money-production-vs-sandbox-test-mode"><img src="https://img.shields.io/badge/Razorpay-Test_Sandbox_+_Real_Money_Live-0d1117?style=for-the-badge&logo=razorpay&logoColor=528FF0" alt="Razorpay" /></a>
+  <a href="#-strategic-positioning-ultron-vs-razorpay-2026-ai-vulcan--agent-studio"><img src="https://img.shields.io/badge/AI_Comparison-ULTRON_vs_Vulcan_&_Studio-7928CA?style=for-the-badge&logo=anthropic&logoColor=white" alt="AI Comparison" /></a>
   <a href="#-api-reference"><img src="https://img.shields.io/badge/API-RESTful_v6.0-0d1117?style=for-the-badge&logo=fastapi&logoColor=10b981" alt="API" /></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Backend_LOC-21,598-blue?style=flat-square" alt="Backend LOC" />
-  <img src="https://img.shields.io/badge/Frontend_LOC-4,762-purple?style=flat-square" alt="Frontend LOC" />
-  <img src="https://img.shields.io/badge/Test_Scripts-164-green?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/Backend_LOC-21,748-blue?style=flat-square" alt="Backend LOC" />
+  <img src="https://img.shields.io/badge/Frontend_LOC-4,697-purple?style=flat-square" alt="Frontend LOC" />
+  <img src="https://img.shields.io/badge/Test_Scripts-165-green?style=flat-square" alt="Tests" />
   <img src="https://img.shields.io/badge/Modules-23-orange?style=flat-square" alt="Modules" />
   <img src="https://img.shields.io/badge/Version-6.0.0-cyan?style=flat-square" alt="Version" />
 </p>
@@ -45,10 +46,12 @@
 - [🌐 Live Working Website](#-live-working-website)
 - [Why ULTRON Exists](#-why-ultron-exists)
 - [Core Philosophy](#-core-philosophy)
+- [⚔️ Strategic Positioning: ULTRON vs. Razorpay 2026 AI (Vulcan & Agent Studio)](#-strategic-positioning-ultron-vs-razorpay-2026-ai-vulcan--agent-studio)
 - [Architecture](#-architecture)
 - [The 7-Stage Pipeline](#-the-7-stage-pipeline)
 - [Advanced Economic Engine](#-advanced-economic-engine)
-- [AI Agent System](#-ai-agent-system)
+- [🤖 AI Agent System & Specialist Network](#-ai-agent-system--specialist-network)
+- [⚡ Real Money (Production) vs Sandbox (Test Mode)](#-real-money-production-vs-sandbox-test-mode)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
@@ -135,6 +138,91 @@ Traditional Retry Systems          ULTRON Control Plane
 <td><strong>Built-In Audit Trail</strong><br/>Every stage writes its reasoning to a durable log as it happens. The "Why?" screen reads stored fields, never generates explanations after the fact.</td>
 </tr>
 </table>
+
+---
+
+## ⚔️ Strategic Positioning: ULTRON vs. Razorpay 2026 AI (Vulcan & Agent Studio)
+
+In 2026, Razorpay unveiled two flagship AI platforms: **Agent Studio** (built on Anthropic's Claude Agent SDK) and **Vulcan** (India's first transformer foundation model for payments, built with NVIDIA & AWS). 
+
+While both represent major technological leaps, they solve problems on opposite sides of the financial lifecycle. **ULTRON is neither an in-flight router nor an open conversational bot** — it is the **autonomous economic control plane and fiduciary guardrail** that sits between transaction failure and merchant action.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   PAYMENT LIFECYCLE                                              │
+│                                                                                                  │
+│   [Checkout & Routing]             [Post-Failure Recovery]           [Back-Office Operations]    │
+│                                                                                                  │
+│    Razorpay VULCAN                      ULTRON                         Razorpay AGENT STUDIO     │
+│   ────────────────────             ─────────────────                  ──────────────────────     │
+│   • In-flight set transformer      • Post-failure economic plane      • Claude Agent SDK         │
+│   • Millisecond routing            • Counterfactual IVEN calculus     • Conversational ops       │
+│   • Multi-rail authorization       • Shadow-price capacity auction    • Chargeback dispute kits  │
+│   • "Can we authorize this?"       • Deterministic Action Authority   • No-code merchant agents  │
+│                                    • "Is it worth our capacity?"      • "Automate my backoffice" │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 📊 Comparative Architecture & Economics
+
+| Dimension | Razorpay Vulcan | Razorpay Agent Studio | 🛡️ ULTRON Control Plane |
+| :--- | :--- | :--- | :--- |
+| **Primary Mission** | Maximize checkout authorization rates & detect network fraud | Automate manual merchant workflows using LLM agents | Maximize net recovery yield under scarce operational capacity |
+| **Operational Timing** | **In-flight** (millisecond authorization window) | **Asynchronous / Reactive** (triggered by events/prompts) | **Post-flight** (immediately following authorization failure) |
+| **Core AI / Math Engine** | **Set Transformer** (3,000 signals, non-sequential field tokens, AWS SageMaker) | **Generative LLM** (Anthropic Claude Agent SDK + tool use) | **Bayesian Estimation + Lagrangian Portfolio Allocation** |
+| **Core Question Answered** | *"Which banking rail gives the highest probability of authorization right now?"* | *"Can an AI agent handle this operational task instead of a human?"* | *"Is recovering this payment worth spending our next unit of scarce recovery capacity?"* |
+| **Execution Authority** | Gateway-internal transaction routing logic | Autonomous Agent with direct tool-execution permissions | **Two-Stage Gate**: Stage 1 Economic Optimization, Stage 2 **Deterministic Compliance Veto** |
+| **LLM on Financial Path** | **None** (pure transformer embeddings, not a language model) | **Direct** (LLM decides tool parameters, messaging, retry timing) | **Strictly Prohibited** (LLM only explains pre-computed ledger logs; zero financial authority) |
+| **Economic Calculus** | Binary authorization probability ($P_{success}$) | Task completion & gross recovery | **Incremental Value ($IVEN$)**: $\Delta P \times \text{Paise} - C_{ops} - C_{fatigue}$ |
+| **Counterfactual Awareness** | Blind to counterfactuals (evaluates only in-flight attempt) | Blind (assumes all recovered revenue was caused by the agent) | **Explicit Natural vs. Intervention Recovery**: isolates true causal lift ($\Delta P$) |
+| **Capacity & Scarcity** | Elastic cloud inference capacity | Unconstrained (retries as many payments as configured) | **Hard Capacity Caps**: derives marginal **Shadow Price ($\lambda$)** per run |
+| **Auditability** | Deep learning black box (proprietary architecture) | Non-deterministic prompt transcripts | **Deterministic Immutable Ledger**: every decision replayed from discrete fields |
+| **Alignment of Interest** | Gateway volume (earns MDR fees on transaction attempts) | Platform stickiness & Claude SDK compute consumption | **Merchant Balance Sheet**: prevents blast fatigue & wasted unit costs |
+
+---
+
+### 🔍 Deep Dive: The Three Core Distinctions
+
+#### 1. In-Flight Routing (Vulcan) vs. Post-Failure Economic Allocation (ULTRON)
+- **Vulcan's domain** is the checkout millisecond: predicting which bank pipe, card network, or UPI switch has the highest probability of success. It treats failure as a transient routing problem.
+- **ULTRON's domain** begins after Vulcan and the upstream gateway have failed. When a payment fails, ULTRON does not ask "how do we retry this right now?" It treats the failed payment as an asset on the merchant's balance sheet that must compete for scarce budget, customer attention, and contact quotas.
+- *Synergy:* ULTRON does not replace Vulcan. Instead, Vulcan’s error codes and route telemetry feed directly into ULTRON’s **Perception Engine** as prior signals.
+
+#### 2. Generative Agent Execution (Agent Studio) vs. Deterministic Action Authority (ULTRON)
+- **The LLM Execution Danger:** Placing an LLM (like Claude) directly on the financial execution path creates non-deterministic drift, uncalibrated spending, and hallucinated action risks during banking outages.
+- **ULTRON Rule #6:** *No LLM sits on the execution path.* ULTRON utilizes deterministic mathematical models for all scoring ($IVEN$), constrained optimization for allocation, and a strict 5-check compliance gate (**Action Authority**) that can veto economic decisions regardless of potential upside. In ULTRON, LLMs are used strictly as post-hoc natural language explainers reading immutable audit logs.
+- **The Anti-Blast Advantage:** While unconstrained agent bots blast payment links for every failed subscription, ULTRON calculates customer fatigue cost ($C_{fatigue}$) and natural recovery probability ($P_{natural}$). If a customer will settle naturally on Monday morning, ULTRON issues an **ABSTAIN** decision, saving messaging fees, gateway charges, and customer goodwill.
+
+#### 3. The Gateway Conflict of Interest: Why ULTRON Must Be Independent
+Payment gateways earn fees on processing attempts, payment link dispatches, and transaction volume. Gateways have **no structural incentive** to tell a merchant: *"Do nothing. Do not send this payment link. Let the user pay on their own tomorrow."*
+
+ULTRON is the merchant’s fiduciary guardian. Because ULTRON is independent of transaction attempt fees, its objective function is strictly aligned with the merchant's net cash recovery and brand preservation.
+
+---
+
+### 🧩 The Enterprise Coexistence Stack
+
+In modern fintech architecture, Vulcan, Agent Studio, and ULTRON form a unified, complementary hierarchy:
+
+```
+1. PRE-CHECKOUT & ROUTING  ──►  Razorpay Vulcan (Foundation Model)
+                                Maximize millisecond success rates across UPI/Cards.
+
+2. PAYMENT FAILURE EVENT   ──►  ULTRON Perception & Economics Engine
+                                Screen raw webhooks. Calculate natural vs. intervention odds.
+                                Filter out low-lift and high-fatigue opportunities.
+
+3. CAPACITY ALLOCATION     ──►  ULTRON Recovery Market
+                                Auction scarce daily WhatsApp/Payment Link quotas.
+                                Establish shadow price (λ) for the batch.
+
+4. COMPLIANCE & SAFETY     ──►  ULTRON Action Authority
+                                Deterministic veto on hard decline codes and exhausted users.
+
+5. DISPATCH & WORKFLOWS    ──►  Razorpay Agent Studio / Official SDK
+                                Execute approved recovery links, or trigger Dispute 
+                                Responder for chargebacks approved by finance.
+```
 
 ---
 
@@ -363,38 +451,62 @@ ULTRON uniquely quantifies the **value of not acting**:
 
 ---
 
-## 🤖 AI Agent System
+## 🤖 AI Agent System & Specialist Network
 
-ULTRON includes a sophisticated multi-agent recovery orchestrator:
+ULTRON includes an enterprise multi-agent recovery orchestrator operating under strict economic and safety constraints:
 
 ```mermaid
 graph TD
-    D[🔄 Recovery Daemon] --> P[📊 Portfolio Agent]
-    P --> M[📈 Market Allocator]
-    M --> A[🛡 Authority Gate]
-    A --> E[⚡ Executor]
-    E --> R[✅ Reconciler]
+    D[🔄 24/7 Recovery Daemon] --> P[📊 Portfolio Agent]
+    P --> O[🎯 Agent Orchestrator]
     
-    O[🎯 Orchestrator] --> S1[👁 Perception Specialist]
-    O --> S2[📋 Strategy Specialist]
-    O --> S3[📨 Outreach Specialist]
-    O --> S4[🛡 Compliance Copilot]
-    O --> S5[🏪 Merchant Copilot]
+    subgraph Specialists ["Specialist Network"]
+        O --> S1[👁 Perception Specialist]
+        O --> S2[📋 Strategy Specialist]
+        O --> S3[📨 Outreach Specialist]
+        O --> S4[🛡 Compliance Copilot]
+        O --> S5[🏪 Merchant Copilot]
+    end
+    
+    subgraph Safeguards ["Safety & Security Firewall"]
+        TF[⏳ Temporal Firewall]
+        LG[🔁 Loop Guard]
+        TR[🧰 Read/Proposal Tool Registry]
+        MEM[(🧠 Episodic & Semantic Memory)]
+    end
+    
+    Specialists --> Safeguards
+    Safeguards --> M[📈 Market Allocator]
+    M --> A[🛡 Action Authority Gate]
+    A --> E[⚡ Execution Layer]
+    E --> R[✅ Reconciler & Learning Loop]
     
     style D fill:#1e293b,stroke:#3b82f6,color:#f1f5f9
     style O fill:#1e293b,stroke:#8b5cf6,color:#f1f5f9
+    style Safeguards fill:#0f172a,stroke:#ef4444,color:#f1f5f9
+    style Specialists fill:#0f172a,stroke:#10b981,color:#f1f5f9
 ```
 
-| Component | File | Purpose |
+### 👥 The 5 Domain Specialist Agents
+
+| Specialist | Implementation File | Mission & Capabilities |
 |---|---|---|
-| **Autonomous Daemon** | `agents/daemon.ts` | 24/7 background sweep loop (configurable 15s–5min intervals) |
-| **Portfolio Agent** | `agents/portfolio_agent.ts` | Scans and ranks all active opportunities |
-| **Orchestrator** | `agents/orchestrator.ts` | Multi-step recovery plan execution with replanning |
-| **Tool Registry** | `agents/tool_registry.ts` | 15+ registered tools for autonomous operations |
-| **Memory System** | `agents/memory.ts` | Episodic + semantic memory for learning from outcomes |
-| **Uncertainty Engine** | `agents/uncertainty.ts` | Entropy-based information value calculations |
-| **Temporal Firewall** | `agents/temporal_firewall.ts` | Prevents action loops and temporal violations |
-| **Loop Guard** | `agents/loop_guard.ts` | Infinite loop detection and circuit-breaking |
+| **👁 Perception Specialist** | `agents/specialists/perception_agent.ts` | Deep decline context extraction, banking rail health correlation, card bin profiling, and failure pattern clustering. |
+| **📋 Strategy Specialist** | `agents/specialists/strategy_agent.ts` | Counterfactual scenario formulation, optimal recovery window modeling, dynamic price-elasticity estimation, and holdout assignment. |
+| **📨 Outreach Specialist** | `agents/specialists/outreach_agent.ts` | Channel-specific recovery payload formulation (WhatsApp vs. SMS vs. Email), cooling-off cadence, and message fatigue tracking. |
+| **🛡 Compliance Copilot** | `agents/specialists/compliance_copilot.ts` | Real-time regulatory auditing (RBI recurring e-mandates, DPDP privacy standards), chargeback dispute pre-screening, and KYC validation. |
+| **🏪 Merchant Copilot** | `agents/specialists/merchant_copilot.ts` | Human-in-the-loop review interface, natural language decision explanation generation, and merchant manual override processing. |
+
+### 🛡️ Autonomous Safety Architecture & Guardrails
+
+| Guardrail Layer | Implementation File | Functionality |
+|---|---|---|
+| **Temporal Firewall** | `agents/temporal_firewall.ts` | Enforces non-retroactive state sequencing, cooling-off windows, and prevents action replay attacks. |
+| **Loop Guard** | `agents/loop_guard.ts` | Detects cycles and halting state anomalies, preventing runaway recursive LLM loops with automatic circuit breaking. |
+| **Tool Registry** | `agents/tool_registry.ts` | 15+ strictly segregated tools divided into **Read Tools** (read-only telemetry) and **Proposal Tools** (requires Action Authority review). |
+| **Memory System** | `agents/memory.ts` | Dual-tier **Episodic Memory** (historical failure traces & run histories) and **Semantic Memory** (merchant-specific behavioral patterns). |
+| **Replanning Engine** | `agents/replan_engine.ts` | Dynamic multi-step recovery replanning when environmental conditions change (e.g., bank outage cleared). |
+| **Wait / Wake Daemon** | `agents/wait_wake.ts` | Asynchronous suspension of opportunities awaiting optimal recovery windows without blocking system workers. |
 
 ---
 
@@ -738,14 +850,14 @@ cd frontend && npm run dev
 
 ### Step 5: Run Automated Tests
 
-ULTRON ships with **164 test & verification scripts**. Verify your installation using the commands below:
+ULTRON ships with **165 test & verification scripts** (80 structured test suites across 7 test directories in `tests/` + 85 automated validation and scenario scripts in `scripts/`). Verify your installation using the commands below:
 
 ```bash
 # 1. Quick System Health & Dependency Probe
 curl http://localhost:3001/health
 curl http://localhost:3001/health/deep
 
-# 2. Master V6 Acceptance Test Battery (26 suites, 100% pass)
+# 2. Master V6 Acceptance Test Battery (27 suites, 100% pass)
 npm test
 
 # 3. Complete Forensic Truth Verification
@@ -990,10 +1102,10 @@ erDiagram
 
 ## 🧪 Testing
 
-ULTRON ships with **164 test & verification scripts** (79 structured test suites across 7 test directories in `tests/` + 85 automated validation and scenario scripts in `scripts/`):
+ULTRON ships with **165 test & verification scripts** (80 structured test suites across 7 test directories in `tests/` + 85 automated validation and scenario scripts in `scripts/`):
 
 ```bash
-# Run all 26 V6 phase acceptance tests
+# Run all 27 V6 phase acceptance tests (including Live Money Environment)
 npm test                       # Alias for npm run test:v6-all
 
 # Comprehensive forensic truth verification
@@ -1008,15 +1120,20 @@ npm run test:authority         # Compliance gate & kill switch (Stage 5)
 npm run test:execution         # Payment link creation & idempotency (Stage 6)
 npm run test:truth             # State consistency & reconciliation (Stage 7)
 
+# AI Agent System test suite (28 safety & specialist tests)
+npm run test:agent             # Autonomous multi-agent behavior & boundary tests
+npm test tests/agent/test_agent_prompt_injection.ts  # Prompt injection firewall
+npm test tests/agent/test_agent_tool_injection.ts    # Tool execution safety
+npm test tests/agent/test_agent_temporal_firewall.ts # Non-retroactive time firewall
+
 # Advanced test suites
-npm run test:agent             # AI agent behavior & specialist safety tests
 npm run test:core              # Core hardening & edge-case stress tests
 npm run test:infra             # Infrastructure resilience & pool tests
 npm run test:integration       # End-to-end integration & pipeline flow
 npm run stress:all             # Comprehensive system-wide stress testing
 npm run test:black-box         # Black-box acceptance criteria verification
 
-# V6 Phase-specific suites
+# V6 Phase-specific suites (Phases 4–12 + Live Money)
 npm run test:v6-phase4         # Tenancy & Auth Platform
 npm run test:v6-phase5         # Canonical Event Connector
 npm run test:v6-phase6         # Razorpay Provider Adapter
@@ -1026,11 +1143,12 @@ npm run test:v6-phase9         # Action Authority & Multi-Level Kill Switch
 npm run test:v6-phase10        # Execution Layer & Token Bucket Limiter
 npm run test:v6-phase11        # Specialist Agents & Human-in-the-Loop Review
 npm run test:v6-phase12        # Simulation Harness & Synthetic Generator
+npm test tests/v6/test_live_money_environment.ts # Production isolation & client pool
 
 # Counterfactual and agent demos
 npm run experiments:causal     # Intervention effectiveness & causal lift
 npm run demo:agent             # Autonomous multi-agent recovery demo
-npm run demo:real-recovery     # Real test mode payment recovery verification
+npm run demo:real-recovery     # Real payment recovery verification
 ```
 
 ---
@@ -1080,20 +1198,21 @@ docker compose up -d
 | 6 | LLM may only **explain**, never execute | `llm/explainer.ts` — no LLM on execution path |
 | 7 | Every stage writes reasoning to **durable log** | Ledger + audit trail built from stored fields |
 | 8 | Probabilities labeled as **model-estimated** | `probability_disclaimer` field on every Score |
-| 9 | **Test Mode only** — capped at 5 links per run | `MAX_LINKS_PER_RUN` env var with hard ceiling |
+| 9 | **Dual-Mode Execution** — Test Sandbox + Real Money Live | Safe 5-link cap in Test Mode; encrypted AES-256 vault & fail-closed credentials in Live |
 
 ---
 
 ## ⚠️ Disclaimer
 
-> **ULTRON is a demonstration project operating in Razorpay Test Mode only.** It is not production-ready and does not process live money. All monetary values shown are from test transactions. All probabilities displayed are model-estimated counterfactuals — the true counterfactual is never observed for any real payment.
+> **ULTRON provides dual-mode operational capability:** an isolated **Test Sandbox** (capped at 5 payment links with synthetic/test keys) and an enterprise **Real Money Live Mode** (protected by AES-256 encrypted credential vaults, tenant isolation, and deterministic Action Authority gates). All counterfactual probability metrics and recovery lift estimates displayed across the dashboard are explicitly **model-estimated** — because true counterfactual outcomes are fundamentally unobservable for any individual real payment.
 
 ---
 
 <p align="center">
   <sub>Built with 🧠 economic reasoning and ⚡ autonomous execution</sub>
   <br/>
-  <sub>All monetary values in paise (₹) · Razorpay Test Mode Only</sub>
+  <sub>All monetary values in paise (₹) · Dual Environment (Test Sandbox + Real Money Live)</sub>
   <br/>
   <sub>🌐 Production Dashboard: <a href="https://ultron-power.vercel.app/dashboard" target="_blank">https://ultron-power.vercel.app/dashboard</a></sub>
 </p>
+
