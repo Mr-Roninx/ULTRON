@@ -5,6 +5,7 @@ import {
   AgentRunRecord,
   SpecialistAgentName,
   PortfolioProposal,
+  AgentBudgetConfig,
 } from './types.js';
 import { PortfolioAgent } from './portfolio_agent.js';
 import {
@@ -33,6 +34,7 @@ import { OutreachAgent } from './specialists/outreach_agent.js';
 import { evaluateOpportunity, isKillSwitchActive } from '../authority/gate.js';
 import { runMarketAllocation } from '../market/allocator.js';
 import { executeOpportunity } from '../execution/executor.js';
+import { AgentLoop, AgentLoopResult } from './agent_loop.js';
 
 export interface MissionExecutionResult {
   run_id: string;
@@ -375,6 +377,23 @@ export class AgentOrchestrator {
   }): Promise<import('./types.js').BatchMissionSummary> {
     const { MissionConcurrencyCoordinator } = await import('./concurrency.js');
     return MissionConcurrencyCoordinator.executeBatch(params);
+  }
+
+  /**
+   * v6.0 — Execute recovery mission using the autonomous Agent Loop (Observe-Reason-Act-Learn).
+   * Replaces single-shot linear execution with an iterative goal-directed reasoning cycle.
+   */
+  public static async executeAutonomousMission(params: {
+    opportunityId: string;
+    environment?: 'SYNTHETIC' | 'FIXTURE' | 'RAZORPAY_TEST' | 'PROVIDER_VERIFIED';
+    budgetConfig?: Partial<AgentBudgetConfig>;
+  }): Promise<AgentLoopResult> {
+    const runId = `run_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const loop = new AgentLoop(runId, params.budgetConfig);
+    return loop.run({
+      opportunityId: params.opportunityId,
+      environment: params.environment,
+    });
   }
 }
 

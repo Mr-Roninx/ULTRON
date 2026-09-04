@@ -1,3 +1,4 @@
+import { RecoveryOpportunity } from '../../types/index.js';
 import { AgentToolRegistry } from '../tool_registry.js';
 
 export interface ForensicAuditClaim {
@@ -21,6 +22,70 @@ export interface ComplianceExplanationResult {
 }
 
 export class ComplianceCopilot {
+  /**
+   * Evaluates hard regulatory and safety invariants before any recovery action is dispatched.
+   * Enforces RBI guidelines:
+   * 1. Hard decline codes are blocked strictly
+   * 2. Max 3 attempts in 24 hours
+   * 3. Do-Not-Disturb (DND) window: 9:00 PM to 8:00 AM IST
+   */
+  public static checkPreExecutionCompliance(opp: RecoveryOpportunity): {
+    dnd_active: boolean;
+    contact_limit_exceeded: boolean;
+    hard_decline_blocked: boolean;
+    can_proceed: boolean;
+    veto_reason?: string;
+  } {
+    const reason = (opp.reason_code || '').toUpperCase();
+    const hardReasons = ['STOLEN_CARD', 'LOST_CARD', 'FRAUD', 'FRAUD_SUSPECTED', 'EXPIRED_CARD', 'PICKUP_CARD'];
+    const isHardDecline = opp.decline_type === 'hard' || hardReasons.some((r) => reason.includes(r));
+
+    if (isHardDecline) {
+      return {
+        dnd_active: false,
+        contact_limit_exceeded: false,
+        hard_decline_blocked: true,
+        can_proceed: false,
+        veto_reason: `Action blocked: Hard decline / security stop code '${opp.reason_code}'.`,
+      };
+    }
+
+    const contactLimitExceeded = opp.attempt_count >= 3;
+    if (contactLimitExceeded) {
+      return {
+        dnd_active: false,
+        contact_limit_exceeded: true,
+        hard_decline_blocked: false,
+        can_proceed: false,
+        veto_reason: `Action blocked: RBI contact threshold reached (attempt ${opp.attempt_count} of max 3).`,
+      };
+    }
+
+    // Check IST time for DND window (21:00 to 08:00 IST)
+    const nowUtc = new Date();
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(nowUtc.getTime() + istOffsetMs);
+    const istHour = istTime.getUTCHours();
+    const isDnd = istHour >= 21 || istHour < 8;
+
+    if (isDnd) {
+      return {
+        dnd_active: true,
+        contact_limit_exceeded: false,
+        hard_decline_blocked: false,
+        can_proceed: false,
+        veto_reason: `Action deferred: Current time (${istHour}:00 IST) falls within RBI DND window (21:00-08:00 IST).`,
+      };
+    }
+
+    return {
+      dnd_active: false,
+      contact_limit_exceeded: false,
+      hard_decline_blocked: false,
+      can_proceed: true,
+    };
+  }
+
   /**
    * Explains an opportunity decision strictly by reading durable SQLite records through get_full_audit_trail tool.
    */

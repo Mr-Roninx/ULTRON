@@ -22,6 +22,7 @@ import { notificationsRouter } from './routes/notifications.js';
 import { webhooksQueueRouter } from './routes/webhooks_queue.js';
 import { playgroundRouter } from './routes/playground.js';
 import { auditExportRouter } from './routes/audit_export.js';
+import { hitlRouter } from './agents/hitl/hitl_routes.js';
 import { AutonomousRecoveryDaemon } from './agents/daemon.js';
 import { WebhookQueueEngine } from './webhooks/queue.js';
 import { metrics } from './observability/metrics.js';
@@ -403,6 +404,10 @@ app.use('/v1/notifications', executionLimiter, notificationsRouter);
 
 // Webhook Delivery Queue & Replay (v6)
 app.use('/v1/webhooks/queue', webhookLimiter, webhooksQueueRouter);
+
+// Human-in-the-Loop (HITL) Approval Workflows
+app.use('/api/hitl', generalLimiter, hitlRouter);
+app.use('/v1/hitl', generalLimiter, hitlRouter);
 
 // Recovery Playground & Real-Time Visualization (v6)
 app.use('/v1/playground', executionLimiter, playgroundRouter);

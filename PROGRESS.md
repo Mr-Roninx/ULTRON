@@ -26,6 +26,7 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **Permanent Supabase Cloud Persistence, Auto API Key Provisioning & Real Interceptor Data Flow** (Completed & Verified)
 - [x] **README.md Codebase Forensic Audit & 100% Accuracy Verification** (Completed & Verified)
 - [x] **ULTRON Production Real Money Mode & Test ↔ Production Switcher** (Completed & Audited)
+- [x] **ULTRON Phase 14: Autonomous AI Agent Architecture (8 Phases)** (Completed & Audited)
 
 ---
 
@@ -249,5 +250,83 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
    - Strict Partitioning: Verified market allocation and authority gate only touch opportunities matching the tenant's active environment.
    - `npm test` (`npm run test:v6-all`): **All 27 v6 test suites PASSED WITH ZERO FAILURES**.
    - `npm run verify:v6-truth`: **100% PASSED (0 discrepancies)**.
+
+---
+
+## ULTRON Phase 14: Autonomous AI Agent Architecture (8 Phases)
+
+### Architectural Transformation Overview
+Following deep forensic research of ULTRON v6.0 and comparative benchmarking against Razorpay Vulcan and Razorpay Agent Studio, ULTRON was upgraded from a scripted recovery pipeline into an autonomous, self-directing AI Agent architecture. The design preserves all foundational non-negotiables from `.agents/rules/ultron.md` (incremental Bayesian scoring, 100% deterministic Action Authority compliance veto, and strictly NO LLM on the financial execution path).
+
+### The 8 Implemented Phases
+
+1. **Phase 1: Agent Loop Engine & Structured Reasoning**:
+   - Built `src/agents/agent_loop.ts`: Autonomous loop implementing an iterative Observe → Reason → Act → Learn cycle with execution budgets, step guards, and budget exhaustion circuit breakers.
+   - Built `src/agents/reasoning_engine.ts`: Chain-of-thought structured reasoning framework generating hypotheses, tool call recommendations, confidence estimation, and risk assessments.
+   - Updated `src/agents/orchestrator.ts`: Added `executeAutonomousMission()` coordinating multi-opportunity autonomous sweeps through the Agent Loop.
+
+2. **Phase 2: MCP-Compatible Tool Architecture**:
+   - Built `src/agents/mcp/mcp_types.ts`: JSON-RPC 2.0 type specifications conforming to the Model Context Protocol (MCP).
+   - Built `src/agents/mcp/mcp_tools_adapter.ts`: Two-way adapter transforming native ULTRON tools to MCP schemas and translating tool calls.
+   - Built `src/agents/mcp/mcp_server.ts`: Full JSON-RPC 2.0 handler supporting `initialize`, `ping`, `tools/list`, `tools/call`, `resources/list`, and `prompts/list`.
+   - Built `src/agents/tools/investigation_tools.ts`: 5 new diagnostic tools:
+     - `check_card_network_status`: Real-time Visa/Mastercard/RuPay latency and downtime evaluation.
+     - `query_customer_interaction_history`: Cross-session customer fatigue and touchpoint history.
+     - `simulate_retry_window`: Temporal success probability curve modeling across hours.
+     - `calculate_optimal_discount`: Elasticity and fee margin modeling for incentive sizing.
+     - `evaluate_customer_risk_profile`: Chargeback velocity, lifetime value, and dispute risk score.
+   - Updated `src/agents/tool_registry.ts`: Added `toMCPTools()`, `registerMCPTool()`, and registered all 5 new diagnostic tools.
+
+3. **Phase 3: Enhanced Specialist Network & Routing**:
+   - Built `src/agents/specialist_router.ts`: Coordinates multi-agent collaboration with priority delegation, tool dispatching, and strict **Compliance Veto Supremacy**.
+   - Updated `src/agents/specialists/perception_agent.ts`: Bank decline code translation (e.g. HDFC 202, ICICI 101) and temporal signal detection (salary cycle days 28-5, maintenance windows 2-4 AM IST).
+   - Updated `src/agents/specialists/strategy_agent.ts`: Added `evaluateOpportunityStrategy` with multi-channel utility scoring and shadow price calibration.
+   - Updated `src/agents/specialists/outreach_agent.ts`: Added tone selection (`POLITE`, `URGENT`, `ASSISTED`) and localized multilingual message generation.
+   - Updated `src/agents/specialists/compliance_copilot.ts`: Added `checkPreExecutionCompliance` evaluating hard declines, RBI 3-attempt caps, and IST DND quiet hours (9 PM – 8 AM).
+
+4. **Phase 4: Multi-Provider LLM Routing & Fallback Cascade**:
+   - Built `src/agents/llm/providers/provider_types.ts`: Standardized provider interface and task categorization (`DIAGNOSIS`, `PERCEPTION`, `AUTHORITY`, `GENERAL`).
+   - Built `src/agents/llm/providers/claude_provider.ts`: Anthropic Claude Messages API adapter with exponential backoff.
+   - Built `src/agents/llm/providers/gemini_provider.ts`: Google GenAI REST API adapter with JSON response mode.
+   - Built `src/agents/llm/providers/openai_provider.ts`: OpenAI & NVIDIA NIM Chat Completions adapter with strict environment variable isolation.
+   - Built `src/agents/llm/providers/provider_router.ts`: Priority routing matrix by task type, 5-failure circuit breaker with 60-second cooldown, and automatic fallback cascade.
+   - Updated `src/agents/llm_provider.ts`: Integrated `ProviderRouter` for `generateAgentIntent` with guaranteed safe deterministic fallback.
+
+5. **Phase 5: Vector Memory & Semantic Search**:
+   - Built `src/agents/memory/embedding_store.ts`: In-memory 64-dimensional semantic projection with cosine similarity calculation and top-k retrieval.
+   - Updated `src/agents/memory.ts`: Integrated `EmbeddingStore` into `recordEpisode()` and `recordSemanticMemory()`. Added `searchSimilarMemories()` with `TemporalMemoryFirewall` ensuring episodic experiences decay accurately over 90-day intervals.
+
+6. **Phase 6: Human-in-the-Loop (HITL) Workflow**:
+   - Built `src/agents/hitl/hitl_types.ts`: Type definitions for `HITLRequest`, `HITLDecision`, and `HITLTriggerReason`.
+   - Built `src/agents/hitl/hitl_manager.ts`: Automated triggers for high-ticket transactions (>₹25,000 / 2,500,000 paise), low-confidence predictions (<40%), and VIP customer disputes with 30-minute SLA timeouts.
+   - Built `src/agents/hitl/hitl_routes.ts`: REST endpoints (`GET /`, `GET /:id`, `POST /:id/approve`, `POST /:id/reject`, `POST /:id/override`, `POST /evaluate`).
+   - Mounted on `/api/hitl` and `/v1/hitl` in `src/server.ts`.
+
+7. **Phase 7: Agent Observability & Trace Streaming**:
+   - Built `src/agents/trace_stream.ts`: Server-Sent Events (SSE) broadcasting engine with in-memory ring-buffer replay for reconnection resilience and periodic heartbeats.
+   - Updated `src/routes/agents.ts`: Mounted `GET /traces/stream` (live global feed), `GET /traces/:runId/stream` (session-specific feed), `GET /traces/recent` (buffered event log), and `POST /mcp` (MCP protocol gateway).
+
+8. **Phase 8: Advanced Autonomous Capabilities**:
+   - Built `src/agents/autonomous/goal_decomposition.ts`: `AutonomousGoalDecomposer` breaking merchant recovery objectives into structured, dependency-aware tactical milestones.
+   - Built `src/agents/autonomous/environment_monitor.ts`: `EnvironmentMonitor` tracking banking rail latency, UPI switch health, and merchant balance thresholds.
+   - Built `src/agents/autonomous/adaptive_strategy.ts`: `AdaptiveStrategyEngine` implementing multi-armed bandit (epsilon-greedy) channel selection with Bayesian weight updates.
+   - Built `src/agents/autonomous/proactive_alerts.ts`: `ProactiveAlertsEngine` detecting structural payment anomalies and notifying merchants before revenue loss compounds.
+   - Updated `src/agents/daemon.ts`: Integrated proactive alert scanning directly into continuous 24/7 background sweeps.
+
+### Verification Results
+- **Dedicated Autonomous Agent Test Suite (`tests/v6/test_autonomous_agent.ts`)**:
+  - `Phase 1: Agent Loop & Reasoning Engine executes iterative cycle`: **PASSED**
+  - `Phase 2: MCP Tool Architecture & Investigation Tools`: **PASSED**
+  - `Phase 3: Specialist Router & Enhanced Domain Specialists`: **PASSED**
+  - `Phase 4: Multi-Provider LLM Routing & Fallback Cascade`: **PASSED**
+  - `Phase 5: Vector Memory & Cosine Similarity Search`: **PASSED**
+  - `Phase 6: Human-in-the-Loop (HITL) Approval Workflow`: **PASSED**
+  - `Phase 7: Real-Time Trace Streaming Engine`: **PASSED**
+  - `Phase 8: Autonomous Goal Decomposition & Proactive Alerts`: **PASSED**
+  - **Overall**: **9/9 tests PASSED with 0 failures**.
+- **Full Backend TypeScript Compilation**: `npx tsc --noEmit` exited with **0 errors**.
+- **Frontend Turbopack Production Build**: `npm run build` compiled all 14 routes with **0 errors**.
+- **Master Test Runner Integration**: Added `test_autonomous_agent.ts` to `tests/v6/run_all_v6_tests.ts`.
+
 
 

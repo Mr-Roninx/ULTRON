@@ -18,6 +18,8 @@ import { ComplianceCopilot } from '../agents/specialists/compliance_copilot.js';
 import { MerchantCopilot } from '../agents/specialists/merchant_copilot.js';
 import { StrategyAgent } from '../agents/specialists/strategy_agent.js';
 import { AgentLearningEngine } from '../agents/learning.js';
+import { TraceStreamManager } from '../agents/trace_stream.js';
+import { MCPServer } from '../agents/mcp/mcp_server.js';
 
 export const agentsRouter = Router();
 
@@ -311,3 +313,27 @@ agentsRouter.get('/metrics', (_req: Request, res: Response) => {
     res.status(500).json({ error: error.message || 'Failed to fetch metrics' });
   }
 });
+
+// SSE Real-time Trace Streaming (global)
+agentsRouter.get('/traces/stream', (req: Request, res: Response) => {
+  TraceStreamManager.subscribe(res, 'ALL');
+});
+
+// SSE Real-time Trace Streaming (by runId)
+agentsRouter.get('/traces/:runId/stream', (req: Request, res: Response) => {
+  const runId = String(req.params.runId);
+  TraceStreamManager.subscribe(res, runId);
+});
+
+// GET recent trace events
+agentsRouter.get('/traces/recent', (req: Request, res: Response) => {
+  const runId = req.query.run_id ? String(req.query.run_id) : undefined;
+  res.json({ events: TraceStreamManager.getRecentEvents(runId) });
+});
+
+// POST Model Context Protocol (MCP) JSON-RPC 2.0 endpoint
+agentsRouter.post('/mcp', async (req: Request, res: Response) => {
+  const response = await MCPServer.handleRequest(req.body);
+  res.json(response);
+});
+

@@ -257,6 +257,21 @@ export class AutonomousRecoveryDaemon {
       });
       
       this.revenue_recovered_paise += recovered_revenue;
+
+      // Broadcast autonomous proactive alerts
+      try {
+        const { ProactiveAlertsEngine } = await import('./autonomous/proactive_alerts.js');
+        const alerts = ProactiveAlertsEngine.generateAlerts();
+        if (alerts.length > 0) {
+          RealtimeBroadcaster.getInstance().broadcastToTenant(
+            'tenant_system_default',
+            'PROACTIVE_ALERTS_UPDATED' as any,
+            { alerts }
+          );
+        }
+      } catch (err) {
+        // Non-blocking proactive alert generation
+      }
       
       if (this.state === 'SWEEPING') {
          this.state = 'SLEEPING';

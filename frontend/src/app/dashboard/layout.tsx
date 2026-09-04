@@ -23,7 +23,7 @@ interface NotificationItem {
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Recovery Hub", icon: LayoutDashboard, exact: true, badge: "LIVE" },
   { href: "/dashboard/setup", label: "Integration Hub", icon: Sparkles, exact: false, highlight: true },
-  { href: "/pitch", label: "5-Min Pitch Studio", icon: Video, exact: false, badge: "CINEMA" },
+  { href: "/presentation", label: "Visual Presentation", icon: Sparkles, exact: false, badge: "DECK" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
 ];
 

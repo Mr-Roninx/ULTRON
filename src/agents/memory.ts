@@ -8,6 +8,7 @@ import {
 } from '../db/database.js';
 import { AgentMemoryItem, MemoryType } from './types.js';
 import { TemporalMemoryFirewall } from './temporal_firewall.js';
+import { EmbeddingStore } from './memory/embedding_store.js';
 
 export class AgentMemoryStore {
   private static MAX_WORKING_MEMORY_ITEMS = 50;
@@ -91,6 +92,7 @@ export class AgentMemoryStore {
     };
 
     insertAgentMemory(item);
+    EmbeddingStore.addDocument(item.id, `${item.failure_type || ''} ${item.context_summary} ${item.action_taken || ''}`, item);
     return item;
   }
 
@@ -138,6 +140,7 @@ export class AgentMemoryStore {
     };
 
     insertAgentMemory(item);
+    EmbeddingStore.addDocument(item.id, `${item.semantic_key || ''} ${item.context_summary} ${item.semantic_value || ''}`, item);
     return item;
   }
 
@@ -153,5 +156,37 @@ export class AgentMemoryStore {
     const memories = getSemanticMemories(params.keyPrefix, cutoff);
     const filtered = TemporalMemoryFirewall.filterMemories(memories, cutoff);
     return filtered.slice(0, params.limit || 20);
+  }
+
+  /**
+   * Performs semantic similarity vector search across memories with Temporal Memory Firewall filtering.
+   */
+  public static searchSimilarMemories(params: {
+    query: string;
+    cutoffTimestamp?: string;
+    topK?: number;
+    minSimilarity?: number;
+  }): Array<AgentMemoryItem & { similarity: number }> {
+    const cutoff = params.cutoffTimestamp || new Date().toISOString();
+    const matches = EmbeddingStore.searchSimilar<AgentMemoryItem>(
+      params.query,
+      (params.topK || 5) * 2,
+      params.minSimilarity ?? 0.10
+    );
+
+    const memoryItems: Array<AgentMemoryItem & { similarity: number }> = [];
+    for (const match of matches) {
+      if (match.metadata) {
+        memoryItems.push({
+          ...match.metadata,
+          similarity: match.similarity,
+        });
+      }
+    }
+
+    const filtered = TemporalMemoryFirewall.filterMemories(memoryItems, cutoff) as Array<
+      AgentMemoryItem & { similarity: number }
+    >;
+    return filtered.slice(0, params.topK || 5);
   }
 }

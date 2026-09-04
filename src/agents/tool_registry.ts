@@ -4,9 +4,11 @@ import { AgentAuthorityGate } from './gate.js';
 import { AgentTelemetry } from './telemetry.js';
 import { MissionBudgetTracker } from './budget.js';
 import { LoopGuard } from './loop_guard.js';
-import *
-  as readTools from './tools/read_tools.js';
+import * as readTools from './tools/read_tools.js';
 import * as proposalTools from './tools/proposal_tools.js';
+import { InvestigationTools } from './tools/investigation_tools.js';
+import { MCPToolsAdapter } from './mcp/mcp_tools_adapter.js';
+import { MCPTool } from './mcp/mcp_types.js';
 
 export interface ToolDefinition {
   tool_id: string;
@@ -41,6 +43,36 @@ export class AgentToolRegistry {
     return Array.from(this.tools.values()).filter(
       (t) => t.agent === 'ALL' || t.agent === agentName
     );
+  }
+
+  /**
+   * Export all registered tools formatted as Model Context Protocol (MCP) tools.
+   */
+  public static toMCPTools(): MCPTool[] {
+    return MCPToolsAdapter.toMCPTools(this.getAllTools());
+  }
+
+  /**
+   * Register a tool using an MCP tool definition and handler.
+   */
+  public static registerMCPTool(
+    mcpTool: MCPTool,
+    handler: (params: any, ctx?: any) => Promise<any>,
+    options?: Partial<ToolDefinition>
+  ): void {
+    this.registerTool({
+      tool_id: mcpTool.name,
+      agent: options?.agent ?? 'ALL',
+      description: mcpTool.description ?? mcpTool.name,
+      input_schema: mcpTool.inputSchema,
+      output_schema: options?.output_schema ?? { type: 'object' },
+      permission: options?.permission ?? 'READ',
+      read_only: options?.read_only ?? true,
+      rate_limit_per_min: options?.rate_limit_per_min ?? 60,
+      timeout_ms: options?.timeout_ms ?? 3000,
+      audit_level: options?.audit_level ?? 'STANDARD',
+      handler,
+    });
   }
 
   /**
@@ -440,3 +472,110 @@ AgentToolRegistry.registerTool({
   audit_level: 'HIGH',
   handler: proposalTools.createOutreachDraftTool,
 });
+
+// 3. Autonomous Investigation Tools
+AgentToolRegistry.registerTool({
+  tool_id: 'check_card_network_status',
+  agent: 'ALL',
+  description: 'Query card network rails (Visa/Mastercard/RuPay) and bank health for outage/latency spikes',
+  input_schema: {
+    type: 'object',
+    properties: {
+      network: { type: 'string', enum: ['VISA', 'MASTERCARD', 'RUPAY', 'UNKNOWN'] },
+      bank_code: { type: 'string' },
+    },
+  },
+  output_schema: { type: 'object' },
+  permission: 'READ',
+  read_only: true,
+  rate_limit_per_min: 60,
+  timeout_ms: 3000,
+  audit_level: 'STANDARD',
+  handler: (params) => InvestigationTools.checkCardNetworkStatus(params),
+});
+
+AgentToolRegistry.registerTool({
+  tool_id: 'query_customer_interaction_history',
+  agent: 'ALL',
+  description: 'Inspect previous recovery interactions, channel reachability, and fatigue signals for a customer',
+  input_schema: {
+    type: 'object',
+    properties: {
+      customer_id: { type: 'string' },
+    },
+    required: ['customer_id'],
+  },
+  output_schema: { type: 'object' },
+  permission: 'READ',
+  read_only: true,
+  rate_limit_per_min: 60,
+  timeout_ms: 3000,
+  audit_level: 'STANDARD',
+  handler: (params) => InvestigationTools.queryCustomerInteractionHistory(params),
+});
+
+AgentToolRegistry.registerTool({
+  tool_id: 'simulate_retry_window',
+  agent: 'ALL',
+  description: 'Simulate recovery probabilities across future time windows (t+15m, t+1h, t+4h, t+24h) to determine optimal retry timing',
+  input_schema: {
+    type: 'object',
+    properties: {
+      opportunity_id: { type: 'string' },
+      reason_code: { type: 'string' },
+      amount_paise: { type: 'number' },
+    },
+    required: ['opportunity_id'],
+  },
+  output_schema: { type: 'object' },
+  permission: 'READ',
+  read_only: true,
+  rate_limit_per_min: 45,
+  timeout_ms: 3000,
+  audit_level: 'STANDARD',
+  handler: (params) => InvestigationTools.simulateRetryWindow(params),
+});
+
+AgentToolRegistry.registerTool({
+  tool_id: 'calculate_optimal_discount',
+  agent: 'ALL',
+  description: 'Simulate whether offering a temporary recovery incentive discount increases expected IVEN net of margin loss',
+  input_schema: {
+    type: 'object',
+    properties: {
+      opportunity_id: { type: 'string' },
+      amount_paise: { type: 'number' },
+      customer_trust_score: { type: 'number' },
+    },
+    required: ['opportunity_id'],
+  },
+  output_schema: { type: 'object' },
+  permission: 'READ',
+  read_only: true,
+  rate_limit_per_min: 30,
+  timeout_ms: 3000,
+  audit_level: 'STANDARD',
+  handler: (params) => InvestigationTools.calculateOptimalDiscount(params),
+});
+
+AgentToolRegistry.registerTool({
+  tool_id: 'evaluate_customer_risk_profile',
+  agent: 'ALL',
+  description: 'Perform multi-factor risk assessment combining trust score, transaction velocity, and chargeback potential',
+  input_schema: {
+    type: 'object',
+    properties: {
+      customer_id: { type: 'string' },
+      amount_paise: { type: 'number' },
+    },
+    required: ['customer_id'],
+  },
+  output_schema: { type: 'object' },
+  permission: 'READ',
+  read_only: true,
+  rate_limit_per_min: 60,
+  timeout_ms: 3000,
+  audit_level: 'STANDARD',
+  handler: (params) => InvestigationTools.evaluateCustomerRiskProfile(params),
+});
+

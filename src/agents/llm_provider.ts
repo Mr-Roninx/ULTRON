@@ -4,6 +4,9 @@ import path from 'node:path';
 import { AgentIntent, AgentSchemaValidator } from './schema.js';
 import { AgentContextBuilder, SanitizedPromptContext } from './context_builder.js';
 import { AgentTelemetry } from './telemetry.js';
+import { ProviderRouter } from './llm/providers/provider_router.js';
+
+export { ProviderRouter };
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -20,7 +23,8 @@ export interface LLMGenerationResult {
 
 export class LLMProvider {
   /**
-   * Generates a structured AgentIntent using NVIDIA NIM LLM, or safely falls back to deterministic rule-based intent.
+   * Generates a structured AgentIntent using multi-provider routing (Claude, Gemini, OpenAI, NVIDIA NIM),
+   * or safely falls back to deterministic rule-based intent.
    */
   public static async generateAgentIntent(params: {
     runId: string;
@@ -31,10 +35,7 @@ export class LLMProvider {
     const invId = `llm_inv_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 
     const isEnabled = process.env.ULTRON_LLM_ENABLED !== 'false';
-    const baseUrl = (process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1').replace(/\/+$/, '');
-    const apiKey = process.env.NVIDIA_API_KEY || '';
-    const model = process.env.NVIDIA_MODEL || process.env.LLM_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b';
-    const timeoutMs = Number(process.env.LLM_TIMEOUT_MS) || 30000;
+    const timeoutMs = Number(process.env.LLM_TIMEOUT_MS) || 5000;
 
     const userPrompt = `
 Analyze the following payment recovery context and produce an AgentIntent JSON:
@@ -86,167 +87,84 @@ Respond ONLY with valid JSON having the exact keys:
 }
 `.trim();
 
-    // Check if real API call is possible
-    const hasValidKey = apiKey && !apiKey.startsWith('nvapi-YOUR_');
-
-    if (!isEnabled || !hasValidKey) {
-      const fallbackIntent = this.generateDeterministicFallbackIntent(params.runId, params.opportunityId, params.context);
-      const latencyMs = Date.now() - startTime;
-
-      AgentTelemetry.logLLMInvocation({
-        id: invId,
-        runId: params.runId,
-        model: 'deterministic_ultron_policy',
-        provider: 'Deterministic Rule Engine (Fallback)',
-        prompt: userPrompt,
-        completion: JSON.stringify(fallbackIntent),
-        latencyMs,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      });
-
-      return {
-        success: true,
-        intent: fallbackIntent,
-        provider: 'Deterministic Fallback',
-        model: 'deterministic_ultron_policy',
-        is_fallback: true,
-        latency_ms: latencyMs,
-        tokens_used: 0,
-      };
-    }
-
-    // Call Real NVIDIA NIM LLM API with timeout
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: AgentContextBuilder.getSystemPrompt() },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.2,
-          max_tokens: 1500,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errBody = await response.text();
-        throw new Error(`NVIDIA NIM HTTP ${response.status}: ${errBody}`);
-      }
-
-      const json = await response.json();
-      const rawContent = json?.choices?.[0]?.message?.content || '';
-      const promptTokens = json?.usage?.prompt_tokens || 0;
-      const completionTokens = json?.usage?.completion_tokens || 0;
-      const totalTokens = json?.usage?.total_tokens || promptTokens + completionTokens;
-
-      // Extract JSON from potential code blocks
-      let cleanJson = rawContent.trim();
-      if (cleanJson.startsWith('```json')) {
-        cleanJson = cleanJson.replace(/^```json\n?/, '').replace(/```$/, '').trim();
-      } else if (cleanJson.startsWith('```')) {
-        cleanJson = cleanJson.replace(/^```\n?/, '').replace(/```$/, '').trim();
-      }
-
-      const valResult = AgentSchemaValidator.validateAgentIntent(cleanJson, params.runId, params.opportunityId);
-
-      if (!valResult.valid || !valResult.data) {
-        console.warn('LLM produced invalid schema, falling back to deterministic intent:', valResult.errors);
-        const fallbackIntent = this.generateDeterministicFallbackIntent(params.runId, params.opportunityId, params.context);
-        const latencyMs = Date.now() - startTime;
-
-        AgentTelemetry.logLLMInvocation({
-          id: invId,
-          runId: params.runId,
-          model,
-          provider: 'NVIDIA NIM (Schema Fallback)',
+    // 1. Attempt Multi-Provider LLM Routing if enabled
+    if (isEnabled) {
+      try {
+        const routerResult = await ProviderRouter.executeWithFallback({
           prompt: userPrompt,
-          completion: rawContent,
-          latencyMs,
-          promptTokens,
-          completionTokens,
-          totalTokens,
-          error: `Schema validation failed: ${valResult.errors.join(', ')}`,
+          systemPrompt: AgentContextBuilder.getSystemPrompt(),
+          taskType: 'DIAGNOSIS',
+          timeoutMs,
         });
 
-        return {
-          success: true,
-          intent: fallbackIntent,
-          provider: 'NVIDIA NIM (Schema Fallback)',
-          model,
-          is_fallback: true,
-          latency_ms: latencyMs,
-          tokens_used: totalTokens,
-          error: valResult.errors.join(', '),
-        };
+        if (routerResult && routerResult.text) {
+          let cleanJson = routerResult.text.trim();
+          if (cleanJson.startsWith('```json')) {
+            cleanJson = cleanJson.replace(/^```json\n?/, '').replace(/```$/, '').trim();
+          } else if (cleanJson.startsWith('```')) {
+            cleanJson = cleanJson.replace(/^```\n?/, '').replace(/```$/, '').trim();
+          }
+
+          const valResult = AgentSchemaValidator.validateAgentIntent(cleanJson, params.runId, params.opportunityId);
+          if (valResult.valid && valResult.data) {
+            const promptTokens = Math.round(routerResult.tokens_used * 0.4);
+            const completionTokens = Math.round(routerResult.tokens_used * 0.6);
+
+            AgentTelemetry.logLLMInvocation({
+              id: invId,
+              runId: params.runId,
+              model: routerResult.model,
+              provider: routerResult.provider_name,
+              prompt: userPrompt,
+              completion: routerResult.text,
+              latencyMs: routerResult.latency_ms,
+              promptTokens,
+              completionTokens,
+              totalTokens: routerResult.tokens_used,
+            });
+
+            return {
+              success: true,
+              intent: valResult.data,
+              provider: routerResult.provider_name,
+              model: routerResult.model,
+              is_fallback: routerResult.is_fallback,
+              latency_ms: routerResult.latency_ms,
+              tokens_used: routerResult.tokens_used,
+            };
+          }
+        }
+      } catch (err: any) {
+        console.warn('LLMProvider: Multi-provider router error, falling back to deterministic policy:', err?.message);
       }
-
-      const latencyMs = Date.now() - startTime;
-      AgentTelemetry.logLLMInvocation({
-        id: invId,
-        runId: params.runId,
-        model,
-        provider: 'NVIDIA NIM',
-        prompt: userPrompt,
-        completion: rawContent,
-        latencyMs,
-        promptTokens,
-        completionTokens,
-        totalTokens,
-      });
-
-      return {
-        success: true,
-        intent: valResult.data,
-        provider: 'NVIDIA NIM',
-        model,
-        is_fallback: false,
-        latency_ms: latencyMs,
-        tokens_used: totalTokens,
-      };
-    } catch (err: any) {
-      console.error('Real LLM invocation failed, using deterministic fallback:', err?.message || err);
-      const fallbackIntent = this.generateDeterministicFallbackIntent(params.runId, params.opportunityId, params.context);
-      const latencyMs = Date.now() - startTime;
-
-      AgentTelemetry.logLLMInvocation({
-        id: invId,
-        runId: params.runId,
-        model,
-        provider: 'NVIDIA NIM (Error Fallback)',
-        prompt: userPrompt,
-        completion: JSON.stringify(fallbackIntent),
-        latencyMs,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-        error: err?.message || 'Network error',
-      });
-
-      return {
-        success: true,
-        intent: fallbackIntent,
-        provider: 'NVIDIA NIM (Error Fallback)',
-        model,
-        is_fallback: true,
-        latency_ms: latencyMs,
-        tokens_used: 0,
-        error: err?.message || 'Network error',
-      };
     }
+
+    // 2. Safe Fallback: Deterministic Rule Engine
+    const fallbackIntent = this.generateDeterministicFallbackIntent(params.runId, params.opportunityId, params.context);
+    const latencyMs = Date.now() - startTime;
+
+    AgentTelemetry.logLLMInvocation({
+      id: invId,
+      runId: params.runId,
+      model: 'deterministic_ultron_policy',
+      provider: 'Deterministic Rule Engine (Fallback)',
+      prompt: userPrompt,
+      completion: JSON.stringify(fallbackIntent),
+      latencyMs,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    });
+
+    return {
+      success: true,
+      intent: fallbackIntent,
+      provider: 'Deterministic Fallback',
+      model: 'deterministic_ultron_policy',
+      is_fallback: true,
+      latency_ms: latencyMs,
+      tokens_used: 0,
+    };
   }
 
   /**
@@ -310,9 +228,9 @@ Respond ONLY with valid JSON having the exact keys:
         recoverability_assessment: recoverability,
       },
       observations: [
-        `Opportunity ${opp.id} (${opp.amount_inr}, decline: ${opp.decline_type})`,
+        `Opportunity ${opp.id} (${(opp as any).amount_inr || (opp.amount_paise ? '₹' + (opp.amount_paise / 100).toFixed(2) : '₹0')}, decline: ${opp.decline_type})`,
         `Attempt count: ${opp.attempt_count}, reason: ${opp.reason_code}`,
-        `Customer trust score: ${context.customer.trust_score}`,
+        `Customer trust score: ${context.customer?.trust_score ?? (context as any).customer_trust_score ?? 0.65}`,
       ],
       hypotheses: [
         isHard
@@ -341,7 +259,7 @@ Respond ONLY with valid JSON having the exact keys:
           name: 'customer_liquidity',
           value: liquidityVal,
           confidence: 0.75,
-          evidence_reference: `Trust score: ${context.customer.trust_score}`,
+          evidence_reference: `Trust score: ${context.customer?.trust_score ?? (context as any).customer_trust_score ?? 0.65}`,
           timestamp: new Date().toISOString(),
           source: 'deterministic_rule_engine',
         },

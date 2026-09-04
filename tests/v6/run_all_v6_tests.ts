@@ -49,6 +49,9 @@ const v6Suites = [
 
   // Production Real Money & Environment Isolation
   'tests/v6/test_live_money_environment.ts',
+
+  // Phase 14: Autonomous AI Agent Architecture
+  'tests/v6/test_autonomous_agent.ts',
 ];
 
 async function runSuite(suite: string): Promise<boolean> {
