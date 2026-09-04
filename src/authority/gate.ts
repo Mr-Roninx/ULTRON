@@ -6,6 +6,7 @@ import {
   AuthorityVerdict,
 } from '../types/index.js';
 import {
+  db,
   insertAuthorityCheck,
   clearAuthorityChecksForOpportunity,
   updateOpportunityStatus,
@@ -110,7 +111,7 @@ export function evaluateOpportunity(
   }
 
   // Check 3: Kill Switch Check
-  if (isKillSwitchActive()) {
+  if (isKillSwitchActive(opp.tenant_id)) {
     checks.push({
       opportunity_id: opp.id,
       check_name: 'kill_switch_check',
@@ -199,7 +200,7 @@ export function evaluateOpportunity(
   } else {
     verdict = 'AUTHORIZED';
     summary_reason = 'all deterministic authority and compliance checks passed';
-    updateOpportunityStatus(opp.id, 'allocated');
+    updateOpportunityStatus(opp.id, 'authorized');
   }
 
   return {
@@ -223,11 +224,23 @@ export interface AuthorityPipelineResult {
 /**
  * Runs full two-stage pipeline: Recovery Market Allocation followed by Action Authority Gate
  */
-export function runAuthorityPipeline(options: { capacity?: number; tenantId?: string } = {}): AuthorityPipelineResult {
-  // 1. Run Market Allocation scoped to tenant
+export function runAuthorityPipeline(options: { capacity?: number; tenantId?: string; environment?: 'test' | 'live' } = {}): AuthorityPipelineResult {
+  // 1. Run Market Allocation scoped to tenant & environment
   runMarketAllocation(options);
 
-  const allOpps = getAllOpportunities(options.tenantId);
+  let env = options.environment;
+  if (!env && options.tenantId) {
+    try {
+      const stmt = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;');
+      const row = stmt.get(options.tenantId) as { environment?: 'test' | 'live' } | undefined;
+      if (row?.environment) env = row.environment;
+    } catch { /* fallthrough */ }
+  }
+
+  const rawOpps = getAllOpportunities(options.tenantId, env);
+  const allOpps = rawOpps.filter(
+    (opp) => opp.status !== 'recovered' && opp.status !== 'not_recovered' && opp.status !== 'executing'
+  );
   const results: AuthorityEvaluationResult[] = [];
 
   let authorized_count = 0;
@@ -260,7 +273,7 @@ export function runAuthorityPipeline(options: { capacity?: number; tenantId?: st
   }
 
   return {
-    kill_switch_active: isKillSwitchActive(),
+    kill_switch_active: isKillSwitchActive(options.tenantId),
     total_evaluated: allOpps.length,
     authorized_count,
     blocked_count,

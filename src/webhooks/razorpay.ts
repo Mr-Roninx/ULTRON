@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Request, Response } from 'express';
 import {
+  db,
   getOpportunityById,
   getOpportunityByRazorpayEventId,
   insertOpportunity,
@@ -10,6 +11,7 @@ import {
 } from '../db/database.js';
 import { normalizeOpportunity } from '../perception/normalizer.js';
 import { AutonomousRecoveryDaemon } from '../agents/daemon.js';
+import { AuthoritativeReconciler } from '../reconciliation/authoritative_reconciler.js';
 
 export function verifyWebhookSignature(
   rawBody: string | Buffer,
@@ -62,10 +64,18 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
     const eventId = req.body?.event_id || req.body?.payload?.payment?.entity?.id;
 
-    // Fetch tenant's webhook secrets (try 'live' first, then 'test' if needed)
-    // For now we assume test environment since this is ULTRON's test focus, but in prod we'd check both
-    const env = (req.body?.payload?.payment?.entity?.environment === 'live') ? 'live' : 'test';
-    const webhookSecrets = await RazorpayConnectionService.getWebhookSecrets(tenantId, env);
+    // Fetch tenant's webhook secrets (check both live and test secrets to validate any incoming payload)
+    let env: 'test' | 'live' = (req.body?.payload?.payment?.entity?.environment === 'live') ? 'live' : 'test';
+    try {
+      const tenantRow = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;').get(tenantId) as any;
+      if (tenantRow?.environment === 'live') {
+        env = 'live';
+      }
+    } catch {}
+    const envSecrets = await RazorpayConnectionService.getWebhookSecrets(tenantId, env);
+    const altEnv = env === 'live' ? 'test' : 'live';
+    const altSecrets = await RazorpayConnectionService.getWebhookSecrets(tenantId, altEnv);
+    const webhookSecrets = [...new Set([...envSecrets, ...altSecrets])];
 
     const validation = await WebhookValidator.validateWebhook({
       tenantId,
@@ -85,19 +95,6 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
     const payload = req.body;
     const eventName: string | undefined = payload?.event;
 
-    // Deduplication check by eventId
-    if (eventId) {
-      const existingByEvent = getOpportunityByRazorpayEventId(eventId);
-      if (existingByEvent) {
-        res.status(200).json({
-          received: true,
-          deduplicated: true,
-          opportunity_id: existingByEvent.id,
-        });
-        return;
-      }
-    }
-
     // 1. Handle payment_link.paid event (Truth Engine Reconciliation)
     if (eventName === 'payment_link.paid') {
       const linkEntity = payload?.payload?.payment_link?.entity;
@@ -115,37 +112,18 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
       if (oppId) {
         const opp = getOpportunityById(oppId);
         if (opp) {
-          if (opp.status === 'recovered') {
-            res.status(200).json({
-              received: true,
-              reconciled: true,
-              status: 'recovered',
-              idempotent: true,
-              opportunity_id: oppId,
-            });
-            return;
-          }
-          updateOpportunityStatus(oppId, 'recovered');
-          const now = new Date().toISOString();
-          insertLedgerEntry({
-            id: `led_rec_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            opportunity_id: oppId,
-            event_type: 'recovered',
-            amount_paise: opp.amount_paise,
-            timestamp: now,
-            raw_payload_ref: JSON.stringify({
-              event: eventName,
-              event_id: eventId,
-              payment_link_id: linkId,
-              amount_paid: linkEntity?.amount_paid || opp.amount_paise,
-            }),
+          const reconResult = await AuthoritativeReconciler.reconcileOpportunity(oppId, {
+            providerPayloadOverride: linkEntity,
+            actor: 'razorpay_webhook',
           });
 
           res.status(200).json({
             received: true,
-            reconciled: true,
-            status: 'recovered',
+            reconciled: reconResult.is_recovered,
+            status: reconResult.new_opportunity_status,
+            idempotent: reconResult.is_idempotent_no_op,
             opportunity_id: oppId,
+            ledger_entry_hash: reconResult.ledger_entry_hash,
           });
           return;
         }
@@ -171,25 +149,15 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
       if (oppId) {
         const opp = getOpportunityById(oppId);
         if (opp) {
-          updateOpportunityStatus(oppId, 'not_recovered');
-          const now = new Date().toISOString();
-          insertLedgerEntry({
-            id: `led_unrec_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            opportunity_id: oppId,
-            event_type: 'not_recovered',
-            amount_paise: opp.amount_paise,
-            timestamp: now,
-            raw_payload_ref: JSON.stringify({
-              event: eventName,
-              event_id: eventId,
-              payment_link_id: linkId,
-            }),
+          const reconResult = await AuthoritativeReconciler.reconcileOpportunity(oppId, {
+            providerPayloadOverride: linkEntity,
+            actor: 'razorpay_webhook',
           });
 
           res.status(200).json({
             received: true,
             reconciled: true,
-            status: 'not_recovered',
+            status: reconResult.new_opportunity_status,
             opportunity_id: oppId,
           });
           return;
@@ -210,6 +178,19 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
 
       const paymentId: string = paymentEntity.id || `pay_${Date.now()}`;
 
+      // Deduplication check by eventId or paymentId
+      if (eventId) {
+        const existingByEvent = getOpportunityByRazorpayEventId(eventId);
+        if (existingByEvent) {
+          res.status(200).json({
+            received: true,
+            deduplicated: true,
+            opportunity_id: existingByEvent.id,
+          });
+          return;
+        }
+      }
+
       // Check if opportunity already exists for this payment_id
       const existingByPaymentId = getOpportunityById(paymentId);
       if (existingByPaymentId) {
@@ -222,7 +203,7 @@ export async function handleRazorpayWebhook(req: Request, res: Response): Promis
       }
 
       // Run Perception Normalization (source='real')
-      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'real', tenantId });
+      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'real', tenantId, environment: env });
 
       // Insert normalized opportunity
       insertOpportunity(opportunity);
@@ -310,20 +291,6 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
     const eventId: string | undefined = payload?.event_id || payload?.id;
     const eventName: string | undefined = payload?.event;
 
-    // Deduplication check by eventId
-    if (eventId) {
-      const existingByEvent = getOpportunityByRazorpayEventId(eventId);
-      if (existingByEvent) {
-        res.status(200).json({
-          received: true,
-          deduplicated: true,
-          simulated: true,
-          opportunity_id: existingByEvent.id,
-        });
-        return;
-      }
-    }
-
     // 1. Handle payment_link.paid event (Simulation)
     if (eventName === 'payment_link.paid') {
       const linkEntity = payload?.payload?.payment_link?.entity;
@@ -340,39 +307,19 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
       if (oppId) {
         const opp = getOpportunityById(oppId);
         if (opp) {
-          if (opp.status === 'recovered') {
-            res.status(200).json({
-              received: true,
-              reconciled: true,
-              status: 'recovered',
-              idempotent: true,
-              opportunity_id: oppId,
-            });
-            return;
-          }
-          updateOpportunityStatus(oppId, 'recovered');
-          const now = new Date().toISOString();
-          insertLedgerEntry({
-            id: `led_sim_rec_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            opportunity_id: oppId,
-            event_type: 'recovered',
-            amount_paise: opp.amount_paise,
-            timestamp: now,
-            raw_payload_ref: JSON.stringify({
-              event: eventName,
-              event_id: eventId,
-              simulated: true,
-              payment_link_id: linkId,
-              amount_paid: linkEntity?.amount_paid || opp.amount_paise,
-            }),
+          const reconResult = await AuthoritativeReconciler.reconcileOpportunity(oppId, {
+            providerPayloadOverride: linkEntity,
+            actor: 'simulated_webhook',
           });
 
           res.status(200).json({
             received: true,
-            reconciled: true,
+            reconciled: reconResult.is_recovered,
             simulated: true,
-            status: 'recovered',
+            status: reconResult.new_opportunity_status,
+            idempotent: reconResult.is_idempotent_no_op,
             opportunity_id: oppId,
+            ledger_entry_hash: reconResult.ledger_entry_hash,
           });
           return;
         }
@@ -391,6 +338,19 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
       }
 
       const paymentId: string = paymentEntity.id || `pay_sim_${Date.now()}`;
+
+      if (eventId) {
+        const existingByEvent = getOpportunityByRazorpayEventId(eventId);
+        if (existingByEvent) {
+          res.status(200).json({
+            received: true,
+            deduplicated: true,
+            simulated: true,
+            opportunity_id: existingByEvent.id,
+          });
+          return;
+        }
+      }
 
       const existingByPaymentId = getOpportunityById(paymentId);
       if (existingByPaymentId) {

@@ -19,7 +19,9 @@ dashboardRouter.get('/summary', async (req: Request, res: Response) => {
 
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
-    const allOpps = getAllOpportunities(tenantId);
+    const envQuery = req.query.environment as string | undefined;
+    const environment = (envQuery === 'live' || envQuery === 'test') ? envQuery : undefined;
+    const allOpps = getAllOpportunities(tenantId, environment);
     const decisions = getAllAllocationDecisions(tenantId);
     const executionRecords = getAllExecutionRecords(tenantId);
 
@@ -44,10 +46,10 @@ dashboardRouter.get('/summary', async (req: Request, res: Response) => {
     const shadowPriceDecision = decisions.find((d) => d.shadow_price_paise_at_decision > 0);
     const shadow_price_paise = shadowPriceDecision ? shadowPriceDecision.shadow_price_paise_at_decision : 0;
 
-    // 5. Capacity
+    // 5. Capacity (Active in-flight & batch allocation)
     const capacity_limit = Number(process.env.MAX_LINKS_PER_RUN) || 5;
     const capacity_used = allOpps.filter(
-      (o) => o.status === 'executing' || o.status === 'recovered' || o.status === 'allocated' || o.status === 'authorized'
+      (o) => o.status === 'executing' || o.status === 'allocated' || o.status === 'authorized'
     ).length;
 
     // 6. Status distribution

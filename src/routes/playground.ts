@@ -34,9 +34,19 @@ playgroundRouter.get(
       const tenantContext = req.tenantContext!;
       const tenantId = tenantContext.tenantId;
 
-      // Determine active key from env or credentials
-      let keyId = process.env.RAZORPAY_KEY_ID || '';
-      let env: 'live' | 'test' = keyId.startsWith('rzp_live_') ? 'live' : 'test';
+      // Check tenant environment from database
+      let env: 'live' | 'test' = 'test';
+      try {
+        const tenantRow = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;').get(tenantId) as any;
+        if (tenantRow?.environment === 'live') {
+          env = 'live';
+        }
+      } catch {}
+
+      // Determine active key from env or credentials based on environment
+      let keyId = env === 'live' 
+        ? (process.env.RAZORPAY_LIVE_KEY_ID || process.env.RAZORPAY_KEY_ID || '')
+        : (process.env.RAZORPAY_KEY_ID || '');
 
       // Check per-tenant credentials if available
       try {
@@ -81,7 +91,15 @@ playgroundRouter.post(
       const { amount_paise, currency = 'INR', description = 'ULTRON Recovery Playground Test' } = req.body;
 
       const amount = Number(amount_paise) || 100; // Default ₹1.00 safe micropayment
-      const env = (process.env.RAZORPAY_KEY_ID || '').startsWith('rzp_live_') ? 'live' : 'test';
+      let env: 'test' | 'live' = req.body.environment || 'test';
+      if (!req.body.environment) {
+        try {
+          const tRow = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;').get(tenantId) as any;
+          if (tRow?.environment === 'live') {
+            env = 'live';
+          }
+        } catch {}
+      }
 
       const tenantClient = await RazorpayClientPool.getClient(tenantId, env);
 

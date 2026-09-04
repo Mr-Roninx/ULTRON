@@ -38,6 +38,23 @@ export interface SupabaseApiKeyRecord {
   created_at?: string;
 }
 
+let supabaseStoreBrokenUntil = 0;
+let lastSupabaseStoreWarn = 0;
+
+function isStoreCircuitOpen(): boolean {
+  return Date.now() < supabaseStoreBrokenUntil;
+}
+
+function tripStoreCircuit(context: string, err: any): void {
+  const now = Date.now();
+  supabaseStoreBrokenUntil = now + 60000;
+  if (now - lastSupabaseStoreWarn > 30000) {
+    lastSupabaseStoreWarn = now;
+    const msg = (err?.message || String(err)).slice(0, 120).replace(/\s+/g, ' ');
+    console.warn(`⚠️ [SUPABASE STORE] Circuit opened for 60s (${context}): ${msg}`);
+  }
+}
+
 /**
  * Enterprise Supabase Permanent Persistence Engine for ULTRON
  * Guarantees permanent persistence and seamless retrieval of API keys and Razorpay credentials.
@@ -47,6 +64,7 @@ export class SupabaseStore {
    * Ensures tenant exists in Supabase to satisfy foreign key constraints.
    */
   public static async ensureTenant(tenantId: string, name?: string, environment: 'test' | 'live' = 'test'): Promise<void> {
+    if (isStoreCircuitOpen()) return;
     try {
       const sb = getSupabaseClient();
       const slug = `slug_${tenantId.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -61,7 +79,7 @@ export class SupabaseStore {
         created_at: new Date().toISOString(),
       }, { onConflict: 'id' });
     } catch (err: any) {
-      console.warn(`⚠️ SupabaseStore: ensureTenant warning for ${tenantId}:`, err.message);
+      tripStoreCircuit('ensureTenant', err);
     }
   }
 
@@ -69,6 +87,7 @@ export class SupabaseStore {
    * Ensures default user exists in Supabase for foreign key constraints.
    */
   public static async ensureUser(userId: string, email: string = 'merchant@ultron.app'): Promise<void> {
+    if (isStoreCircuitOpen()) return;
     try {
       const sb = getSupabaseClient();
       await sb.from('users').upsert({
@@ -80,7 +99,7 @@ export class SupabaseStore {
         created_at: new Date().toISOString(),
       }, { onConflict: 'id' });
     } catch (err: any) {
-      console.warn(`⚠️ SupabaseStore: ensureUser warning for ${userId}:`, err.message);
+      tripStoreCircuit('ensureUser', err);
     }
   }
 
@@ -88,6 +107,7 @@ export class SupabaseStore {
    * Permanently saves encrypted credentials into Supabase.
    */
   public static async saveCredential(record: SupabaseCredentialRecord): Promise<boolean> {
+    if (isStoreCircuitOpen()) return false;
     try {
       await this.ensureTenant(record.tenant_id, undefined, record.environment);
       const sb = getSupabaseClient();
@@ -116,12 +136,12 @@ export class SupabaseStore {
       }, { onConflict: 'id' });
 
       if (error) {
-        console.warn(`⚠️ SupabaseStore.saveCredential warning:`, error.message);
+        tripStoreCircuit('saveCredential', error);
         return false;
       }
       return true;
     } catch (err: any) {
-      console.warn(`⚠️ SupabaseStore.saveCredential error:`, err.message);
+      tripStoreCircuit('saveCredential', err);
       return false;
     }
   }
@@ -130,6 +150,7 @@ export class SupabaseStore {
    * Fetches encrypted credential by reference from Supabase.
    */
   public static async fetchCredential(tenantId: string, credentialReference: string): Promise<SupabaseCredentialRecord | null> {
+    if (isStoreCircuitOpen()) return null;
     try {
       const sb = getSupabaseClient();
       const { data, error } = await sb
@@ -143,6 +164,7 @@ export class SupabaseStore {
       if (error || !data) return null;
       return data as SupabaseCredentialRecord;
     } catch (err: any) {
+      tripStoreCircuit('fetchCredential', err);
       return null;
     }
   }
@@ -151,6 +173,7 @@ export class SupabaseStore {
    * Lists all credentials for a given tenant from Supabase.
    */
   public static async listCredentials(tenantId: string): Promise<SupabaseCredentialRecord[]> {
+    if (isStoreCircuitOpen()) return [];
     try {
       const sb = getSupabaseClient();
       const { data, error } = await sb
@@ -160,7 +183,8 @@ export class SupabaseStore {
 
       if (error || !data) return [];
       return data as SupabaseCredentialRecord[];
-    } catch {
+    } catch (err: any) {
+      tripStoreCircuit('listCredentials', err);
       return [];
     }
   }
@@ -169,6 +193,7 @@ export class SupabaseStore {
    * Permanently saves an API key record into Supabase.
    */
   public static async saveApiKey(record: SupabaseApiKeyRecord): Promise<boolean> {
+    if (isStoreCircuitOpen()) return false;
     try {
       const userId = record.user_id || 'usr_1788258987540_9355d9c3';
       await this.ensureTenant(record.tenant_id);
@@ -190,12 +215,12 @@ export class SupabaseStore {
       }, { onConflict: 'id' });
 
       if (error) {
-        console.warn(`⚠️ SupabaseStore.saveApiKey warning:`, error.message);
+        tripStoreCircuit('saveApiKey', error);
         return false;
       }
       return true;
     } catch (err: any) {
-      console.warn(`⚠️ SupabaseStore.saveApiKey error:`, err.message);
+      tripStoreCircuit('saveApiKey', err);
       return false;
     }
   }
@@ -204,6 +229,7 @@ export class SupabaseStore {
    * Fetches an API key by hash or ID from Supabase.
    */
   public static async fetchApiKeyByHash(keyHash: string): Promise<SupabaseApiKeyRecord | null> {
+    if (isStoreCircuitOpen()) return null;
     try {
       const sb = getSupabaseClient();
       const { data, error } = await sb
@@ -216,7 +242,8 @@ export class SupabaseStore {
 
       if (error || !data) return null;
       return data as SupabaseApiKeyRecord;
-    } catch {
+    } catch (err: any) {
+      tripStoreCircuit('fetchApiKeyByHash', err);
       return null;
     }
   }
@@ -225,6 +252,7 @@ export class SupabaseStore {
    * Lists all API keys for a tenant from Supabase.
    */
   public static async listApiKeys(tenantId: string): Promise<SupabaseApiKeyRecord[]> {
+    if (isStoreCircuitOpen()) return [];
     try {
       const sb = getSupabaseClient();
       const { data, error } = await sb
@@ -234,7 +262,8 @@ export class SupabaseStore {
 
       if (error || !data) return [];
       return data as SupabaseApiKeyRecord[];
-    } catch {
+    } catch (err: any) {
+      tripStoreCircuit('listApiKeys', err);
       return [];
     }
   }
@@ -243,6 +272,7 @@ export class SupabaseStore {
    * Revokes an API key in Supabase.
    */
   public static async revokeApiKey(tenantId: string, keyId: string): Promise<boolean> {
+    if (isStoreCircuitOpen()) return false;
     try {
       const sb = getSupabaseClient();
       const { error } = await sb
@@ -252,7 +282,8 @@ export class SupabaseStore {
         .eq('id', keyId);
 
       return !error;
-    } catch {
+    } catch (err: any) {
+      tripStoreCircuit('revokeApiKey', err);
       return false;
     }
   }

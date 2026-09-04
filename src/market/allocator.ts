@@ -51,22 +51,27 @@ export interface MarketRunResult {
   budget_pacing_burn_rate?: number;
 }
 
-export function runMarketAllocation(options: { capacity?: number; opportunities?: RecoveryOpportunity[]; tenantId?: string } = {}): MarketRunResult {
-  // Resolve capacity: explicit > per-tenant DB > env var > default
+export function runMarketAllocation(options: { capacity?: number; opportunities?: RecoveryOpportunity[]; tenantId?: string; environment?: 'test' | 'live' } = {}): MarketRunResult {
+  // Resolve capacity and environment: explicit > per-tenant DB > env var > default
   let capacity = options.capacity;
-  if (capacity === undefined && options.tenantId) {
+  let env = options.environment;
+  if (options.tenantId) {
     try {
-      const stmt = db.prepare('SELECT capacity_limit FROM tenants WHERE id = ? LIMIT 1;');
-      const row = stmt.get(options.tenantId) as { capacity_limit: number } | undefined;
-      if (row?.capacity_limit) capacity = row.capacity_limit;
+      const stmt = db.prepare('SELECT capacity_limit, environment FROM tenants WHERE id = ? LIMIT 1;');
+      const row = stmt.get(options.tenantId) as { capacity_limit?: number; environment?: 'test' | 'live' } | undefined;
+      if (capacity === undefined && row?.capacity_limit) capacity = row.capacity_limit;
+      if (!env && row?.environment) env = row.environment;
     } catch { /* fallthrough to env var */ }
   }
   if (capacity === undefined) {
     capacity = Number(process.env.MAX_LINKS_PER_RUN) || 5;
   }
 
-  // Filter opportunities to tenant scope if provided
-  const allOpps = options.opportunities || getAllOpportunities(options.tenantId);
+  // Filter opportunities to tenant scope & environment, excluding terminal and in-flight states
+  const rawOpps = options.opportunities || getAllOpportunities(options.tenantId, env);
+  const allOpps = rawOpps.filter(
+    (opp) => opp.status !== 'recovered' && opp.status !== 'not_recovered' && opp.status !== 'executing'
+  );
 
   // 1. Fetch or compute economic scores for all opportunities
   const scoredItems: OpportunityWithScore[] = allOpps.map((opp) => {

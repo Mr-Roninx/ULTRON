@@ -15,6 +15,11 @@
 <br/>
 
 <p align="center">
+  <a href="https://ultron-power.vercel.app/dashboard" target="_blank"><img src="https://img.shields.io/badge/⚡_Live_Working_Website-ultron--power.vercel.app-00DC82?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Working Website" /></a>
+  <a href="https://ultron-power.vercel.app/showcase" target="_blank"><img src="https://img.shields.io/badge/🎨_Product_Showcase-Interactive_Demo-7928CA?style=for-the-badge&logo=next.js&logoColor=white" alt="Product Showcase" /></a>
+</p>
+
+<p align="center">
   <a href="#-architecture"><img src="https://img.shields.io/badge/Architecture-7_Stage_Pipeline-0d1117?style=for-the-badge&logo=buffer&logoColor=3b82f6" alt="Architecture" /></a>
   <a href="#-tech-stack"><img src="https://img.shields.io/badge/Stack-TypeScript_+_React_+_SQLite-0d1117?style=for-the-badge&logo=typescript&logoColor=3178C6" alt="Stack" /></a>
   <a href="#-getting-started"><img src="https://img.shields.io/badge/Razorpay-Test_Mode_Only-0d1117?style=for-the-badge&logo=razorpay&logoColor=528FF0" alt="Razorpay" /></a>
@@ -29,10 +34,15 @@
   <img src="https://img.shields.io/badge/Version-6.0.0-cyan?style=flat-square" alt="Version" />
 </p>
 
+<p align="center">
+  🌐 <strong>Real Working Website:</strong> <a href="https://ultron-power.vercel.app/dashboard" target="_blank"><strong>https://ultron-power.vercel.app/dashboard</strong></a>
+</p>
+
 ---
 
 ## 📋 Table of Contents
 
+- [🌐 Live Working Website](#-live-working-website)
 - [Why ULTRON Exists](#-why-ultron-exists)
 - [Core Philosophy](#-core-philosophy)
 - [Architecture](#-architecture)
@@ -50,6 +60,26 @@
 - [Docker Deployment](#-docker-deployment)
 - [Design Principles](#-design-principles)
 - [License](#-license)
+
+---
+
+## 🌐 Live Working Website
+
+Experience the live ULTRON autonomous recovery control plane running in production on Vercel:
+
+<div align="center">
+  <br/>
+  <a href="https://ultron-power.vercel.app/dashboard" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_LAUNCH_LIVE_DASHBOARD-ultron--power.vercel.app%2Fdashboard-00DC82?style=for-the-badge&logo=vercel&logoColor=white" alt="Launch Live Dashboard" />
+  </a>
+  <br/><br/>
+  <strong>🔗 Direct Dashboard URL:</strong> <a href="https://ultron-power.vercel.app/dashboard" target="_blank"><strong>https://ultron-power.vercel.app/dashboard</strong></a>
+  <br/>
+  <strong>🎨 Interactive Failure Lab & Showcase:</strong> <a href="https://ultron-power.vercel.app/showcase" target="_blank"><strong>https://ultron-power.vercel.app/showcase</strong></a>
+  <br/><br/>
+</div>
+
+> ⚡ **Cloud Deployment Note:** The live website connects to our cloud PostgreSQL instance, demonstrating real-time portfolio allocation, live economic shadow pricing, Bayesian calibration curves, and deterministic compliance verification without requiring local setup.
 
 ---
 
@@ -368,6 +398,26 @@ graph TD
 
 ---
 
+## ⚡ Real Money (Production) vs Sandbox (Test Mode)
+
+ULTRON provides strict, zero-leak isolation between **Test Sandbox** and **Real Money (Production)** execution modes, with a one-click dashboard switcher:
+
+| Dimension | 🧪 Test Mode (Sandbox) | ⚡ Production Mode (Real Money) |
+|---|---|---|
+| **Credentials** | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (`rzp_test_...`) | `RAZORPAY_LIVE_KEY_ID` / `RAZORPAY_LIVE_KEY_SECRET` (`rzp_live_...`) or encrypted per-tenant AES-256 vault |
+| **Payment Links** | Real Razorpay Test payment links (simulated settlement) | Real Razorpay Live payment links (actual customer money recovery) |
+| **Data Partitioning** | `environment = 'test'` (scoped opportunities & ledger) | `environment = 'live'` (isolated real money pipeline) |
+| **Allocation & Authority** | Scoped strictly to sandbox opportunities | Scoped strictly to production opportunities |
+| **Safety Guardrails** | Standard rate limits | High-visibility emerald badge, confirmation modal, strict fail-closed credentials |
+| **Client Pool Isolation** | Resolves test SDK client | Strictly rejects if live keys are absent — **zero test credential leak** |
+
+### Switching Environments in Dashboard
+Operators and merchants can toggle modes instantly via the top navigation bar:
+- **`🧪 Test`**: Simulates failed payments, tests webhooks, and evaluates recovery without financial risk.
+- **`⚡ Live`**: Activates real-money recovery mode using live Razorpay credentials and real customer payment links.
+
+---
+
 ## 🛠 Tech Stack
 
 <table>
@@ -414,7 +464,7 @@ graph TD
 <tr>
 <td>Payments</td>
 <td><img src="https://img.shields.io/badge/Razorpay-528FF0?style=flat-square&logo=razorpay&logoColor=white" /></td>
-<td>Official Node SDK — Test Mode keys only</td>
+<td>Official Node SDK — Seamless Test Sandbox & Real Money Production</td>
 </tr>
 <tr>
 <td>Messaging</td>
@@ -553,7 +603,8 @@ ultron/
 │       ├── dashboard/            #   Main operations dashboard
 │       │   ├── page.tsx          #   Dashboard home (32KB)
 │       │   ├── layout.tsx        #   Navigation layout
-│       │   └── settings/         #   Configuration panels
+│       │   ├── settings/         #   Configuration panels (API keys, integrations, team)
+│       │   └── setup/            #   Merchant setup & onboarding walkthrough
 │       ├── login/                #   Authentication UI
 │       ├── signup/               #   Merchant onboarding
 │       ├── showcase/             #   Product showcase page
@@ -579,74 +630,141 @@ ultron/
 
 ## 🚀 Getting Started
 
+You can test and explore ULTRON in two ways:
+1. **Instantly via the Live Cloud Dashboard:** Visit [**https://ultron-power.vercel.app/dashboard**](https://ultron-power.vercel.app/dashboard) (no setup required).
+2. **Locally on your machine:** Follow the quick 5-step guide below to pull, execute, and run tests.
+
+---
+
 ### Prerequisites
 
-- **Node.js** ≥ 18
-- **npm** ≥ 9
-- **Razorpay Test Mode** account with API keys
+- **Node.js** ≥ 18.x
+- **npm** ≥ 9.x
+- **Razorpay Test Mode** keys ([sign up for free test keys](https://dashboard.razorpay.com))
+- *Note:* SQLite is file-based and embedded (`ultron.db`) — **zero database server setup is required**.
 
-### 1. Clone and Install
+---
 
+### Step 1: Pull or Clone the Codebase
+
+#### Fresh Installation:
 ```bash
 git clone https://github.com/Mr-Roninx/ULTRON.git
 cd ULTRON
+```
 
-# Backend dependencies
+#### If you already have the repository:
+```bash
+git pull origin main
+```
+
+#### Install All Dependencies:
+```bash
+# 1. Install Backend Dependencies
 npm install
 
-# Frontend dependencies
+# 2. Install Frontend Next.js Dashboard Dependencies
 cd frontend && npm install && cd ..
 ```
 
-### 2. Configure Environment
+---
+
+### Step 2: Configure Environment Variables
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials:
+Edit `.env` with your Razorpay Test Mode credentials (or keep defaults for synthetic tests):
 
 ```env
-# Required
+# Required for execution & authentication
 JWT_SECRET=your_super_secret_jwt_key
-RAZORPAY_KEY_ID=rzp_test_xxxxx
-RAZORPAY_KEY_SECRET=your_secret
-RAZORPAY_WEBHOOK_SECRET=rzp_whsec_xxxxx
+AES_MASTER_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+RAZORPAY_KEY_ID=rzp_test_YOUR_KEY_ID
+RAZORPAY_KEY_SECRET=YOUR_KEY_SECRET
+RAZORPAY_WEBHOOK_SECRET=rzp_whsec_YOUR_SECRET
 
-# Optional (enhances functionality)
-NVIDIA_API_KEY=nvapi-xxxxx          # LLM explanations
-RESEND_API_KEY=re_xxxxx             # Email notifications
-DATABASE_URL=postgresql://...       # Supabase cloud sync
+# Portfolio Configuration
+PORT=3001
+MAX_LINKS_PER_RUN=5
+
+# Optional Integrations
+APP_URL=https://ultron-power.vercel.app
+NVIDIA_API_KEY=nvapi-YOUR_KEY        # Natural language decision explainer
+RESEND_API_KEY=re_YOUR_KEY           # Email recovery notifications
+DATABASE_URL=postgresql://...        # Optional Supabase cloud synchronization
 ```
 
-### 3. Initialize Database & Seed
+---
+
+### Step 3: Initialize Database & Seed Scenarios
+
+ULTRON uses an embedded SQLite database (`ultron.db`) with WAL mode enabled. Initialize the schema and seed the canonical test scenarios:
 
 ```bash
-# Auto-migrates on server start, or manually:
+# Apply schema migrations
 npm run db:migrate
 
-# Seed synthetic test scenarios
+# Seed synthetic test scenarios (hard declines, soft declines, and holdout groups)
 npm run seed
 ```
 
-### 4. Start Development Servers
+---
 
+### Step 4: Execute & Run the Application
+
+Start the local development stack:
+
+#### Terminal 1 — Backend API & 24/7 Autonomous Recovery Daemon:
 ```bash
-# Terminal 1: Backend API (port 3001)
 npm run dev
+```
+*The backend starts at `http://localhost:3001` and automatically starts the 24/7 autonomous recovery daemon.*
 
-# Terminal 2: Frontend Dashboard (port 3000)
+#### Terminal 2 — Next.js Operations Dashboard:
+```bash
 cd frontend && npm run dev
 ```
+*The frontend dashboard starts at `http://localhost:3000`.*
 
-### 5. Verify Installation
+#### Interactive Test Endpoints & Live Views:
+- 📊 **Local Dashboard:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+- 🛒 **Demo Merchant Storefront:** [http://localhost:3001/demo-store](http://localhost:3001/demo-store) (test real failure interception)
+- 🌐 **Live Production Cloud Dashboard:** [https://ultron-power.vercel.app/dashboard](https://ultron-power.vercel.app/dashboard)
+- 🎨 **Live Product Showcase:** [https://ultron-power.vercel.app/showcase](https://ultron-power.vercel.app/showcase)
+
+---
+
+### Step 5: Run Automated Tests
+
+ULTRON ships with **164 test & verification scripts**. Verify your installation using the commands below:
 
 ```bash
-# Health check
+# 1. Quick System Health & Dependency Probe
 curl http://localhost:3001/health
+curl http://localhost:3001/health/deep
 
-# Run full pipeline test
+# 2. Master V6 Acceptance Test Battery (26 suites, 100% pass)
+npm test
+
+# 3. Complete Forensic Truth Verification
+npm run verify:v6-truth
+
+# 4. End-to-End Webhook & Recovery Pipeline Integration
 npm run test:integration
+
+# 5. Stage-by-Stage Module Tests
+npm run test:perception        # Stage 2: Decline taxonomy classification
+npm run test:economics         # Stage 3: Bayesian IVEN calculation
+npm run test:market            # Stage 4: Portfolio knapsack & shadow price
+npm run test:authority         # Stage 5: Deterministic compliance checks
+npm run test:execution         # Stage 6: Payment link dispatch & idempotency
+npm run test:truth             # Stage 7: Double-entry ledger & reconciliation
+
+# 6. AI Agent System & Stress Tests
+npm run test:agent             # Autonomous multi-agent behavior tests
+npm run stress:all             # System-wide concurrency & load stress test
 ```
 
 ---
@@ -656,18 +774,24 @@ npm run test:integration
 | Variable | Required | Description |
 |---|:---:|---|
 | `JWT_SECRET` | ✅ | Secret for JWT authentication tokens |
-| `AES_MASTER_KEY` | ✅ | 256-bit hex key for credential encryption |
+| `AES_MASTER_KEY` | ✅ | 256-bit hex key for credential encryption in vault |
 | `RAZORPAY_KEY_ID` | ✅ | Razorpay Test Mode Key ID |
 | `RAZORPAY_KEY_SECRET` | ✅ | Razorpay Test Mode Key Secret |
-| `RAZORPAY_WEBHOOK_SECRET` | ✅ | Razorpay webhook signature secret |
+| `RAZORPAY_WEBHOOK_SECRET` | ✅ | Razorpay webhook signature verification secret |
 | `PORT` | ❌ | Server port (default: `3001`) |
 | `MAX_LINKS_PER_RUN` | ❌ | Payment links per execution batch (default: `5`) |
-| `DATABASE_URL` | ❌ | PostgreSQL connection string for Supabase |
+| `DATABASE_URL` | ❌ | PostgreSQL connection string for Supabase / remote sync |
+| `DATABASE_POOL_SIZE` | ❌ | Maximum connection pool size (default: `15`) |
 | `REDIS_URL` | ❌ | Redis connection string (default: in-memory fallback) |
+| `NVIDIA_BASE_URL` | ❌ | NVIDIA NIM base endpoint (default: `https://integrate.api.nvidia.com/v1`) |
 | `NVIDIA_API_KEY` | ❌ | NVIDIA NIM API key for LLM explanations |
-| `RESEND_API_KEY` | ❌ | Resend API key for transactional email |
+| `LLM_MODEL` | ❌ | NVIDIA LLM model (default: `nvidia/nemotron-3.5-lightning-30b-a3b`) |
+| `DISABLE_LLM_SCORING_INFLUENCE` | ❌ | Pure deterministic scoring mode when `true` (default: `false`) |
+| `RESEND_API_KEY` | ❌ | Resend API key for transactional email recovery |
+| `RESEND_FROM_EMAIL` | ❌ | Sender email address for Resend notifications |
+| `APP_URL` | ❌ | Frontend web application URL for CORS and links |
 | `SUPABASE_URL` | ❌ | Supabase project URL |
-| `SUPABASE_KEY` | ❌ | Supabase anon/service key |
+| `SUPABASE_KEY` | ❌ | Supabase service/anon key |
 
 > ⚠️ **Never commit `.env` to version control.** The `.gitignore` already excludes it.
 
@@ -675,47 +799,70 @@ npm run test:integration
 
 ## 📡 API Reference
 
-### Authentication
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/v1/auth/signup` | `POST` | Merchant registration & onboarding |
-| `/v1/auth/login` | `POST` | JWT token authentication |
-
-### Core Pipeline
+### Authentication & Merchant Onboarding
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/webhooks/razorpay/:tenant_id` | `POST` | HMAC | Real webhook ingestion |
-| `/internal/simulate-webhook/:tenant_id` | `POST` | HMAC | Simulation webhook (source=synthetic) |
-| `/v1/events` | `POST` | API Key | Canonical event ingestion gateway |
-| `/opportunities` | `GET` | JWT | List all recovery opportunities |
-| `/market/run` | `POST` | JWT+Admin | Execute market allocation round |
-| `/authority/evaluate/:id` | `POST` | JWT | Run authority checks on opportunity |
-| `/execution/batch` | `POST` | JWT+Admin | Execute authorized batch |
+| `/v1/auth/signup` | `POST` | Public | Merchant registration & tenant workspace initialization |
+| `/v1/auth/login` | `POST` | Public | Email/password JWT token authentication |
+| `/v1/auth/send-otp` | `POST` | Public | Dispatch one-time authentication passcode |
+| `/v1/auth/verify-otp` | `POST` | Public | Verify OTP code and issue session token |
+| `/v1/auth/demo-login` | `POST` | Public | Instant demo merchant session generator |
+| `/v1/auth/me` | `GET` | JWT | Current authenticated merchant & tenant metadata |
+| `/v1/auth/tenant` | `PATCH` | JWT | Update merchant capacity limit and environment |
+
+### Core Pipeline & Recovery Operations
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/webhooks/razorpay/:tenant_id` | `POST` | HMAC | Ingest real Razorpay payment failure/success webhooks |
+| `/internal/simulate-webhook/:tenant_id` | `POST` | HMAC | Ingest synthetic test scenarios (unconditionally source=`synthetic`) |
+| `/v1/events` | `POST` | API Key | Universal canonical event ingestion gateway (Odoo/external) |
+| `/v1/events/ping` | `POST` | API Key / JWT | Web application heartbeat & origin connection handshake |
+| `/opportunities` | `GET` | JWT | List all recovery opportunities for current merchant |
+| `/opportunities/score-all` | `POST` | JWT | Run batch economic IVEN scoring across all opportunities |
+| `/opportunities/:id/score` | `GET` | JWT | Inspect IVEN, cost breakdown, and model-estimated probabilities |
+| `/opportunities/:id/authority` | `GET` | JWT | Check 5-stage deterministic compliance checks for opportunity |
+| `/opportunities/:id/explain` | `GET/POST` | JWT | LLM natural language narrative explaining recovery decision |
+| `/market/run` | `GET/POST` | JWT+Operator | Run greedy portfolio allocation under capacity limit |
+| `/authority/run` | `GET/POST` | JWT+Operator | Run batch compliance gate across all allocated opportunities |
+| `/authority/evaluate/:id` | `GET/POST` | JWT | Run compliance checks and return verdict on specific opportunity |
+| `/authority/kill-switch` | `GET/POST` | JWT+Admin | Check status or toggle global/tenant emergency kill switch |
+| `/execution/run` | `POST` | JWT+Operator | Execute batch payment link creation for authorized opportunities |
+| `/execution/batch` | `POST` | JWT+Operator | Alias for `/execution/run` batch dispatch |
+| `/execution/opportunity/:id` | `POST` | JWT+Operator | Execute payment link creation for a single authorized opportunity |
+| `/execution/records` | `GET` | JWT | List execution records and created payment links |
 
 ### Dashboard & Observability
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/dashboard/summary` | `GET` | JWT | Full dashboard metrics |
-| `/health` | `GET` | — | System health + pool metrics |
-| `/health/live` | `GET` | — | Kubernetes liveness probe |
-| `/health/ready` | `GET` | — | Kubernetes readiness probe |
-| `/health/deep` | `GET` | — | Deep dependency check |
-| `/metrics` | `GET` | — | Prometheus metrics export |
-| `/audit/records` | `GET` | JWT | Audit trail records |
+| `/dashboard/summary` | `GET` | JWT | Real-time recovery metrics, shadow price, anti-blast savings |
+| `/dashboard/analytics` | `GET` | JWT | Bank-by-bank failure rates, gross causal lift, budget pacing state |
+| `/dashboard/reconcile-poll` | `POST` | JWT | Trigger manual reconciliation against provider truth |
+| `/health` | `GET` | Public | System status, database pool metrics, and cache telemetry |
+| `/health/live` | `GET` | Public | Kubernetes liveness probe |
+| `/health/ready` | `GET` | Public | Kubernetes readiness probe |
+| `/health/deep` | `GET` | Public | Deep dependency check (SQLite, PostgreSQL, Redis, Razorpay) |
+| `/metrics` | `GET` | Public | Prometheus exposition format metrics scrape endpoint |
+| `/audit/records` | `GET` | JWT | Immutable audit trail logs with actor, action, and timestamp |
 
-### Enterprise Features
+### Enterprise Features & AI Agent Daemon
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/v1/api-keys` | `POST/GET` | JWT+Admin | API key management |
-| `/v1/integrations` | `GET/POST` | JWT | Provider integration management |
-| `/v1/notifications` | `GET` | JWT | Recovery activity notifications |
-| `/v1/webhooks/queue` | `GET/POST` | JWT | Webhook delivery queue & replay |
-| `/v1/playground` | `POST` | JWT | Recovery simulation playground |
-| `/agents/status` | `GET` | JWT+Admin | AI agent daemon status |
+| `/v1/api-keys` | `GET/POST` | JWT+Admin | Generate and manage scoped API keys (`events:write`, etc.) |
+| `/v1/integrations` | `GET/POST` | JWT | Multi-provider configuration and discovery |
+| `/v1/notifications` | `GET/POST` | JWT | Omnichannel recovery alerts (WhatsApp, Email) |
+| `/v1/webhooks/queue` | `GET/POST` | JWT | Webhook delivery queue telemetry and dead-letter replay |
+| `/v1/playground` | `GET/POST` | JWT | Interactive recovery sandbox & counterfactual lift simulator |
+| `/agents/status` | `GET` | JWT+Admin | Check 24/7 autonomous recovery daemon state and sweep counts |
+| `/agents/daemon/status` | `GET` | JWT+Admin | Full daemon status with active interval and capacity settings |
+| `/agents/daemon/start` | `POST` | JWT+Admin | Start 24/7 background autonomous sweep loop |
+| `/agents/daemon/stop` | `POST` | JWT+Admin | Pause 24/7 background autonomous sweep loop |
+| `/agents/daemon/sweep` | `POST` | JWT+Admin | Trigger an immediate manual recovery sweep cycle |
+| `/agents/tools` | `GET` | JWT+Admin | Inspect tool registry and permission controls |
+| `/agents/runs` | `GET` | JWT+Admin | List agent mission traces and replanning telemetry |
 
 ---
 
@@ -726,13 +873,14 @@ All records use these exact field names — every feature reads and writes again
 ```mermaid
 erDiagram
     RecoveryOpportunity ||--|| Score : "1:1"
-    RecoveryOpportunity ||--|{ AllocationDecision : "1:N"
-    RecoveryOpportunity ||--|{ AuthorityCheck : "N:1"
+    RecoveryOpportunity ||--|| AllocationDecision : "1:1"
+    RecoveryOpportunity ||--|{ AuthorityCheck : "1:N"
     RecoveryOpportunity ||--o| ExecutionRecord : "0..1"
     RecoveryOpportunity ||--|{ LedgerEntry : "1:N"
 
     RecoveryOpportunity {
         string id PK
+        string tenant_id
         enum source "real|synthetic"
         int amount_paise
         string currency
@@ -742,7 +890,8 @@ erDiagram
         string customer_id
         float customer_trust_score
         string created_at
-        enum status "pending|scored|allocated|..."
+        enum status "pending|scored|allocated|authorized|deferred|blocked|abstained|executing|recovered|not_recovered"
+        string razorpay_event_id
     }
 
     Score {
@@ -841,41 +990,47 @@ erDiagram
 
 ## 🧪 Testing
 
-ULTRON ships with **164 test files** across multiple test suites:
+ULTRON ships with **164 test & verification scripts** (79 structured test suites across 7 test directories in `tests/` + 85 automated validation and scenario scripts in `scripts/`):
 
 ```bash
-# Run all V6 phase acceptance tests
-npm test
+# Run all 26 V6 phase acceptance tests
+npm test                       # Alias for npm run test:v6-all
 
-# Individual module tests
-npm run test:perception        # Decline taxonomy classification
-npm run test:economics         # IVEN computation & Bayesian engine
-npm run test:market            # Portfolio allocation & shadow pricing
-npm run test:authority         # Compliance gate & kill switch
-npm run test:execution         # Payment link creation & idempotency
-npm run test:truth             # State consistency & reconciliation
+# Comprehensive forensic truth verification
+npm run verify:v6-truth        # Verifies 100% truth consistency across all deliverables
+npm run verify:test-counts     # Verifies cross-file test count consistency
+
+# Individual pipeline stage tests
+npm run test:perception        # Decline taxonomy classification (Stage 2)
+npm run test:economics         # IVEN computation & Bayesian engine (Stage 3)
+npm run test:market            # Portfolio allocation & shadow pricing (Stage 4)
+npm run test:authority         # Compliance gate & kill switch (Stage 5)
+npm run test:execution         # Payment link creation & idempotency (Stage 6)
+npm run test:truth             # State consistency & reconciliation (Stage 7)
 
 # Advanced test suites
-npm run test:agent             # AI agent behavior tests
-npm run test:core              # Core hardening tests
-npm run test:infra             # Infrastructure resilience tests
-npm run test:integration       # End-to-end integration
-npm run stress:all             # Comprehensive stress testing
-npm run test:black-box         # Black-box acceptance criteria
+npm run test:agent             # AI agent behavior & specialist safety tests
+npm run test:core              # Core hardening & edge-case stress tests
+npm run test:infra             # Infrastructure resilience & pool tests
+npm run test:integration       # End-to-end integration & pipeline flow
+npm run stress:all             # Comprehensive system-wide stress testing
+npm run test:black-box         # Black-box acceptance criteria verification
 
-# V6 Phase-specific tests
-npm run test:v6-phase4         # Tenancy & Auth
-npm run test:v6-phase5         # Event Connector
-npm run test:v6-phase6         # Provider Adapter
-npm run test:v6-phase7         # Ledger & Reconciliation
-npm run test:v6-phase8         # Economic Engine
-npm run test:v6-phase9         # Action Authority
-npm run test:v6-phase10        # Execution Layer
-npm run test:v6-phase11        # Agent & Copilot
-npm run test:v6-phase12        # Simulation Harness
+# V6 Phase-specific suites
+npm run test:v6-phase4         # Tenancy & Auth Platform
+npm run test:v6-phase5         # Canonical Event Connector
+npm run test:v6-phase6         # Razorpay Provider Adapter
+npm run test:v6-phase7         # Unified Ledger & Reconciliation
+npm run test:v6-phase8         # Economic Engine & Bayesian Calibration
+npm run test:v6-phase9         # Action Authority & Multi-Level Kill Switch
+npm run test:v6-phase10        # Execution Layer & Token Bucket Limiter
+npm run test:v6-phase11        # Specialist Agents & Human-in-the-Loop Review
+npm run test:v6-phase12        # Simulation Harness & Synthetic Generator
 
-# Causal experiments
-npm run experiments:causal     # Intervention effectiveness analysis
+# Counterfactual and agent demos
+npm run experiments:causal     # Intervention effectiveness & causal lift
+npm run demo:agent             # Autonomous multi-agent recovery demo
+npm run demo:real-recovery     # Real test mode payment recovery verification
 ```
 
 ---
@@ -939,4 +1094,6 @@ docker compose up -d
   <sub>Built with 🧠 economic reasoning and ⚡ autonomous execution</sub>
   <br/>
   <sub>All monetary values in paise (₹) · Razorpay Test Mode Only</sub>
+  <br/>
+  <sub>🌐 Production Dashboard: <a href="https://ultron-power.vercel.app/dashboard" target="_blank">https://ultron-power.vercel.app/dashboard</a></sub>
 </p>

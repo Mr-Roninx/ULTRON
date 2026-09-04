@@ -13,6 +13,14 @@ export function getSupabaseClient(): SupabaseClient {
         persistSession: false,
         autoRefreshToken: false,
       },
+      global: {
+        fetch: (url: any, init: any) => {
+          return fetch(url, {
+            ...init,
+            signal: init?.signal || AbortSignal.timeout(3500),
+          });
+        },
+      },
     });
   }
   return supabaseClientInstance;

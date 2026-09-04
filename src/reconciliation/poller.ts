@@ -1,10 +1,8 @@
 import {
   getAllOpportunities,
   getExecutionRecordByOpportunityId,
-  updateOpportunityStatus,
-  insertLedgerEntry,
 } from '../db/database.js';
-import { rzpClient } from '../execution/executor.js';
+import { AuthoritativeReconciler } from './authoritative_reconciler.js';
 
 /**
  * RECONCILIATION DESIGN NOTE:
@@ -51,57 +49,27 @@ export async function pollAndReconcile(): Promise<PollerRunResult> {
     }
 
     try {
-      // Direct API query to Razorpay
-      const plink: any = await rzpClient.paymentLink.fetch(record.razorpay_payment_link_id);
-      const linkStatus = plink?.status; // 'created', 'paid', 'expired', 'cancelled', 'partially_paid'
+      const reconResult = await AuthoritativeReconciler.reconcileOpportunity(opp.id, {
+        actor: 'reconciliation_poller',
+      });
 
-      if (linkStatus === 'paid') {
-        updateOpportunityStatus(opp.id, 'recovered');
-        const now = new Date().toISOString();
-        insertLedgerEntry({
-          id: `led_poll_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      if (reconResult.status === 'UNKNOWN' && reconResult.error) {
+        failed_count++;
+        items.push({
           opportunity_id: opp.id,
-          event_type: 'recovered',
-          amount_paise: opp.amount_paise,
-          timestamp: now,
-          raw_payload_ref: JSON.stringify({
-            source: 'reconciliation_poller',
-            razorpay_payment_link_id: record.razorpay_payment_link_id,
-            amount_paid: plink?.amount_paid || opp.amount_paise,
-            payment_id: plink?.payments?.[0]?.payment_id,
-          }),
+          payment_link_id: record.razorpay_payment_link_id,
+          previous_status: reconResult.previous_opportunity_status,
+          new_status: reconResult.new_opportunity_status,
+          reconciled: false,
+          error: reconResult.error,
         });
-
+      } else if (reconResult.new_opportunity_status === 'recovered' || reconResult.new_opportunity_status === 'not_recovered') {
         reconciled_count++;
         items.push({
           opportunity_id: opp.id,
           payment_link_id: record.razorpay_payment_link_id,
-          previous_status: opp.status,
-          new_status: 'recovered',
-          reconciled: true,
-        });
-      } else if (linkStatus === 'expired' || linkStatus === 'cancelled') {
-        updateOpportunityStatus(opp.id, 'not_recovered');
-        const now = new Date().toISOString();
-        insertLedgerEntry({
-          id: `led_poll_exp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          opportunity_id: opp.id,
-          event_type: 'not_recovered',
-          amount_paise: opp.amount_paise,
-          timestamp: now,
-          raw_payload_ref: JSON.stringify({
-            source: 'reconciliation_poller',
-            razorpay_payment_link_id: record.razorpay_payment_link_id,
-            link_status: linkStatus,
-          }),
-        });
-
-        reconciled_count++;
-        items.push({
-          opportunity_id: opp.id,
-          payment_link_id: record.razorpay_payment_link_id,
-          previous_status: opp.status,
-          new_status: 'not_recovered',
+          previous_status: reconResult.previous_opportunity_status,
+          new_status: reconResult.new_opportunity_status,
           reconciled: true,
         });
       } else {
@@ -109,8 +77,8 @@ export async function pollAndReconcile(): Promise<PollerRunResult> {
         items.push({
           opportunity_id: opp.id,
           payment_link_id: record.razorpay_payment_link_id,
-          previous_status: opp.status,
-          new_status: opp.status,
+          previous_status: reconResult.previous_opportunity_status,
+          new_status: reconResult.new_opportunity_status,
           reconciled: false,
         });
       }

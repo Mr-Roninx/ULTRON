@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Shield, LayoutDashboard, Settings, Power, LogOut, ChevronRight, Sparkles,
-  Bell, CheckCircle2, CheckCheck, Search, HelpCircle
+  Bell, CheckCircle2, CheckCheck, Search, HelpCircle, Zap
 } from "lucide-react";
 import { useAuth, api } from "../../lib/auth";
 
@@ -27,11 +27,14 @@ const NAV_ITEMS = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { user, tenant, token, loading, logout } = useAuth();
+  const { user, tenant, token, loading, logout, switchEnvironment } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [switchingEnv, setSwitchingEnv] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  const isLive = tenant?.environment === "live";
 
   useEffect(() => {
     setMounted(true);
@@ -298,16 +301,100 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* Right Header Controls */}
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {/* Live Gateway Indicator */}
-            <div style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "4px 10px", borderRadius: 16,
-              background: "var(--google-green-light)", border: "1px solid #ceead6"
-            }}>
-              <div className="status-dot active" />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--google-green-hover)" }}>
-                Razorpay Test Mode (Live)
-              </span>
+            {/* Interactive Test vs Production Mode Switcher */}
+            <div
+              id="environment-switcher"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: isLive ? "rgba(19, 115, 51, 0.08)" : "var(--bg-hover)",
+                borderRadius: 24,
+                padding: "3px 4px",
+                border: isLive ? "1px solid #a8dab5" : "1px solid var(--border)",
+                gap: 3,
+                transition: "all 0.25s ease",
+              }}
+            >
+              {/* Test Sandbox Button */}
+              <button
+                id="env-btn-test"
+                type="button"
+                onClick={async () => {
+                  if (!isLive || switchingEnv) return;
+                  setSwitchingEnv(true);
+                  await switchEnvironment("test");
+                  setSwitchingEnv(false);
+                }}
+                disabled={switchingEnv}
+                title="Switch to Test Sandbox Mode (Simulated transactions & safe testing)"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 12px",
+                  borderRadius: 20,
+                  border: "none",
+                  cursor: isLive ? "pointer" : "default",
+                  background: !isLive ? "#ffffff" : "transparent",
+                  color: !isLive ? "#1a73e8" : "var(--text-secondary)",
+                  fontSize: 12,
+                  fontWeight: !isLive ? 700 : 500,
+                  boxShadow: !isLive ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                <span>🧪</span>
+                <span>Test Sandbox</span>
+                {!isLive && (
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%", background: "#1a73e8", display: "inline-block"
+                  }} />
+                )}
+              </button>
+
+              {/* Production Button */}
+              <button
+                id="env-btn-prod"
+                type="button"
+                onClick={async () => {
+                  if (isLive || switchingEnv) return;
+                  const confirmSwitch = window.confirm(
+                    "⚡ Switch to Production Mode (Real Money)?\n\n" +
+                    "In Production Mode, all recovery payment links will be created via official Razorpay Live credentials and real money will be charged to customers.\n\n" +
+                    "Ensure your live credentials (rzp_live_...) are connected in Settings → Integrations."
+                  );
+                  if (!confirmSwitch) return;
+                  setSwitchingEnv(true);
+                  await switchEnvironment("live");
+                  setSwitchingEnv(false);
+                }}
+                disabled={switchingEnv}
+                title="Switch to Production Mode (Real money recovery via live Razorpay account)"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 13px",
+                  borderRadius: 20,
+                  border: "none",
+                  cursor: !isLive ? "pointer" : "default",
+                  background: isLive ? "#137333" : "transparent",
+                  color: isLive ? "#ffffff" : "var(--text-secondary)",
+                  fontSize: 12,
+                  fontWeight: isLive ? 700 : 500,
+                  boxShadow: isLive ? "0 1px 4px rgba(19, 115, 51, 0.35)" : "none",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                <Zap size={13} color={isLive ? "#ffffff" : "var(--text-secondary)"} />
+                <span>Production (Real Money)</span>
+                {isLive && (
+                  <span style={{
+                    width: 7, height: 7, borderRadius: "50%", background: "#a8dab5",
+                    boxShadow: "0 0 6px #ffffff", display: "inline-block"
+                  }} />
+                )}
+              </button>
             </div>
 
             {/* Quick Docs Link */}

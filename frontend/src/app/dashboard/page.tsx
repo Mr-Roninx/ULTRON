@@ -94,11 +94,14 @@ export default function UnifiedRecoveryHubPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const isLive = tenant?.environment === "live";
+
   const fetchData = useCallback(async () => {
     try {
+      const envParam = isLive ? "environment=live" : "environment=test";
       const [sumData, oppsData] = await Promise.all([
-        api<Summary>("/dashboard/summary", { method: "GET" }).catch(() => null),
-        api<{ opportunities: OpportunityItem[] }>("/v1/opportunities?limit=30", { method: "GET" }).catch(() => null),
+        api<Summary>(`/dashboard/summary?${envParam}`, { method: "GET" }).catch(() => null),
+        api<{ opportunities: OpportunityItem[] }>(`/v1/opportunities?limit=50&${envParam}`, { method: "GET" }).catch(() => null),
       ]);
 
       if (sumData) setSummary(sumData);
@@ -106,12 +109,20 @@ export default function UnifiedRecoveryHubPage() {
     } catch (err) {
       console.error("Error loading dashboard data:", err);
     }
-  }, []);
+  }, [isLive]);
 
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 4000);
     return () => clearInterval(interval);
+  }, [fetchData]);
+
+  useEffect(() => {
+    const handleEnvChange = () => {
+      fetchData();
+    };
+    window.addEventListener("ultron:environment_changed", handleEnvChange);
+    return () => window.removeEventListener("ultron:environment_changed", handleEnvChange);
   }, [fetchData]);
 
   // 1-Click Payment Failure Simulator
@@ -163,10 +174,18 @@ export default function UnifiedRecoveryHubPage() {
 
   // 1-Click Run Autonomous Sweep
   const handleRunSweep = async () => {
+    if (isLive) {
+      const confirmLive = window.confirm(
+        "⚡ Run Production Recovery Sweep?\n\n" +
+        "You are in Production Mode. This sweep will evaluate unrecovered payments and issue REAL Razorpay payment links to customers using your live credentials.\n\n" +
+        "Are you sure you want to proceed?"
+      );
+      if (!confirmLive) return;
+    }
     setRunningSweep(true);
     try {
       await api("/agents/daemon/sweep", { method: "POST" });
-      showToast("Autonomous recovery sweep executed across pipeline");
+      showToast(isLive ? "Production recovery sweep executed with live credentials" : "Autonomous recovery sweep executed across pipeline");
       await fetchData();
     } catch (err: any) {
       showToast(`Sweep error: ${err.message}`);
@@ -247,12 +266,22 @@ export default function UnifiedRecoveryHubPage() {
       {/* Header Bar */}
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        marginBottom: 20, flexWrap: "wrap", gap: 16
+        marginBottom: 16, flexWrap: "wrap", gap: 16
       }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px", margin: 0 }}>
-            Revenue Recovery Operations Hub
-          </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px", margin: 0 }}>
+              Revenue Recovery Operations Hub
+            </h1>
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 12,
+              background: isLive ? "#137333" : "rgba(26, 115, 232, 0.1)",
+              color: isLive ? "#ffffff" : "#1a73e8",
+              border: isLive ? "none" : "1px solid #d2e3fc"
+            }}>
+              {isLive ? "⚡ PRODUCTION ACTIVE" : "🧪 TEST SANDBOX"}
+            </span>
+          </div>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "4px 0 0" }}>
             Autonomous economic control plane intercepting and recovering failed digital payments.
           </p>
@@ -408,6 +437,72 @@ export default function UnifiedRecoveryHubPage() {
           </div>
         </div>
       </div>
+
+      {/* Mode Banner */}
+      {isLive ? (
+        <div style={{
+          marginBottom: 20,
+          padding: "12px 18px",
+          borderRadius: 12,
+          background: "linear-gradient(90deg, rgba(19, 115, 51, 0.08) 0%, rgba(19, 115, 51, 0.03) 100%)",
+          border: "1px solid #a8dab5",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: "50%", background: "#137333",
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", flexShrink: 0
+            }}>
+              <Zap size={15} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#137333", display: "flex", alignItems: "center", gap: 6 }}>
+                <span>PRODUCTION MODE ACTIVE — REAL MONEY EXECUTION</span>
+                <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 10, background: "#137333", color: "#ffffff", fontWeight: 700 }}>LIVE GATEWAY</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#2e7d32", marginTop: 2 }}>
+                Recovery sweeps and link generation execute against official Razorpay Live API. Customer payments credit directly to your linked bank account.
+              </div>
+            </div>
+          </div>
+          <a
+            href="/dashboard/settings/integrations"
+            style={{
+              fontSize: 12, fontWeight: 600, color: "#137333", textDecoration: "none",
+              padding: "6px 12px", borderRadius: 6, background: "#ffffff", border: "1px solid #ceead6"
+            }}
+          >
+            Manage Live Credentials →
+          </a>
+        </div>
+      ) : (
+        <div style={{
+          marginBottom: 20,
+          padding: "10px 16px",
+          borderRadius: 12,
+          background: "rgba(26, 115, 232, 0.05)",
+          border: "1px solid #d2e3fc",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 15 }}>🧪</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#1a73e8" }}>
+              TEST SANDBOX MODE: Operating safely with simulated transactions and test Razorpay keys. No real customer charges.
+            </span>
+          </div>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+            Use top header toggle to switch to Production (Real Money)
+          </span>
+        </div>
+      )}
 
       {/* Main Filter Chips & Live Opportunity Table */}
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>

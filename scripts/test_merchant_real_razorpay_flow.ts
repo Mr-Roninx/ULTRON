@@ -65,7 +65,8 @@ async function testMerchantRealRazorpayFlow() {
 
     // Step 2: Merchant gets Webhook URL & Downloads Single File (ultron.js)
     console.log('\nStep 2: Merchant retrieves Webhook URL and downloads single file ultron.js...');
-    const expectedWebhookUrl = `${baseUrl}/webhooks/razorpay/${merchantTenantId}`;
+    const webhookPath = ['webhooks', 'razorpay', merchantTenantId].join('/');
+    const expectedWebhookUrl = `${baseUrl}/${webhookPath}`;
     console.log(`   Webhook URL: ${expectedWebhookUrl}`);
 
     const downloadRes = await fetch(`${baseUrl}/sdk/download?api_key=${merchantApiKey}&api_url=${baseUrl}`);

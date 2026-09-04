@@ -1,5 +1,6 @@
 import { db, getOpportunityById, getExecutionRecordByOpportunityId, getScoreByOpportunityId } from '../db/database.js';
 import { rzpClient } from '../execution/executor.js';
+import { RazorpayClientPool } from '../providers/razorpay/client_pool.js';
 import { ProviderTruthEvaluator, ProviderTruthEvaluation } from '../truth/provider_truth.js';
 import { CanonicalStateMachine, CanonicalPaymentState } from '../truth/canonical_state_machine.js';
 import { DoubleEntryLedger } from '../truth/double_entry_ledger.js';
@@ -61,7 +62,10 @@ export class AuthoritativeReconciler {
     let providerPayload = options.providerPayloadOverride;
     if (!providerPayload && execRecord && execRecord.razorpay_payment_link_id) {
       try {
-        providerPayload = await rzpClient.paymentLink.fetch(execRecord.razorpay_payment_link_id);
+        const tenantId = (opp as any).tenant_id || 'tenant_system_default';
+        const env: 'test' | 'live' = (opp as any).environment === 'live' ? 'live' : 'test';
+        const client = await RazorpayClientPool.getClient(tenantId, env).catch(() => rzpClient);
+        providerPayload = await client.paymentLink.fetch(execRecord.razorpay_payment_link_id);
       } catch (err: any) {
         // Provider network/API error -> quarantine as UNKNOWN
         return {
@@ -326,30 +330,10 @@ export class AuthoritativeReconciler {
       }
 
       db.exec('COMMIT;');
-
-      // Real-Time Bayesian Continuous Learning Feedback
-      if (targetOpportunityStatus === 'recovered' || targetOpportunityStatus === 'not_recovered') {
-        const isRecovered = targetOpportunityStatus === 'recovered';
-        const wasIntervention = Boolean(execRecord?.razorpay_payment_link_id);
-        BayesianProbabilityCalibrator.recordRealtimeObservation(
-          opp.reason_code,
-          isRecovered,
-          wasIntervention
-        ).catch(() => {});
-
-        try {
-          const bandit = ThompsonSamplingBandit.getInstance();
-          const contextKey = bandit.getContextKey(opp);
-          bandit.updateReward({
-            tenantId: (opp as any).tenant_id || 'tenant_system_default',
-            contextKey,
-            isRecovered,
-            isIntervention: wasIntervention,
-          });
-        } catch {}
-      }
     } catch (err: any) {
-      db.exec('ROLLBACK;');
+      try {
+        db.exec('ROLLBACK;');
+      } catch {}
       return {
         opportunity_id: opp.id,
         payment_link_id: truthEval.payment_link_id,
@@ -365,6 +349,28 @@ export class AuthoritativeReconciler {
         timestamp: now,
         error: err.message,
       };
+    }
+
+    // Real-Time Bayesian Continuous Learning Feedback (executed safely post-commit)
+    if (targetOpportunityStatus === 'recovered' || targetOpportunityStatus === 'not_recovered') {
+      const isRecovered = targetOpportunityStatus === 'recovered';
+      const wasIntervention = Boolean(execRecord?.razorpay_payment_link_id);
+      BayesianProbabilityCalibrator.recordRealtimeObservation(
+        opp.reason_code,
+        isRecovered,
+        wasIntervention
+      ).catch(() => {});
+
+      try {
+        const bandit = ThompsonSamplingBandit.getInstance();
+        const contextKey = bandit.getContextKey(opp);
+        bandit.updateReward({
+          tenantId: (opp as any).tenant_id || 'tenant_system_default',
+          contextKey,
+          isRecovered,
+          isIntervention: wasIntervention,
+        });
+      } catch {}
     }
 
     return {

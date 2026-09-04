@@ -28,8 +28,14 @@ import {
 } from '../agents/types.js';
 import { getSupabaseClient } from '../security/supabase.js';
 
+let supabaseBrokenUntil = 0;
 let lastSupabaseWarn = 0;
 function syncToSupabase(table: string, payload: Record<string, any>, onConflictKey: string = 'id'): void {
+  const now = Date.now();
+  if (now < supabaseBrokenUntil) {
+    return; // Circuit open: skip remote sync while Supabase is unreachable
+  }
+
   try {
     const sb = getSupabaseClient();
     Promise.resolve(
@@ -37,15 +43,21 @@ function syncToSupabase(table: string, payload: Record<string, any>, onConflictK
     )
       .then(({ error }) => {
         if (error) {
-          const now = Date.now();
-          if (now - lastSupabaseWarn > 30000) {
-            lastSupabaseWarn = now;
-            console.warn(`⚠️ [SUPABASE SYNC] Remote sync notice for '${table}': ${error.message}`);
+          const currentNow = Date.now();
+          supabaseBrokenUntil = currentNow + 60000; // Trip circuit breaker for 60 seconds
+          if (currentNow - lastSupabaseWarn > 30000) {
+            lastSupabaseWarn = currentNow;
+            const shortMsg = (error.message || String(error)).slice(0, 120).replace(/\s+/g, ' ');
+            console.warn(`⚠️ [SUPABASE SYNC] Remote sync circuit opened for 60s (${table}): ${shortMsg}`);
           }
         }
       })
-      .catch(() => {});
-  } catch {}
+      .catch(() => {
+        supabaseBrokenUntil = Date.now() + 60000;
+      });
+  } catch {
+    supabaseBrokenUntil = Date.now() + 60000;
+  }
 }
 
 const DB_PATH = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'ultron.db');
@@ -127,6 +139,10 @@ export function initDatabase(): void {
 
   try {
     db.exec(`ALTER TABLE recovery_opportunities ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default';`);
+  } catch (e) {}
+
+  try {
+    db.exec(`ALTER TABLE recovery_opportunities ADD COLUMN environment TEXT NOT NULL DEFAULT 'test';`);
   } catch (e) {}
 
   db.exec(`
@@ -656,9 +672,9 @@ export function countPriorAttempts(customerId: string, rawPayloadSubstring?: str
   if (rawPayloadSubstring) {
     const stmt = db.prepare(`
       SELECT COUNT(*) as count FROM recovery_opportunities 
-      WHERE customer_id = ? OR raw_payload_ref LIKE ?
+      WHERE customer_id = ? AND (raw_payload_ref LIKE ? OR id LIKE ?)
     `);
-    const res = stmt.get(customerId, `%${rawPayloadSubstring}%`) as { count: number };
+    const res = stmt.get(customerId, `%${rawPayloadSubstring}%`, `%${rawPayloadSubstring}%`) as { count: number };
     return res?.count || 0;
   }
 
@@ -678,10 +694,28 @@ export function getOpportunityByRazorpayEventId(eventId: string): RecoveryOpport
   return stmt.get(eventId) as unknown as RecoveryOpportunity | undefined;
 }
 
-export function getAllOpportunities(tenantId?: string): RecoveryOpportunity[] {
+export function getAllOpportunities(tenantId?: string, environment?: 'test' | 'live'): RecoveryOpportunity[] {
+  if (tenantId && environment) {
+    if (environment === 'live') {
+      const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE (tenant_id = ? OR merchant_id = ?) AND environment = ? ORDER BY created_at DESC');
+      return stmt.all(tenantId, tenantId, environment) as unknown as RecoveryOpportunity[];
+    } else {
+      const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE (tenant_id = ? OR merchant_id = ?) AND (environment = ? OR environment IS NULL) ORDER BY created_at DESC');
+      return stmt.all(tenantId, tenantId, environment) as unknown as RecoveryOpportunity[];
+    }
+  }
   if (tenantId) {
     const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE tenant_id = ? OR merchant_id = ? ORDER BY created_at DESC');
     return stmt.all(tenantId, tenantId) as unknown as RecoveryOpportunity[];
+  }
+  if (environment) {
+    if (environment === 'live') {
+      const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE environment = ? ORDER BY created_at DESC');
+      return stmt.all(environment) as unknown as RecoveryOpportunity[];
+    } else {
+      const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE environment = ? OR environment IS NULL ORDER BY created_at DESC');
+      return stmt.all(environment) as unknown as RecoveryOpportunity[];
+    }
   }
   const stmt = db.prepare('SELECT * FROM recovery_opportunities ORDER BY created_at DESC');
   return stmt.all() as unknown as RecoveryOpportunity[];
@@ -689,15 +723,25 @@ export function getAllOpportunities(tenantId?: string): RecoveryOpportunity[] {
 
 export function insertOpportunity(opp: RecoveryOpportunity): void {
   const tenantId = opp.tenant_id || 'tenant_system_default';
+  let oppEnv = opp.environment;
+  if (!oppEnv) {
+    try {
+      const tRow = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;').get(tenantId) as any;
+      oppEnv = tRow?.environment || (opp.source === 'real' ? 'live' : 'test');
+    } catch {
+      oppEnv = opp.source === 'real' ? 'live' : 'test';
+    }
+  }
+
   const stmt = db.prepare(`
     INSERT INTO recovery_opportunities (
       id, source, amount_paise, currency, reason_code, decline_type,
       attempt_count, customer_id, customer_trust_score, created_at, status,
-      tenant_id, merchant_id, razorpay_event_id, raw_payload_ref
+      tenant_id, merchant_id, razorpay_event_id, raw_payload_ref, environment
     ) VALUES (
       ?, ?, ?, ?, ?, ?,
       ?, ?, ?, ?, ?,
-      ?, ?, ?, ?
+      ?, ?, ?, ?, ?
     )
     ON CONFLICT(id) DO UPDATE SET
       source = excluded.source,
@@ -712,7 +756,8 @@ export function insertOpportunity(opp: RecoveryOpportunity): void {
       tenant_id = excluded.tenant_id,
       merchant_id = excluded.merchant_id,
       razorpay_event_id = excluded.razorpay_event_id,
-      raw_payload_ref = excluded.raw_payload_ref
+      raw_payload_ref = excluded.raw_payload_ref,
+      environment = excluded.environment
   `);
   stmt.run(
     opp.id,
@@ -729,7 +774,8 @@ export function insertOpportunity(opp: RecoveryOpportunity): void {
     tenantId,
     tenantId,
     opp.razorpay_event_id || null,
-    opp.raw_payload_ref || null
+    opp.raw_payload_ref || null,
+    oppEnv || 'test'
   );
 
   syncToSupabase('recovery_opportunities', {
@@ -812,6 +858,12 @@ export function upsertOpportunity(opp: RecoveryOpportunity): void {
 }
 
 export function updateOpportunityStatus(id: string, status: OpportunityStatus): void {
+  // Terminal state immutability guard: Once recovered, state is irreversible
+  const current = getOpportunityById(id);
+  if (current?.status === 'recovered' && status !== 'recovered') {
+    return;
+  }
+
   const stmt = db.prepare('UPDATE recovery_opportunities SET status = ? WHERE id = ?');
   stmt.run(status, id);
 

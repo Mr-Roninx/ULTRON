@@ -42,11 +42,16 @@ export class RazorpayClientPool {
 
     if (tenantId === 'tenant_system_default') {
       // Fall back to env vars for system/legacy data
-      keyId = process.env.RAZORPAY_KEY_ID || '';
-      keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+      if (environment === 'live') {
+        keyId = process.env.RAZORPAY_LIVE_KEY_ID || '';
+        keySecret = process.env.RAZORPAY_LIVE_KEY_SECRET || '';
+      } else {
+        keyId = process.env.RAZORPAY_KEY_ID || '';
+        keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+      }
 
       if (!keyId || !keySecret) {
-        throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set for system default tenant.');
+        throw new Error(`Razorpay credentials not configured for system default tenant in environment '${environment}'.`);
       }
     } else {
       // Resolve from encrypted tenant credential store
@@ -57,8 +62,12 @@ export class RazorpayClientPool {
         const creds = JSON.parse(rawJson);
         keyId = creds.key_id;
         keySecret = creds.key_secret;
-      } else if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-        // Graceful fallback to default system test keys for evaluation
+      } else if (environment === 'live' && process.env.RAZORPAY_LIVE_KEY_ID && process.env.RAZORPAY_LIVE_KEY_SECRET) {
+        // Fallback to system live credentials if configured
+        keyId = process.env.RAZORPAY_LIVE_KEY_ID;
+        keySecret = process.env.RAZORPAY_LIVE_KEY_SECRET;
+      } else if (environment === 'test' && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+        // Graceful fallback to default system test keys for evaluation in test mode
         keyId = process.env.RAZORPAY_KEY_ID;
         keySecret = process.env.RAZORPAY_KEY_SECRET;
       } else {

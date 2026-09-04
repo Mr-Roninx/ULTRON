@@ -18,7 +18,9 @@ export const opportunitiesRouter = Router();
 opportunitiesRouter.get('/', (req: Request, res: Response) => {
   try {
     const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
-    const opportunities = getAllOpportunities(tenantId);
+    const envQuery = req.query.environment as string | undefined;
+    const environment = (envQuery === 'live' || envQuery === 'test') ? envQuery : undefined;
+    const opportunities = getAllOpportunities(tenantId, environment);
     res.json({
       count: opportunities.length,
       opportunities,

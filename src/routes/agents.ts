@@ -41,14 +41,17 @@ agentsRouter.get('/runs', (_req: Request, res: Response) => {
 
 const daemon = AutonomousRecoveryDaemon.getInstance();
 
-// GET daemon status
-agentsRouter.get('/daemon/status', (_req: Request, res: Response) => {
+// GET daemon status (/agents/daemon/status & /agents/status)
+const handleGetDaemonStatus = (_req: Request, res: Response) => {
   try {
     res.json(daemon.getStatus());
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to fetch daemon status' });
   }
-});
+};
+
+agentsRouter.get('/daemon/status', handleGetDaemonStatus);
+agentsRouter.get('/status', handleGetDaemonStatus);
 
 // POST start daemon
 agentsRouter.post('/daemon/start', (req: Request, res: Response) => {

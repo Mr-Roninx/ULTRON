@@ -2,6 +2,7 @@ import Razorpay from 'razorpay';
 import dotenv from 'dotenv';
 import path from 'node:path';
 import {
+  db,
   getOpportunityById,
   getCustomerById,
   getScoreByOpportunityId,
@@ -98,13 +99,28 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     };
   }
 
-  // 3. Call Razorpay API (Test Mode) — resolve client from per-tenant pool
+  // 3. Call Razorpay API — dynamically resolve client for tenant's active environment ('live' vs 'test')
+  const tenantId = (opp as any).tenant_id || 'tenant_system_default';
+  let executionEnv: 'test' | 'live' = (opp as any).environment || 'test';
+  try {
+    const tenantRow = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;').get(tenantId) as any;
+    if (tenantRow?.environment === 'live' || (opp as any).environment === 'live') {
+      executionEnv = 'live';
+    }
+  } catch {}
+
+  let tenantClient: Razorpay;
+  try {
+    tenantClient = await RazorpayClientPool.getClient(tenantId, executionEnv);
+  } catch (err: any) {
+    if (executionEnv === 'live') {
+      throw new Error(`Production Execution Blocked: ${err.message}`);
+    }
+    tenantClient = rzpClient;
+  }
+
   try {
     const circuitBreaker = CircuitBreaker.getInstance();
-
-    // Resolve tenant-specific Razorpay client (falls back to env vars for system default)
-    const tenantId = (opp as any).tenant_id || 'tenant_system_default';
-    const tenantClient = await RazorpayClientPool.getClient(tenantId, 'test').catch(() => rzpClient);
 
     // Resolve customer details from direct identifiers, raw payload, or customer profile
     let payloadRef: any = {};
@@ -252,7 +268,7 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     // Handle remote idempotency conflict if link already exists in Razorpay
     if (errorDesc.includes('already exists') || errorDesc.includes('reference_id')) {
       try {
-        const existingList: any = await (rzpClient.paymentLink as any).all({ reference_id: opp.id });
+        const existingList: any = await (tenantClient.paymentLink as any).all({ reference_id: opp.id });
         const existingPlink = existingList?.payment_links?.[0];
         if (existingPlink) {
           const now = new Date().toISOString();
@@ -302,12 +318,21 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
  * Executes payment link creation for all currently AUTHORIZED opportunities up to capacity cap (default 5).
  */
 export async function executeAuthorizedBatch(
-  options: { maxLinks?: number; capacity?: number; tenantId?: string } = {}
+  options: { maxLinks?: number; capacity?: number; tenantId?: string; environment?: 'test' | 'live' } = {}
 ): Promise<BatchExecutionResult> {
   const maxLinks = options.maxLinks || Number(process.env.MAX_LINKS_PER_RUN) || 5;
 
-  // 1. Run Authority Pipeline scoped to tenant to get up-to-date compliance verdicts
-  const authorityRun = runAuthorityPipeline({ capacity: options.capacity || maxLinks, tenantId: options.tenantId });
+  let env = options.environment;
+  if (!env && options.tenantId) {
+    try {
+      const stmt = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;');
+      const row = stmt.get(options.tenantId) as { environment?: 'test' | 'live' } | undefined;
+      if (row?.environment) env = row.environment;
+    } catch { /* fallthrough */ }
+  }
+
+  // 1. Run Authority Pipeline scoped to tenant & environment to get up-to-date compliance verdicts
+  const authorityRun = runAuthorityPipeline({ capacity: options.capacity || maxLinks, tenantId: options.tenantId, environment: env });
   const authorizedOpps = authorityRun.results.filter((r) => r.verdict === 'AUTHORIZED');
 
   const executionResults: SingleExecutionResult[] = [];

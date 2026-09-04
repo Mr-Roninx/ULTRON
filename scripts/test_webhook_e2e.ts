@@ -81,9 +81,9 @@ async function testWebhook() {
     const rawBody = JSON.stringify(payload);
     const signature = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
 
-    // 4. Send webhook to /webhooks/razorpay/:tenant_id
-    console.log(`📡 Dispatching Razorpay webhook to /webhooks/razorpay/${tenantId}...`);
-    const whRes = await fetch(`${API_BASE}/webhooks/razorpay/${tenantId}`, {
+    // 4. Send webhook to /internal/simulate-webhook/:tenant_id
+    console.log(`📡 Dispatching simulation webhook to /internal/simulate-webhook/${tenantId}...`);
+    const whRes = await fetch(`${API_BASE}/internal/simulate-webhook/${tenantId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

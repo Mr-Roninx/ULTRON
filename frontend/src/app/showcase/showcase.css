@@ -1,0 +1,63 @@
+/* ==========================================================================
+   ULTRON: Product Showcase Stylesheet
+   ========================================================================== */
+
+:root {
+  --sc-bg-deep: #03060c;
+  --sc-bg-panel: rgba(11, 19, 38, 0.85);
+  --sc-bg-card: rgba(15, 25, 48, 0.75);
+  --sc-border-subtle: rgba(255, 255, 255, 0.08);
+  --sc-border-glow: rgba(16, 185, 129, 0.35);
+  
+  --sc-text-primary: #f8fafc;
+  --sc-text-secondary: #94a3b8;
+  --sc-text-muted: #64748b;
+
+  --sc-emerald: #10b981;
+  --sc-emerald-glow: rgba(16, 185, 129, 0.35);
+  --sc-cyan: #06b6d4;
+  --sc-cyan-glow: rgba(6, 182, 212, 0.35);
+  --sc-indigo: #6366f1;
+  --sc-indigo-glow: rgba(99, 102, 241, 0.35);
+  --sc-amber: #f59e0b;
+  --sc-amber-glow: rgba(245, 158, 11, 0.35);
+  --sc-rose: #f43f5e;
+  --sc-rose-glow: rgba(244, 63, 94, 0.35);
+
+  --sc-font-sans: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sc-font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
+
+  /* Aliases */
+  --pitch-bg-deep: var(--sc-bg-deep);
+  --pitch-bg-panel: var(--sc-bg-panel);
+  --pitch-bg-card: var(--sc-bg-card);
+  --pitch-border-subtle: var(--sc-border-subtle);
+  --pitch-border-glow: var(--sc-border-glow);
+  --pitch-text-primary: var(--sc-text-primary);
+  --pitch-text-secondary: var(--sc-text-secondary);
+  --pitch-text-muted: var(--sc-text-muted);
+  --pitch-emerald: var(--sc-emerald);
+  --pitch-emerald-glow: var(--sc-emerald-glow);
+  --pitch-cyan: var(--sc-cyan);
+  --pitch-cyan-glow: var(--sc-cyan-glow);
+  --pitch-indigo: var(--sc-indigo);
+  --pitch-indigo-glow: var(--sc-indigo-glow);
+  --pitch-amber: var(--sc-amber);
+  --pitch-amber-glow: var(--sc-amber-glow);
+  --pitch-rose: var(--sc-rose);
+  --pitch-rose-glow: var(--sc-rose-glow);
+  --pitch-font-sans: var(--sc-font-sans);
+  --pitch-font-mono: var(--sc-font-mono);
+}
+
+.cyber-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 2;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 85%);
+}

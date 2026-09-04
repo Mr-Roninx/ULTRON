@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import "../pitch/pitch.css";
+import "./showcase.css";
 
 interface LabScenario {
   id: string;
@@ -228,7 +228,7 @@ export default function MotionShowcasePage() {
               Experience
             </a>
             <Link
-              href="/pitch/video"
+              href="/dashboard"
               style={{
                 background: "rgba(16, 185, 129, 0.15)",
                 color: "var(--pitch-emerald)",
@@ -245,7 +245,7 @@ export default function MotionShowcasePage() {
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--pitch-emerald)" }} />
-              Watch 5-Min Motion Video (1080p)
+              Merchant Dashboard ↗
             </Link>
           </nav>
         </div>
@@ -717,12 +717,12 @@ export default function MotionShowcasePage() {
           Ready to Recover GMV Without Burning Trust?
         </h2>
         <p style={{ color: "var(--pitch-text-secondary)", fontSize: 16, maxWidth: 640, margin: "12px auto 28px auto", lineHeight: 1.5 }}>
-          Experience the autonomous economic control plane live. Watch the full 5-minute video pitch or open the merchant recovery dashboard.
+          Experience the autonomous economic control plane live. Test real checkout interception or open the merchant recovery dashboard.
         </p>
 
         <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
           <Link
-            href="/pitch/video"
+            href="/dashboard"
             style={{
               background: "linear-gradient(135deg, var(--pitch-emerald), #059669)",
               color: "#000",
@@ -734,10 +734,10 @@ export default function MotionShowcasePage() {
               boxShadow: "0 4px 20px rgba(16, 185, 129, 0.4)",
             }}
           >
-            ▶ Watch 5-Minute Motion Presentation
+            🚀 Open Merchant Dashboard
           </Link>
           <Link
-            href="/dashboard"
+            href="/dashboard/setup"
             style={{
               background: "rgba(255, 255, 255, 0.05)",
               border: "1px solid rgba(255, 255, 255, 0.15)",

@@ -119,8 +119,14 @@ export class CircuitBreaker {
         const jitterMs = Math.floor(Math.random() * (baseDelayMs * 0.3));
         const totalDelayMs = Math.min(baseDelayMs + jitterMs, 8000);
 
+        const errMsg =
+          err?.error?.description ||
+          err?.description ||
+          err?.message ||
+          (typeof err === 'object' ? JSON.stringify(err) : String(err));
+
         console.warn(
-          `⚠️ ${contextName} failed on attempt ${attempt}/${this.maxRetries}: ${err.message}. Retrying in ${totalDelayMs}ms...`
+          `⚠️ ${contextName} failed on attempt ${attempt}/${this.maxRetries}: ${errMsg}. Retrying in ${totalDelayMs}ms...`
         );
         await new Promise((r) => setTimeout(r, totalDelayMs));
       }

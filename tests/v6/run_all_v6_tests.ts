@@ -46,6 +46,9 @@ const v6Suites = [
   // Phase 13: Enterprise Pacing, Anti-Blast & Provider Routing
   'tests/v6/test_enterprise_pacing_and_antiblast.ts',
   'tests/v6/test_provider_routing.ts',
+
+  // Production Real Money & Environment Isolation
+  'tests/v6/test_live_money_environment.ts',
 ];
 
 async function runSuite(suite: string): Promise<boolean> {

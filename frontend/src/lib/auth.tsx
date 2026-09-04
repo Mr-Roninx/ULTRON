@@ -42,6 +42,7 @@ interface AuthContextType extends AuthState {
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  switchEnvironment: (env: 'test' | 'live') => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -517,8 +518,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const switchEnvironment = async (env: 'test' | 'live'): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (!state.tenant) {
+        return { success: false, error: 'No active tenant found' };
+      }
+
+      // 1. Update backend tenant record
+      try {
+        await fetch(`${API_BASE}/v1/auth/tenant`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
+          },
+          body: JSON.stringify({ environment: env }),
+        });
+      } catch (patchErr) {
+        console.warn('Tenant environment patch warning:', patchErr);
+      }
+
+      const updatedTenant: AuthTenant = {
+        ...state.tenant,
+        environment: env,
+      };
+
+      // 2. Persist locally
+      saveToStorage(state.token, state.user, updatedTenant);
+      setState(prev => ({
+        ...prev,
+        tenant: updatedTenant,
+      }));
+
+      // 3. Dispatch global event so all open views re-fetch data
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ultron:environment_changed', { detail: { environment: env } }));
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Failed to switch environment:', err);
+      return { success: false, error: err.message || 'Failed to switch environment' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ ...state, login, loginAsDemo, signup, sendOtp, verifyOtp, logout, refresh }}>
+    <AuthContext.Provider value={{ ...state, login, loginAsDemo, signup, sendOtp, verifyOtp, logout, refresh, switchEnvironment }}>
       {children}
     </AuthContext.Provider>
   );
