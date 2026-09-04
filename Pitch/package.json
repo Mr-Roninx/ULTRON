@@ -1,0 +1,10 @@
+{
+  "name": "ultron-pitch",
+  "version": "1.0.0",
+  "description": "ULTRON 5-Minute Motion Graph & Pitch",
+  "scripts": {
+    "dev": "npm --prefix ../frontend run dev",
+    "start": "npm --prefix ../frontend run dev",
+    "serve": "npx -y serve -p 3000 ."
+  }
+}

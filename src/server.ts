@@ -417,6 +417,15 @@ app.get('/demo-store', (_req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'demo_merchant_store.html'));
 });
 
+// 5-Minute Executive Pitch Landing Page with Audio & Synchronized Captions
+app.use('/pitch', express.static(path.resolve(process.cwd(), 'Pitch')));
+app.get('/pitch-page', (_req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'Pitch', 'index.html'));
+});
+app.get('/pitch-video', (_req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'Pitch', 'video.html'));
+});
+
 // Start server if run directly
 const isDirectRun = process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE && !process.env.SUPPRESS_LISTEN;
 
