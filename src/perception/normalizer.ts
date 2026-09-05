@@ -22,6 +22,12 @@ export const HARD_DECLINE_PATTERNS = [
   'bad_request_payment_card_stolen_or_lost',
   'bad_request_payment_card_pick_up',
   'bad_request_payment_card_restricted',
+  // NPCI / Indian Banking Hard Declines
+  'invalid_vpa',
+  'vpa_not_found',
+  'account_blocked',
+  'account_frozen',
+  'npci_xb',
 ];
 
 export const SOFT_DECLINE_PATTERNS = [
@@ -47,6 +53,17 @@ export const SOFT_DECLINE_PATTERNS = [
   'bad_request_payment_do_not_honor',
   'bad_request_payment_authentication_failed',
   'gateway_error',
+  // NPCI / Indian Banking Soft Declines (UPI & Netbanking)
+  'npci_u30',
+  'transaction_limit_exceeded',
+  'npci_u69',
+  'collect_request_expired',
+  'npci_za',
+  'payment_cancelled_by_user',
+  'invalid_mpin',
+  'npci_zm',
+  'npci_zh',
+  'user_dropped',
 ];
 
 /**
