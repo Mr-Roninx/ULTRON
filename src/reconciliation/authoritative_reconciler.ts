@@ -354,11 +354,13 @@ export class AuthoritativeReconciler {
     // Real-Time Bayesian Continuous Learning Feedback (executed safely post-commit)
     if (targetOpportunityStatus === 'recovered' || targetOpportunityStatus === 'not_recovered') {
       const isRecovered = targetOpportunityStatus === 'recovered';
-      const wasIntervention = Boolean(execRecord?.razorpay_payment_link_id);
+      const wasIntervention = Boolean(truthEval.payment_link_id) || opp.status === 'executing' || opp.status === 'allocated' || opp.status === 'authorized';
+      const itemTenantId = (opp as any).tenant_id || 'tenant_system_default';
       BayesianProbabilityCalibrator.recordRealtimeObservation(
         opp.reason_code,
         isRecovered,
-        wasIntervention
+        wasIntervention,
+        itemTenantId
       ).catch(() => {});
 
       try {

@@ -33,6 +33,7 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **ULTRON V11 Phase 4: Advanced Security Hardening** (Completed & Audited)
 - [x] **ULTRON V11 Phase 5: Resilient Execution Engine** (Completed & Audited)
 - [x] **ULTRON V11 Phase 6: Multi-Tenant Row-Level Isolation** (Completed & Audited)
+- [x] **ULTRON V11 Phase 7: Enhanced Economic Engine** (Completed & Audited)
 
 ---
 
@@ -449,6 +450,35 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - `npx tsc --noEmit` passed with **0 errors**.
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+### Phase 7: Enhanced Economic Engine (Completed & Verified)
+- **What was built**:
+  - Upgraded `src/economics/bayesian_calibration.ts`:
+    - Created `bayesian_priors` table schema with tenant isolation (`UNIQUE(tenant_id, reason_code)`).
+    - Added `persistPrior()` and `loadPriorsFromDatabase()` for durable storage and warm loading of Beta posterior parameters (`alpha_natural`, `beta_natural`, `alpha_interv`, `beta_interv`, `sample_size`).
+    - Connected `recordRealtimeObservation()` and `updateCalibratedDistributions()` with tenant-aware parameterization.
+  - Upgraded `src/reconciliation/authoritative_reconciler.ts`:
+    - Fed live recovery and failure outcomes back into Bayesian prior calibrator with tenant context upon transaction commit.
+    - Updated Thompson Sampling bandit rewards on payment link settlement.
+  - Upgraded `src/types/index.ts` & `src/economics/scorer.ts`:
+    - Introduced `IVENBand` type (`STRONG`, `MODERATE`, `WEAK`, `NEGATIVE`).
+    - Built `classifyIVENBand(ivenPaise)`: STRONG (>= ₹150), MODERATE (₹50 to ₹149.99), WEAK (₹0 to ₹49.99), NEGATIVE (<= ₹0).
+    - Attached `iven_band` to `Score` model output.
+  - Built `src/economics/causal_attribution.ts`:
+    - Implemented `CausalAttributionEngine.computeDiffInDiff()` computing Average Treatment Effect on the Treated (ATT), standard error via pooled variance propagation, two-tailed p-value, and parallel trends check (< 15% pre divergence).
+    - Implemented `evaluateSyntheticHoldoutLift()` partitioning opportunities into treated vs synthetic holdout groups against cutoff timestamps.
+  - Created test suite `tests/economics/test_enhanced_economics.ts`:
+    - Tested Bayesian prior persistence and cache reloading.
+    - Tested Beta posterior computation and real-time observation updates.
+    - Tested IVEN band classification and score assignment.
+    - Tested Thompson Sampling bandit hard-decline zero incremental probability invariant and soft-decline sampling.
+    - Tested Difference-in-Differences ATT calculation, statistical significance, and parallel trends violation detection.
+- **Verification Gate**:
+  - `npx tsx tests/economics/test_enhanced_economics.ts` passed **10/10 tests (100%)**.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
 
 
 

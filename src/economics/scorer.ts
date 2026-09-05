@@ -1,7 +1,23 @@
-import { RecoveryOpportunity, Score, ConfidenceLevel } from '../types/index.js';
+import type { RecoveryOpportunity, Score, ConfidenceLevel, IVENBand } from '../types/index.js';
 import { upsertScore, updateOpportunityStatus } from '../db/database.js';
 import { BayesianProbabilityCalibrator } from './bayesian_calibration.js';
 import { ThompsonSamplingBandit } from './bandit_policy.js';
+
+export type { IVENBand };
+
+/**
+ * Classifies an IVEN value into economic priority bands:
+ * - STRONG: IVEN >= ₹150 (15,000 paise) — High-conviction recovery
+ * - MODERATE: ₹50 <= IVEN < ₹150 (5,000 to 14,999 paise) — Profitable recovery
+ * - WEAK: ₹0 < IVEN < ₹50 (1 to 4,999 paise) — Marginal recovery
+ * - NEGATIVE: IVEN <= ₹0 — Value destructive (must ABSTAIN)
+ */
+export function classifyIVENBand(ivenPaise: number): IVENBand {
+  if (ivenPaise >= 15000) return 'STRONG';
+  if (ivenPaise >= 5000) return 'MODERATE';
+  if (ivenPaise > 0) return 'WEAK';
+  return 'NEGATIVE';
+}
 
 export interface ProbabilityEstimate {
   natural_recovery_prob: number;
@@ -150,6 +166,8 @@ export function calculateScore(opp: RecoveryOpportunity, options?: ScoreOptions)
     expected_incremental_value_paise = Math.min(0, expected_incremental_value_paise);
   }
 
+  const iven_band = classifyIVENBand(expected_incremental_value_paise);
+
   return {
     opportunity_id: opp.id,
     tenant_id: opp.tenant_id,
@@ -160,6 +178,7 @@ export function calculateScore(opp: RecoveryOpportunity, options?: ScoreOptions)
     fatigue_cost_paise: costs.fatigue_cost_paise,
     expected_incremental_value_paise,
     confidence,
+    iven_band,
     probability_disclaimer: 'All probabilities are model-estimated counterfactuals. The true counterfactual is never observed for any real payment.',
     probability_source: probs.source || 'STATIC',
   };

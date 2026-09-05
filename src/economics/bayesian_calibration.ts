@@ -28,6 +28,18 @@ export interface CalibratedModelRecord {
   updated_at: string;
 }
 
+export interface BayesianPriorRecord {
+  id: string;
+  tenant_id: string;
+  reason_code: string;
+  alpha_natural: number;
+  beta_natural: number;
+  alpha_interv: number;
+  beta_interv: number;
+  sample_size: number;
+  updated_at: string;
+}
+
 export class BayesianProbabilityCalibrator {
   public static async initTable(db?: DatabaseAdapter): Promise<void> {
     const adapter = db || DatabaseAdapter.getInstance();
@@ -44,6 +56,81 @@ export class BayesianProbabilityCalibrator {
         updated_at TEXT NOT NULL
       );
     `);
+
+    await adapter.execute(`
+      CREATE TABLE IF NOT EXISTS bayesian_priors (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+        reason_code TEXT NOT NULL,
+        alpha_natural REAL NOT NULL,
+        beta_natural REAL NOT NULL,
+        alpha_interv REAL NOT NULL,
+        beta_interv REAL NOT NULL,
+        sample_size INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL,
+        UNIQUE(tenant_id, reason_code)
+      );
+    `);
+  }
+
+  /**
+   * Persists updated Beta parameters to bayesian_priors table.
+   */
+  public static async persistPrior(
+    tenantId: string,
+    reasonCode: string,
+    alphaNatural: number,
+    betaNatural: number,
+    alphaInterv: number,
+    betaInterv: number,
+    sampleSize: number
+  ): Promise<void> {
+    const adapter = DatabaseAdapter.getInstance();
+    await this.initTable(adapter);
+    const now = new Date().toISOString();
+    const id = `prior_${tenantId}_${reasonCode}`;
+
+    await adapter.execute(
+      `INSERT INTO bayesian_priors (id, tenant_id, reason_code, alpha_natural, beta_natural, alpha_interv, beta_interv, sample_size, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(tenant_id, reason_code) DO UPDATE SET
+         alpha_natural = excluded.alpha_natural,
+         beta_natural = excluded.beta_natural,
+         alpha_interv = excluded.alpha_interv,
+         beta_interv = excluded.beta_interv,
+         sample_size = excluded.sample_size,
+         updated_at = excluded.updated_at;`,
+      [id, tenantId, reasonCode, alphaNatural, betaNatural, alphaInterv, betaInterv, sampleSize, now]
+    );
+  }
+
+  /**
+   * Loads persisted priors from database into hot cache.
+   */
+  public static async loadPriorsFromDatabase(tenantId: string = 'tenant_system_default'): Promise<void> {
+    const adapter = DatabaseAdapter.getInstance();
+    await this.initTable(adapter);
+
+    const rows = await adapter.query<BayesianPriorRecord>(
+      'SELECT * FROM bayesian_priors WHERE tenant_id = ?;',
+      [tenantId]
+    );
+
+    for (const row of rows) {
+      const pNatMean = row.alpha_natural / (row.alpha_natural + row.beta_natural);
+      const pIntMean = row.alpha_interv / (row.alpha_interv + row.beta_interv);
+      this.cache.set(row.reason_code, {
+        reason_code: row.reason_code,
+        p_natural_mean: Number(pNatMean.toFixed(4)),
+        p_interv_mean: Number(pIntMean.toFixed(4)),
+        sample_size: row.sample_size,
+        model_type: row.sample_size >= 100 ? 'CALIBRATED' : 'STATIC',
+        status: 'ACTIVE',
+        lift_vs_baseline: 0,
+        p_value: 0.05,
+        updated_at: row.updated_at,
+      });
+    }
   }
 
   /**
@@ -169,13 +256,15 @@ export class BayesianProbabilityCalibrator {
   public static async recordRealtimeObservation(
     reasonCode: string,
     isRecovered: boolean,
-    wasIntervention: boolean
+    wasIntervention: boolean,
+    tenantId: string = 'tenant_system_default'
   ): Promise<void> {
     const normReason = (reasonCode || 'generic_decline').toLowerCase();
-    if (!this.observationsCache.has(normReason)) {
-      this.observationsCache.set(normReason, { natSucc: 0, natTot: 0, intSucc: 0, intTot: 0 });
+    const cacheKey = `${tenantId}:${normReason}`;
+    if (!this.observationsCache.has(cacheKey)) {
+      this.observationsCache.set(cacheKey, { natSucc: 0, natTot: 0, intSucc: 0, intTot: 0 });
     }
-    const obs = this.observationsCache.get(normReason)!;
+    const obs = this.observationsCache.get(cacheKey)!;
 
     if (wasIntervention) {
       obs.intTot += 1;
@@ -191,7 +280,8 @@ export class BayesianProbabilityCalibrator {
         const updated = await this.updateCalibratedDistributions(
           normReason,
           { successes: obs.natSucc, total: obs.natTot },
-          { successes: obs.intSucc, total: obs.intTot }
+          { successes: obs.intSucc, total: obs.intTot },
+          tenantId
         );
         this.cache.set(normReason, updated);
       } catch (err) {
@@ -240,7 +330,8 @@ export class BayesianProbabilityCalibrator {
   public static async updateCalibratedDistributions(
     reasonCode: string,
     naturalObservations: { successes: number; total: number },
-    intervObservations: { successes: number; total: number }
+    intervObservations: { successes: number; total: number },
+    tenantId: string = 'tenant_system_default'
   ): Promise<CalibratedModelRecord> {
     const adapter = DatabaseAdapter.getInstance();
     await this.initTable(adapter);
@@ -298,6 +389,17 @@ export class BayesianProbabilityCalibrator {
         pValue,
         new Date().toISOString(),
       ]
+    );
+
+    // Persist to bayesian_priors table
+    await this.persistPrior(
+      tenantId,
+      reasonCode,
+      postNat.alpha,
+      postNat.beta,
+      postInt.alpha,
+      postInt.beta,
+      totalObs
     );
 
     return {

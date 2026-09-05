@@ -51,6 +51,8 @@ export interface RecoveryOpportunity {
   raw_payload_ref?: string | null;
 }
 
+export type IVENBand = 'STRONG' | 'MODERATE' | 'WEAK' | 'NEGATIVE';
+
 export interface Score {
   opportunity_id: string;
   tenant_id?: string;
@@ -61,6 +63,7 @@ export interface Score {
   fatigue_cost_paise: number;
   expected_incremental_value_paise: number;
   confidence: ConfidenceLevel;
+  iven_band?: IVENBand;
   probability_disclaimer?: string;
   probability_source?: 'STATIC' | 'CALIBRATED';
 }
