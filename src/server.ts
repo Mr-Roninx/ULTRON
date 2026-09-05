@@ -37,6 +37,10 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { logger } from './observability/logger.js';
 import { MigrationRunner } from './db/migrations/runner.js';
+import { initOpenTelemetry, shutdownOpenTelemetry } from './observability/otel.js';
+
+// Initialize OpenTelemetry Distributed Tracing
+initOpenTelemetry();
 
 // Initialize database schema & run auto-migrations
 initDatabase();

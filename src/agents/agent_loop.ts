@@ -32,6 +32,7 @@ import { evaluateOpportunity } from '../authority/gate.js';
 import { runMarketAllocation } from '../market/allocator.js';
 import { executeOpportunity } from '../execution/executor.js';
 import { OutreachAgent } from './specialists/outreach_agent.js';
+import { withSpan, ULTRON_SPANS } from '../observability/otel.js';
 
 /**
  * Result of a single agent loop iteration.
@@ -220,10 +221,19 @@ export class AgentLoop {
       this.stateMachine.transition('DIAGNOSE', `REASONING_STEP_${i + 1}`);
       this.budgetTracker.recordStep();
 
-      const reasoningOutput = await ReasoningEngine.reason({
-        runId: this.runId,
-        context: reasoningCtx,
-      });
+      const reasoningOutput = await withSpan(
+        ULTRON_SPANS.AGENT_ITERATION,
+        {
+          opportunity_id: opp.id,
+          iteration: i + 1,
+          run_id: this.runId,
+        },
+        async () =>
+          ReasoningEngine.reason({
+            runId: this.runId,
+            context: reasoningCtx,
+          })
+      );
 
       // Accumulate semantic signals
       this.accumulatedSignals.push(...reasoningOutput.semantic_signals);
@@ -281,7 +291,11 @@ export class AgentLoop {
     this.stateMachine.transition('PLAN', 'MARKET_ALLOCATION');
     this.budgetTracker.recordStep();
 
-    const marketRun = runMarketAllocation({ capacity: 5 });
+    const marketRun = await withSpan(
+      ULTRON_SPANS.MARKET_ALLOCATION,
+      { opportunity_id: opp.id, run_id: this.runId },
+      async () => runMarketAllocation({ capacity: 5 })
+    );
     const marketItem = marketRun.items.find(d => d.opportunity_id === opp.id);
     const allocation: AllocationDecision = marketItem
       ? {
@@ -304,7 +318,11 @@ export class AgentLoop {
     this.stateMachine.transition('WAIT_AUTHORITY', 'AUTHORITY_EVALUATION');
     this.budgetTracker.recordStep();
 
-    const authResult = evaluateOpportunity(opp, allocation, calibratedEcon.score);
+    const authResult = await withSpan(
+      ULTRON_SPANS.AUTHORITY_CHECK,
+      { opportunity_id: opp.id, run_id: this.runId, decision: allocation.decision },
+      async () => evaluateOpportunity(opp, allocation, calibratedEcon.score)
+    );
 
     // ── Phase 6: Execution (if AUTHORIZED) ──
     let executionPlinkId: string | undefined;
@@ -314,7 +332,11 @@ export class AgentLoop {
       this.stateMachine.transition('EXECUTE', 'DISPATCH_TO_EXECUTOR');
       this.budgetTracker.recordStep();
 
-      const execResult = await executeOpportunity(opp.id);
+      const execResult = await withSpan(
+        ULTRON_SPANS.EXECUTION_DISPATCH,
+        { opportunity_id: opp.id, run_id: this.runId },
+        async () => executeOpportunity(opp.id)
+      );
       if (execResult.success && execResult.record) {
         executionPlinkId = execResult.record.razorpay_payment_link_id;
         executionPlinkUrl = execResult.record.link_url;

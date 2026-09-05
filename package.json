@@ -55,6 +55,10 @@
     "demo:agent": "tsx scripts/demo_agent_recovery.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.80.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
     "@supabase/supabase-js": "^2.112.4",
     "@types/bcrypt": "^6.0.0",
     "bcrypt": "^6.0.0",

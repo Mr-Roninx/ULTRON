@@ -382,6 +382,21 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
 
+### Phase 3: OpenTelemetry Distributed Tracing (Completed & Verified)
+- **What was built**:
+  - Installed official OpenTelemetry dependencies: `@opentelemetry/sdk-node`, `@opentelemetry/auto-instrumentations-node`, `@opentelemetry/exporter-trace-otlp-http`, `@opentelemetry/api`.
+  - Built `src/observability/otel.ts`: NodeSDK with OTLP HTTP trace exporter targetable to Jaeger / Tempo (`http://localhost:4318/v1/traces`), tracer factory `getTracer()`, contextual `withSpan()` wrapper, and graceful `shutdownOpenTelemetry()`. Defined standard spans: `ultron.agent.loop.iteration`, `ultron.market.allocation`, `ultron.authority.check`, `ultron.execution.dispatch`.
+  - Updated `src/middleware/tracing.ts`: Propagates W3C `traceparent` (`00-{traceId}-{spanId}-01`), `x-request-id`, and backward-compatible `x-trace-id` headers while recording provider and route latency.
+  - Updated `src/agents/agent_loop.ts`: Wrapped reasoning iterations, market allocation, action authority evaluation, and execution dispatch directly in OpenTelemetry spans.
+  - Initialized OpenTelemetry in `src/server.ts` upon startup.
+  - Created test suite `tests/observability/test_otel_tracing.ts`: Validates initialization, `withSpan` execution, attribute capture, and exception recording.
+- **Verification Gate**:
+  - `npx tsx --test tests/observability/test_otel_tracing.ts` passed **4/4 tests (100%)**.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+
 
 
 

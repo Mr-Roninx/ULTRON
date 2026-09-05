@@ -49,13 +49,14 @@ export function tracingMiddleware(req: Request, res: Response, next: NextFunctio
 
   // Set outgoing headers
   res.setHeader('x-request-id', requestId);
+  res.setHeader('x-trace-id', traceId);
   res.setHeader('traceparent', `00-${traceId}-${spanId}-01`);
 
   // Log on response completion and record metrics
   res.on('finish', () => {
     const durationMs = Date.now() - startTime;
     const durationSec = durationMs / 1000;
-    const path = req.route?.path || req.path;
+    const routePath = req.route?.path || req.path;
 
     metrics.observeHistogram('ultron_provider_latency_seconds', durationSec, {
       method: req.method,
