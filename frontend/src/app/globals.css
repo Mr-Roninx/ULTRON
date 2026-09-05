@@ -1,61 +1,87 @@
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --font-sans: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'Roboto Mono', monospace;
 
-  /* Google Clean White Theme Color System */
-  --bg-base:          #f8f9fa;
+  /* Razorpay Fintech Color System */
+  --bg-base:          #f4f6fa;
   --bg-surface:       #ffffff;
   --bg-card:          #ffffff;
-  --bg-hover:         #f1f3f4;
-  --bg-active:        #e8f0fe;
+  --bg-hover:         #f0f4f9;
+  --bg-active:        #eaf4ff;
   
-  --border:           #dadce0;
-  --border-subtle:    #e8eaed;
-  --border-focus:     #1a73e8;
+  --border:           #e2e8f0;
+  --border-subtle:    #edf2f7;
+  --border-focus:     #0c83ff;
 
-  /* Google Palette */
-  --google-blue:      #1a73e8;
-  --google-blue-hover:#174ea6;
-  --google-blue-light:#e8f0fe;
-  
-  --google-green:     #1e8e3e;
-  --google-green-hover:#137333;
-  --google-green-light:#e6f4ea;
-  
-  --google-yellow:    #f9ab00;
-  --google-yellow-dark:#e37400;
-  --google-yellow-light:#fef7e0;
-  
-  --google-red:       #d93025;
-  --google-red-hover: #c5221f;
-  --google-red-light: #fce8e6;
-  
-  --google-purple:    #9334e6;
-  --google-purple-light:#f3e8fd;
-  --google-cyan:      #12b5cb;
+  /* Razorpay Brand Palette */
+  --rzp-blue:         #0c83ff;
+  --rzp-blue-hover:   #0066ff;
+  --rzp-blue-light:   #eaf4ff;
+  --rzp-blue-glow:    rgba(12, 131, 255, 0.35);
+
+  --rzp-navy:         #02042b;
+  --rzp-navy-surface: #080c34;
+  --rzp-navy-card:    #0c1033;
+  --rzp-navy-border:  #1e2659;
+
+  --rzp-emerald:      #00d09c;
+  --rzp-emerald-hover:#00b586;
+  --rzp-emerald-light:#e6faf5;
+
+  --rzp-amber:        #ff9900;
+  --rzp-amber-dark:   #d97706;
+  --rzp-amber-light:  #fff8ed;
+
+  --rzp-crimson:      #f43f5e;
+  --rzp-crimson-hover:#e11d48;
+  --rzp-crimson-light:#fee8ec;
+
+  --rzp-purple:       #7952de;
+  --rzp-purple-light: #f3f0fc;
+
+  /* Backward Compatibility Aliases (maps legacy tokens to Razorpay) */
+  --google-blue:      var(--rzp-blue);
+  --google-blue-hover:var(--rzp-blue-hover);
+  --google-blue-light:var(--rzp-blue-light);
+
+  --google-green:     var(--rzp-emerald);
+  --google-green-hover:var(--rzp-emerald-hover);
+  --google-green-light:var(--rzp-emerald-light);
+
+  --google-yellow:    var(--rzp-amber);
+  --google-yellow-dark:var(--rzp-amber-dark);
+  --google-yellow-light:var(--rzp-amber-light);
+
+  --google-red:       var(--rzp-crimson);
+  --google-red-hover: var(--rzp-crimson-hover);
+  --google-red-light: var(--rzp-crimson-light);
+
+  --google-purple:    var(--rzp-purple);
+  --google-purple-light:var(--rzp-purple-light);
+  --google-cyan:      #00b4d8;
   --google-cyan-light:#e0f7fa;
 
-  /* Backward Compatibility Aliases */
-  --electric-blue:    #1a73e8;
-  --emerald:          #1e8e3e;
-  --amber:            #e37400;
-  --rose:             #d93025;
-  --purple:           #9334e6;
-  --cyan:             #12b5cb;
+  --electric-blue:    var(--rzp-blue);
+  --emerald:          var(--rzp-emerald);
+  --amber:            var(--rzp-amber);
+  --rose:             var(--rzp-crimson);
+  --purple:           var(--rzp-purple);
+  --cyan:             #00b4d8;
 
   /* Typography */
-  --text-primary:     #202124;
-  --text-secondary:   #5f6368;
-  --text-muted:       #80868b;
+  --text-primary:     #0c1033;
+  --text-secondary:   #525d7e;
+  --text-muted:       #8492a6;
   --text-inverse:     #ffffff;
 
-  /* Elevation Shadows */
-  --shadow-sm:        0 1px 2px 0 rgba(60,64,67,0.1), 0 1px 3px 1px rgba(60,64,67,0.06);
-  --shadow-md:        0 1px 3px 0 rgba(60,64,67,0.2), 0 4px 8px 3px rgba(60,64,67,0.08);
-  --shadow-lg:        0 4px 16px 0 rgba(60,64,67,0.15), 0 2px 6px 0 rgba(60,64,67,0.1);
-  --shadow-dropdown:  0 8px 24px rgba(60,64,67,0.18);
+  /* Razorpay Precision Elevation Shadows */
+  --shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md:        0 4px 12px rgba(12, 131, 255, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg:        0 10px 25px rgba(2, 4, 43, 0.08), 0 4px 10px rgba(0, 0, 0, 0.03);
+  --shadow-dropdown:  0 12px 32px rgba(2, 4, 43, 0.16);
+  --shadow-blue-glow: 0 4px 14px rgba(12, 131, 255, 0.35);
 }
 
 *, *::before, *::after {
@@ -75,15 +101,15 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Clean Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #f1f3f4; }
-::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
+/* Custom Razorpay Scrollbar */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: #f1f4f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* Focus Ring */
 *:focus-visible {
-  outline: 2px solid var(--google-blue);
+  outline: 2px solid var(--rzp-blue);
   outline-offset: 2px;
 }
 
@@ -97,6 +123,11 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.15); }
+}
+
 .animate-spin {
   animation: spin 0.8s linear infinite;
 }
@@ -105,20 +136,46 @@ html, body {
   animation: fadeIn 0.2s ease-out forwards;
 }
 
-/* Google Style Cards */
+.animate-pulse-glow {
+  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Razorpay Style Cards */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .card:hover {
   box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
 }
 
-/* Google Style Buttons */
+.card-accent-blue {
+  border-top: 3px solid var(--rzp-blue) !important;
+}
+
+.card-accent-green {
+  border-top: 3px solid var(--rzp-emerald) !important;
+}
+
+.card-accent-amber {
+  border-top: 3px solid var(--rzp-amber) !important;
+}
+
+.card-accent-purple {
+  border-top: 3px solid var(--rzp-purple) !important;
+}
+
+.card-accent-crimson {
+  border-top: 3px solid var(--rzp-crimson) !important;
+}
+
+/* Razorpay Style Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -127,7 +184,7 @@ html, body {
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -137,19 +194,22 @@ html, body {
 }
 
 .btn-primary {
-  background: var(--google-blue);
+  background: linear-gradient(90deg, #0c83ff 0%, #0066ff 100%);
   color: #ffffff;
-  box-shadow: 0 1px 2px rgba(26,115,232,0.3);
+  box-shadow: 0 2px 8px rgba(12, 131, 255, 0.35);
 }
 
 .btn-primary:hover {
-  background: var(--google-blue-hover);
-  box-shadow: 0 2px 4px rgba(26,115,232,0.4);
+  background: linear-gradient(90deg, #0072ea 0%, #0055e0 100%);
+  box-shadow: 0 4px 14px rgba(12, 131, 255, 0.45);
+  transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary {
@@ -160,7 +220,8 @@ html, body {
 
 .btn-secondary:hover {
   background: var(--bg-hover);
-  border-color: #bdc1c6;
+  border-color: #cbd5e1;
+  color: var(--rzp-blue);
 }
 
 .btn-ghost {
@@ -174,19 +235,20 @@ html, body {
 }
 
 .btn-danger {
-  background: var(--google-red-light);
-  color: var(--google-red);
-  border: 1px solid #f28b82;
+  background: var(--rzp-crimson-light);
+  color: var(--rzp-crimson);
+  border: 1px solid rgba(244, 63, 94, 0.3);
 }
 
 .btn-danger:hover {
   background: #fad2cf;
+  border-color: var(--rzp-crimson);
 }
 
-/* Google Style Form Inputs */
+/* Razorpay Style Form Inputs */
 .input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 13px;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -202,11 +264,11 @@ html, body {
 }
 
 .input:focus {
-  border-color: var(--google-blue);
-  box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+  border-color: var(--rzp-blue);
+  box-shadow: 0 0 0 3px rgba(12, 131, 255, 0.18);
 }
 
-/* Google Material Status Badges */
+/* Razorpay Fintech Status Badges */
 .status-dot {
   width: 8px;
   height: 8px;
@@ -215,8 +277,8 @@ html, body {
 }
 
 .status-dot.active {
-  background: var(--google-green);
-  box-shadow: 0 0 0 3px rgba(30,142,62,0.2);
+  background: var(--rzp-emerald);
+  box-shadow: 0 0 0 3px rgba(0, 208, 156, 0.25);
 }
 
 .badge {
@@ -224,37 +286,38 @@ html, body {
   align-items: center;
   gap: 5px;
   padding: 3px 8px;
-  border-radius: 12px;
+  border-radius: 4px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .badge-blue {
-  background: var(--google-blue-light);
-  color: var(--google-blue);
-  border: 1px solid #d2e3fc;
+  background: var(--rzp-blue-light);
+  color: var(--rzp-blue);
+  border: 1px solid rgba(12, 131, 255, 0.25);
 }
 
 .badge-green {
-  background: var(--google-green-light);
-  color: var(--google-green-hover);
-  border: 1px solid #ceead6;
+  background: var(--rzp-emerald-light);
+  color: var(--rzp-emerald-hover);
+  border: 1px solid rgba(0, 208, 156, 0.3);
 }
 
 .badge-amber {
-  background: var(--google-yellow-light);
-  color: var(--google-yellow-dark);
-  border: 1px solid #feefc3;
+  background: var(--rzp-amber-light);
+  color: var(--rzp-amber-dark);
+  border: 1px solid rgba(255, 153, 0, 0.3);
 }
 
 .badge-red {
-  background: var(--google-red-light);
-  color: var(--google-red);
-  border: 1px solid #fad2cf;
+  background: var(--rzp-crimson-light);
+  color: var(--rzp-crimson);
+  border: 1px solid rgba(244, 63, 94, 0.3);
 }
 
 .badge-gray {
-  background: #f1f3f4;
+  background: #f1f5f9;
   color: var(--text-secondary);
   border: 1px solid var(--border);
 }

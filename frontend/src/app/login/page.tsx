@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, Mail, KeyRound, ArrowRight, ArrowLeft, Sparkles, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Shield, Mail, ArrowRight, ArrowLeft, Sparkles, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../lib/auth";
 
 export default function LoginPage() {
@@ -101,51 +101,48 @@ export default function LoginPage() {
 
   const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").trim().slice(0, 6);
-    if (/^[0-9]+$/.test(pasteData)) {
-      const digits = pasteData.split("");
-      const newOtp = ["", "", "", "", "", ""];
-      digits.forEach((d, i) => {
-        if (i < 6) newOtp[i] = d;
-      });
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted) {
+      const newOtp = pasted.split("");
+      while (newOtp.length < 6) newOtp.push("");
       setOtp(newOtp);
-      if (pasteData.length === 6) {
-        handleVerifyCode(pasteData);
+      if (pasted.length === 6) {
+        handleVerifyCode(pasted);
       } else {
-        const nextIdx = Math.min(pasteData.length, 5);
-        otpInputsRef.current[nextIdx]?.focus();
+        otpInputsRef.current[pasted.length]?.focus();
       }
     }
   };
 
-  // Step 2: Verify OTP
-  const handleVerifyCode = async (codeToVerify?: string) => {
-    const finalOtp = codeToVerify || otp.join("");
-    if (finalOtp.length < 6) {
-      setError("Please enter the complete 6-digit verification code.");
+  // Step 3: Verify Code & Authenticate
+  const handleVerifyCode = async (overrideCode?: string) => {
+    const codeToVerify = overrideCode || otp.join("");
+    if (codeToVerify.length !== 6) {
+      setError("Please enter the complete 6-digit code.");
       return;
     }
 
     setError(null);
     setLoading(true);
-    const res = await verifyOtp(email.trim(), finalOtp);
+    const res = await verifyOtp(email.trim(), codeToVerify);
     setLoading(false);
 
     if (res.success) {
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } else {
-      setError(res.error || "Invalid verification code. Please check and try again.");
+      setError(res.error || "Invalid or expired verification code.");
     }
   };
 
-  // 1-Click Instant Demo Login for Hackathon & Quick Preview
+  // 1-Click Instant Demo Login
   const handleInstantDemoLogin = async () => {
     setError(null);
     setLoading(true);
     const res = await loginAsDemo();
     setLoading(false);
+
     if (res.success) {
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } else {
       setError(res.error || "Demo login failed");
     }
@@ -155,21 +152,21 @@ export default function LoginPage() {
     <div style={{
       display: "flex",
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #090d16 0%, #0f172a 50%, #0a0f1d 100%)",
+      background: "#02042B",
       color: "#f8fafc",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      fontFamily: "var(--font-sans)",
       position: "relative",
       overflow: "hidden"
     }}>
-      {/* Background glowing ambient light effects */}
+      {/* Background Razorpay ambient electric glow effects */}
       <div style={{
-        position: "absolute", top: "-10%", left: "20%", width: "500px", height: "500px",
-        background: "radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(0,0,0,0) 70%)",
+        position: "absolute", top: "-10%", left: "15%", width: "550px", height: "550px",
+        background: "radial-gradient(circle, rgba(12, 131, 255, 0.16) 0%, rgba(0,0,0,0) 70%)",
         borderRadius: "50%", pointerEvents: "none"
       }} />
       <div style={{
-        position: "absolute", bottom: "-10%", right: "20%", width: "500px", height: "500px",
-        background: "radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(0,0,0,0) 70%)",
+        position: "absolute", bottom: "-10%", right: "15%", width: "550px", height: "550px",
+        background: "radial-gradient(circle, rgba(0, 208, 156, 0.12) 0%, rgba(0,0,0,0) 70%)",
         borderRadius: "50%", pointerEvents: "none"
       }} />
 
@@ -183,38 +180,52 @@ export default function LoginPage() {
         padding: "40px 20px",
         zIndex: 10
       }}>
-        {/* Logo & Brand Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
+        {/* Razorpay Brand Header with Stylized Emblem */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+            width: 42, height: 42, borderRadius: 8,
+            background: "linear-gradient(135deg, #0C83FF 0%, #0052CC 100%)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 14px rgba(37,99,235,0.4)"
+            boxShadow: "0 4px 16px rgba(12, 131, 255, 0.4)",
+            position: "relative", overflow: "hidden"
           }}>
-            <Shield size={20} color="#ffffff" />
+            <div style={{
+              position: "absolute", top: -4, right: -4, width: 16, height: 16,
+              background: "#00D09C", transform: "rotate(45deg)", opacity: 0.9
+            }} />
+            <Shield size={22} color="#ffffff" style={{ position: "relative", zIndex: 2 }} />
           </div>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px", color: "#ffffff" }}>
-              ULTRON
+            <div style={{
+              fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", color: "#ffffff",
+              display: "flex", alignItems: "center", gap: 8
+            }}>
+              <span>ULTRON</span>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+                background: "rgba(12, 131, 255, 0.25)", color: "#58A6FF", border: "1px solid rgba(12, 131, 255, 0.4)"
+              }}>
+                RAZORPAY
+              </span>
             </div>
-            <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, letterSpacing: "0.2px" }}>
+            <div style={{ fontSize: 11, color: "#8492A6", fontWeight: 500, letterSpacing: "0.2px" }}>
               Autonomous Revenue Recovery Engine
             </div>
           </div>
         </div>
 
-        {/* Card */}
+        {/* Razorpay Styled Login Card */}
         <div style={{
           width: "100%",
-          maxWidth: 420,
-          background: "rgba(15, 23, 42, 0.75)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          borderRadius: 16,
+          maxWidth: 430,
+          background: "#080C34",
+          border: "1px solid #1E2659",
+          borderTop: "3px solid #0C83FF",
+          borderRadius: 8,
           padding: "36px 32px",
-          boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.05)"
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.05)"
         }}>
-          {/* 1-Click Instant Demo Login Banner */}
+          {/* 1-Click Instant Demo Login Banner in Razorpay Electric Blue */}
           <button
             type="button"
             onClick={handleInstantDemoLogin}
@@ -222,31 +233,31 @@ export default function LoginPage() {
             style={{
               width: "100%", padding: "12px 16px", fontSize: 13, fontWeight: 700,
               marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              border: "1px solid rgba(59,130,246,0.35)",
-              background: "linear-gradient(135deg, rgba(37,99,235,0.18) 0%, rgba(124,58,237,0.18) 100%)",
-              color: "#93c5fd", cursor: "pointer", borderRadius: 10,
-              boxShadow: "0 2px 12px rgba(37,99,235,0.15)",
+              border: "1px solid rgba(12, 131, 255, 0.4)",
+              background: "linear-gradient(90deg, #0C83FF 0%, #0066FF 100%)",
+              color: "#ffffff", cursor: "pointer", borderRadius: 6,
+              boxShadow: "0 4px 14px rgba(12, 131, 255, 0.35)",
               transition: "all 0.2s ease"
             }}
           >
-            <Sparkles size={16} color="#60a5fa" />
-            <span>🚀 1-Click Instant Demo Login</span>
+            <Sparkles size={16} color="#ffffff" />
+            <span>⚡ 1-Click Instant Demo Login</span>
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-            <div style={{ flex: 1, height: 1, background: "rgba(255, 255, 255, 0.08)" }} />
-            <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
-              {step === "EMAIL" ? "or continue with email" : "verification"}
+            <div style={{ flex: 1, height: 1, background: "#1E2659" }} />
+            <span style={{ fontSize: 11, color: "#8492A6", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+              {step === "EMAIL" ? "or sign in with email" : "verification code"}
             </span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255, 255, 255, 0.08)" }} />
+            <div style={{ flex: 1, height: 1, background: "#1E2659" }} />
           </div>
 
           {/* Error Banner */}
           {error && (
             <div style={{
-              padding: "12px 16px", marginBottom: 20, borderRadius: 8,
-              background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.25)",
-              color: "#fb7185", fontSize: 13, lineHeight: 1.5
+              padding: "12px 16px", marginBottom: 20, borderRadius: 6,
+              background: "rgba(244, 63, 94, 0.12)", border: "1px solid rgba(244, 63, 94, 0.3)",
+              color: "#FB7185", fontSize: 13, lineHeight: 1.5
             }}>
               {error}
             </div>
@@ -256,20 +267,20 @@ export default function LoginPage() {
           {step === "EMAIL" && (
             <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>
+                <h2 style={{ fontSize: 19, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>
                   Sign in or Sign up
                 </h2>
-                <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
-                  Enter your email address. We'll send a 6-digit verification code to sign in or create your account.
+                <p style={{ fontSize: 13, color: "#8492A6", lineHeight: 1.5, margin: 0 }}>
+                  Enter your email address. We'll send a 6-digit verification code to sign in or create your merchant account.
                 </p>
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#cbd5e1", marginBottom: 8 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#CBD5E1", marginBottom: 8 }}>
                   Work Email Address
                 </label>
                 <div style={{ position: "relative" }}>
-                  <Mail size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+                  <Mail size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#525D7E" }} />
                   <input
                     type="email"
                     required
@@ -279,10 +290,12 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     style={{
                       width: "100%", padding: "12px 14px 12px 42px",
-                      background: "rgba(30, 41, 59, 0.6)",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 10, color: "#ffffff", fontSize: 14,
-                      outline: "none", boxSizing: "border-box"
+                      background: "#0C1033",
+                      border: "1px solid #1E2659",
+                      borderRadius: 6, color: "#ffffff", fontSize: 14,
+                      outline: "none", boxSizing: "border-box",
+                      fontFamily: "var(--font-sans)",
+                      transition: "border-color 0.15s ease, box-shadow 0.15s ease"
                     }}
                   />
                 </div>
@@ -293,16 +306,16 @@ export default function LoginPage() {
                 disabled={loading || !email.trim()}
                 style={{
                   width: "100%", padding: "12px 16px",
-                  background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-                  color: "#ffffff", border: "none", borderRadius: 10,
+                  background: "linear-gradient(90deg, #0C83FF 0%, #0066FF 100%)",
+                  color: "#ffffff", border: "none", borderRadius: 6,
                   fontSize: 14, fontWeight: 600, cursor: loading ? "wait" : "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  boxShadow: "0 4px 14px rgba(37,99,235,0.35)", marginTop: 4
+                  boxShadow: "0 4px 14px rgba(12, 131, 255, 0.35)", marginTop: 4
                 }}
               >
                 {loading ? (
                   <>
-                    <RefreshCw size={16} className="spin" />
+                    <RefreshCw size={16} className="animate-spin" />
                     <span>Sending code…</span>
                   </>
                 ) : (
@@ -323,41 +336,41 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setStep("EMAIL")}
                   style={{
-                    background: "none", border: "none", color: "#94a3b8", cursor: "pointer",
+                    background: "none", border: "none", color: "#8492A6", cursor: "pointer",
                     fontSize: 12, display: "flex", alignItems: "center", gap: 6, padding: 0, marginBottom: 12
                   }}
                 >
                   <ArrowLeft size={14} />
                   <span>Change email</span>
                 </button>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>
+                <h2 style={{ fontSize: 19, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>
                   Enter verification code
                 </h2>
-                <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
-                  We sent a 6-digit code to <strong style={{ color: "#e2e8f0" }}>{email}</strong>
+                <p style={{ fontSize: 13, color: "#8492A6", lineHeight: 1.5, margin: 0 }}>
+                  We sent a 6-digit code to <strong style={{ color: "#ffffff" }}>{email}</strong>
                 </p>
               </div>
 
               {/* Sandbox Notice / Dev hint banner */}
               {sandboxNotice && (
                 <div style={{
-                  padding: "12px 14px", borderRadius: 8,
-                  background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.3)",
-                  color: "#fcd34d", fontSize: 12, lineHeight: 1.5
+                  padding: "12px 14px", borderRadius: 6,
+                  background: "rgba(255, 153, 0, 0.12)", border: "1px solid rgba(255, 153, 0, 0.35)",
+                  color: "#FCD34D", fontSize: 12, lineHeight: 1.5
                 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>⚠️ Email Provider Sandbox Notice</div>
-                  <div style={{ color: "#fef3c7" }}>{sandboxNotice}</div>
-                  <div style={{ marginTop: 6, fontSize: 11, color: "#cbd5e1" }}>
-                    Code: <strong style={{ color: "#ffffff", fontFamily: "monospace", fontSize: 14 }}>{devOtpHint}</strong> (Auto-filled below for instant access)
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>⚠️ Sandbox Notice</div>
+                  <div style={{ color: "#FEF3C7" }}>{sandboxNotice}</div>
+                  <div style={{ marginTop: 6, fontSize: 11, color: "#CBD5E1" }}>
+                    Code: <strong style={{ color: "#ffffff", fontFamily: "var(--font-mono)", fontSize: 14 }}>{devOtpHint}</strong> (Auto-filled below for instant access)
                   </div>
                 </div>
               )}
 
               {!sandboxNotice && devOtpHint && (
                 <div style={{
-                  padding: "10px 14px", borderRadius: 8,
-                  background: "rgba(37,99,235,0.12)", border: "1px dashed rgba(59,130,246,0.4)",
-                  color: "#93c5fd", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "space-between"
+                  padding: "10px 14px", borderRadius: 6,
+                  background: "rgba(12, 131, 255, 0.12)", border: "1px dashed rgba(12, 131, 255, 0.4)",
+                  color: "#93C5FD", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "space-between"
                 }}>
                   <span>Dev Sandbox Code: <strong>{devOtpHint}</strong></span>
                   <button
@@ -368,7 +381,7 @@ export default function LoginPage() {
                       handleVerifyCode(devOtpHint);
                     }}
                     style={{
-                      background: "rgba(59,130,246,0.25)", border: "none", borderRadius: 4,
+                      background: "rgba(12, 131, 255, 0.25)", border: "none", borderRadius: 4,
                       color: "#ffffff", padding: "3px 8px", cursor: "pointer", fontSize: 11, fontWeight: 600
                     }}
                   >
@@ -393,11 +406,12 @@ export default function LoginPage() {
                     style={{
                       width: 48, height: 54, textAlign: "center",
                       fontSize: 22, fontWeight: 700, color: "#ffffff",
-                      background: "rgba(30, 41, 59, 0.7)",
-                      border: digit ? "1.5px solid #3b82f6" : "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: 8, outline: "none",
-                      boxShadow: digit ? "0 0 10px rgba(59,130,246,0.25)" : "none",
-                      transition: "all 0.15s ease"
+                      background: "#0C1033",
+                      border: digit ? "2px solid #0C83FF" : "1px solid #1E2659",
+                      borderRadius: 6, outline: "none",
+                      boxShadow: digit ? "0 0 10px rgba(12, 131, 255, 0.3)" : "none",
+                      transition: "all 0.15s ease",
+                      fontFamily: "var(--font-mono)"
                     }}
                   />
                 ))}
@@ -411,17 +425,17 @@ export default function LoginPage() {
                 style={{
                   width: "100%", padding: "12px 16px",
                   background: otp.join("").length === 6
-                    ? "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)"
-                    : "rgba(37,99,235,0.4)",
-                  color: "#ffffff", border: "none", borderRadius: 10,
+                    ? "linear-gradient(90deg, #0C83FF 0%, #0066FF 100%)"
+                    : "rgba(12, 131, 255, 0.4)",
+                  color: "#ffffff", border: "none", borderRadius: 6,
                   fontSize: 14, fontWeight: 600, cursor: loading ? "wait" : "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  boxShadow: otp.join("").length === 6 ? "0 4px 14px rgba(37,99,235,0.35)" : "none"
+                  boxShadow: otp.join("").length === 6 ? "0 4px 14px rgba(12, 131, 255, 0.35)" : "none"
                 }}
               >
                 {loading ? (
                   <>
-                    <RefreshCw size={16} className="spin" />
+                    <RefreshCw size={16} className="animate-spin" />
                     <span>Verifying…</span>
                   </>
                 ) : (
@@ -433,16 +447,16 @@ export default function LoginPage() {
               </button>
 
               {/* Resend Link */}
-              <div style={{ textAlign: "center", fontSize: 12, color: "#94a3b8" }}>
+              <div style={{ textAlign: "center", fontSize: 12, color: "#8492A6" }}>
                 {resendCountdown > 0 ? (
-                  <span>Resend code in <strong style={{ color: "#e2e8f0" }}>{resendCountdown}s</strong></span>
+                  <span>Resend code in <strong style={{ color: "#ffffff" }}>{resendCountdown}s</strong></span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleSendOtp()}
                     disabled={loading}
                     style={{
-                      background: "none", border: "none", color: "#60a5fa",
+                      background: "none", border: "none", color: "#0C83FF",
                       cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0
                     }}
                   >
@@ -455,8 +469,8 @@ export default function LoginPage() {
         </div>
 
         {/* Footer info */}
-        <div style={{ marginTop: 24, fontSize: 12, color: "#64748b", textAlign: "center" }}>
-          Razorpay Integration • Test Mode • Zero LLM on Financial Path
+        <div style={{ marginTop: 24, fontSize: 12, color: "#525D7E", textAlign: "center" }}>
+          Razorpay Partner Control Plane • Autonomous Payment Recovery Engine • Test & Live Gateway
         </div>
       </div>
     </div>

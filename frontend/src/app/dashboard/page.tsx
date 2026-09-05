@@ -274,10 +274,10 @@ export default function UnifiedRecoveryHubPage() {
               Revenue Recovery Operations Hub
             </h1>
             <span style={{
-              fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 12,
-              background: isLive ? "#137333" : "rgba(26, 115, 232, 0.1)",
-              color: isLive ? "#ffffff" : "#1a73e8",
-              border: isLive ? "none" : "1px solid #d2e3fc"
+              fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
+              background: isLive ? "rgba(0, 208, 156, 0.15)" : "var(--rzp-blue-light)",
+              color: isLive ? "#00D09C" : "var(--rzp-blue)",
+              border: isLive ? "1px solid rgba(0, 208, 156, 0.35)" : "1px solid rgba(12, 131, 255, 0.3)"
             }}>
               {isLive ? "⚡ PRODUCTION ACTIVE" : "🧪 TEST SANDBOX"}
             </span>
@@ -295,10 +295,10 @@ export default function UnifiedRecoveryHubPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, textDecoration: "none" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, textDecoration: "none", borderColor: "var(--rzp-blue)", color: "var(--rzp-blue)" }}
             title="Open customer checkout store with official Razorpay modal to test real-time payment failure and recovery"
           >
-            <ExternalLink size={14} color="var(--google-blue)" />
+            <ExternalLink size={14} color="var(--rzp-blue)" />
             <span>Open Live Checkout</span>
           </a>
 
@@ -318,10 +318,10 @@ export default function UnifiedRecoveryHubPage() {
           <div
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              padding: "7px 14px", borderRadius: 20,
-              background: summary?.kill_switch_active ? "var(--google-red-light)" : "var(--google-blue-light)",
-              border: summary?.kill_switch_active ? "1px solid #fad2cf" : "1px solid rgba(26,115,232,0.25)",
-              color: summary?.kill_switch_active ? "var(--google-red)" : "var(--google-blue)",
+              padding: "7px 14px", borderRadius: 6,
+              background: summary?.kill_switch_active ? "var(--rzp-crimson-light)" : "var(--rzp-emerald-light)",
+              border: summary?.kill_switch_active ? "1px solid rgba(244,63,94,0.3)" : "1px solid rgba(0,208,156,0.35)",
+              color: summary?.kill_switch_active ? "var(--rzp-crimson)" : "var(--rzp-emerald-hover)",
               fontSize: 12, fontWeight: 600,
             }}
             title="ULTRON continuously scans, scores, and recovers failed payments automatically every 10s"
@@ -329,8 +329,8 @@ export default function UnifiedRecoveryHubPage() {
             <span
               style={{
                 width: 8, height: 8, borderRadius: "50%",
-                background: summary?.kill_switch_active ? "var(--google-red)" : "var(--google-green)",
-                boxShadow: summary?.kill_switch_active ? "none" : "0 0 8px var(--google-green)",
+                background: summary?.kill_switch_active ? "var(--rzp-crimson)" : "var(--rzp-emerald)",
+                boxShadow: summary?.kill_switch_active ? "none" : "0 0 8px var(--rzp-emerald)",
                 display: "inline-block"
               }}
             />
@@ -346,24 +346,24 @@ export default function UnifiedRecoveryHubPage() {
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
             title="Deterministic hard safety cutoff"
           >
-            <Power size={14} color={summary?.kill_switch_active ? "var(--google-red)" : "var(--text-secondary)"} />
+            <Power size={14} color={summary?.kill_switch_active ? "var(--rzp-crimson)" : "var(--text-secondary)"} />
             <span>{summary?.kill_switch_active ? "Kill Switch ENGAGED" : "Kill Switch Off"}</span>
           </button>
         </div>
       </div>
 
-      {/* Top 4 Google-Style Clean Metric Cards */}
+      {/* Top 5 Razorpay-Style Fintech Metric Cards with Top Border Accents */}
       <div style={{
         display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
         gap: 16, marginBottom: 20
       }}>
         {/* At Risk Volume */}
-        <div className="card" style={{ padding: "18px 20px" }}>
+        <div className="card card-accent-amber" style={{ padding: "18px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
               Total Failed Revenue At Risk
             </span>
-            <AlertTriangle size={16} color="var(--google-yellow-dark)" />
+            <AlertTriangle size={16} color="var(--rzp-amber-dark)" />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
             {summary?.total_at_risk_display || "₹0.00"}
@@ -374,14 +374,14 @@ export default function UnifiedRecoveryHubPage() {
         </div>
 
         {/* Recovered Revenue */}
-        <div className="card" style={{ padding: "18px 20px" }}>
+        <div className="card card-accent-green" style={{ padding: "18px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--google-green)" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--rzp-emerald-hover)" }}>
               Gross Recovered Revenue
             </span>
-            <CheckCircle2 size={16} color="var(--google-green)" />
+            <CheckCircle2 size={16} color="var(--rzp-emerald)" />
           </div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: "var(--google-green)", letterSpacing: "-0.5px" }}>
+          <div style={{ fontSize: 26, fontWeight: 700, color: "var(--rzp-emerald-hover)", letterSpacing: "-0.5px" }}>
             {summary?.total_recovered_display || "₹0.00"}
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
@@ -390,12 +390,12 @@ export default function UnifiedRecoveryHubPage() {
         </div>
 
         {/* Shadow Price */}
-        <div className="card" style={{ padding: "18px 20px" }}>
+        <div className="card card-accent-blue" style={{ padding: "18px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--google-blue)" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--rzp-blue)" }}>
               Portfolio Shadow Price (λ)
             </span>
-            <BarChart2 size={16} color="var(--google-blue)" />
+            <BarChart2 size={16} color="var(--rzp-blue)" />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
             {summary?.shadow_price_display || "₹0.00"}
@@ -406,12 +406,12 @@ export default function UnifiedRecoveryHubPage() {
         </div>
 
         {/* Recovery Capacity */}
-        <div className="card" style={{ padding: "18px 20px" }}>
+        <div className="card card-accent-purple" style={{ padding: "18px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
               Recovery Capacity Budget
             </span>
-            <Zap size={16} color="var(--google-purple)" />
+            <Zap size={16} color="var(--rzp-purple)" />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
             {summary?.capacity_available ?? 5} / {summary?.capacity_limit ?? 5}
@@ -422,14 +422,14 @@ export default function UnifiedRecoveryHubPage() {
         </div>
 
         {/* Anti-Blast Capital Saved */}
-        <div className="card" style={{ padding: "18px 20px", borderLeft: "4px solid var(--google-green)" }}>
+        <div className="card card-accent-green" style={{ padding: "18px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--google-green)" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--rzp-emerald-hover)" }}>
               Anti-Blast Capital Saved
             </span>
-            <ShieldCheck size={16} color="var(--google-green)" />
+            <ShieldCheck size={16} color="var(--rzp-emerald)" />
           </div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: "var(--google-green)", letterSpacing: "-0.5px" }}>
+          <div style={{ fontSize: 26, fontWeight: 700, color: "var(--rzp-emerald-hover)", letterSpacing: "-0.5px" }}>
             {summary?.total_capital_saved_display || "₹0.00"}
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
@@ -442,10 +442,10 @@ export default function UnifiedRecoveryHubPage() {
       {isLive ? (
         <div style={{
           marginBottom: 20,
-          padding: "12px 18px",
-          borderRadius: 12,
-          background: "linear-gradient(90deg, rgba(19, 115, 51, 0.08) 0%, rgba(19, 115, 51, 0.03) 100%)",
-          border: "1px solid #a8dab5",
+          padding: "14px 18px",
+          borderRadius: 6,
+          background: "linear-gradient(90deg, rgba(0, 208, 156, 0.12) 0%, rgba(0, 208, 156, 0.04) 100%)",
+          border: "1px solid #00D09C",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -454,17 +454,18 @@ export default function UnifiedRecoveryHubPage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
-              width: 28, height: 28, borderRadius: "50%", background: "#137333",
-              display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", flexShrink: 0
+              width: 30, height: 30, borderRadius: 6, background: "#00D09C",
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#02042B", flexShrink: 0,
+              boxShadow: "0 2px 8px rgba(0, 208, 156, 0.4)"
             }}>
-              <Zap size={15} />
+              <Zap size={16} />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#137333", display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#00B586", display: "flex", alignItems: "center", gap: 6 }}>
                 <span>PRODUCTION MODE ACTIVE — REAL MONEY EXECUTION</span>
-                <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 10, background: "#137333", color: "#ffffff", fontWeight: 700 }}>LIVE GATEWAY</span>
+                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 3, background: "#00D09C", color: "#02042B", fontWeight: 800 }}>LIVE GATEWAY</span>
               </div>
-              <div style={{ fontSize: 12, color: "#2e7d32", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#008763", marginTop: 2 }}>
                 Recovery sweeps and link generation execute against official Razorpay Live API. Customer payments credit directly to your linked bank account.
               </div>
             </div>
@@ -472,8 +473,8 @@ export default function UnifiedRecoveryHubPage() {
           <a
             href="/dashboard/settings/integrations"
             style={{
-              fontSize: 12, fontWeight: 600, color: "#137333", textDecoration: "none",
-              padding: "6px 12px", borderRadius: 6, background: "#ffffff", border: "1px solid #ceead6"
+              fontSize: 12, fontWeight: 700, color: "#00B586", textDecoration: "none",
+              padding: "6px 14px", borderRadius: 4, background: "#ffffff", border: "1px solid #00D09C"
             }}
           >
             Manage Live Credentials →
@@ -482,10 +483,10 @@ export default function UnifiedRecoveryHubPage() {
       ) : (
         <div style={{
           marginBottom: 20,
-          padding: "10px 16px",
-          borderRadius: 12,
-          background: "rgba(26, 115, 232, 0.05)",
-          border: "1px solid #d2e3fc",
+          padding: "12px 18px",
+          borderRadius: 6,
+          background: "rgba(12, 131, 255, 0.06)",
+          border: "1px solid rgba(12, 131, 255, 0.25)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -494,12 +495,12 @@ export default function UnifiedRecoveryHubPage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 15 }}>🧪</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#1a73e8" }}>
-              TEST SANDBOX MODE: Operating safely with simulated transactions and test Razorpay keys. No real customer charges.
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--rzp-blue)" }}>
+              RAZORPAY TEST MODE: Operating safely with simulated transactions and test API credentials. No real customer charges.
             </span>
           </div>
           <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-            Use top header toggle to switch to Production (Real Money)
+            Use top header toggle to switch to Live Mode (Real Money)
           </span>
         </div>
       )}
@@ -515,21 +516,21 @@ export default function UnifiedRecoveryHubPage() {
           {/* Controls: Source & Status Switchers */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             {/* Traffic Source Filter */}
-            <div style={{ display: "flex", gap: 4, background: "var(--bg-hover)", padding: 4, borderRadius: 20 }}>
+            <div style={{ display: "flex", gap: 3, background: "#F0F4F9", padding: 3, borderRadius: 6 }}>
               {[
                 { id: "REAL" as const, label: `🟢 Live Gateway (${opportunities.filter((o) => o.source === "real").length})` },
-                { id: "ALL" as const, label: `All Transactions (${opportunities.length})` },
-                { id: "SYNTHETIC" as const, label: `🧪 Benchmark Sandbox (${opportunities.filter((o) => o.source === "synthetic").length})` },
+                { id: "ALL" as const, label: `All (${opportunities.length})` },
+                { id: "SYNTHETIC" as const, label: `🧪 Benchmark (${opportunities.filter((o) => o.source === "synthetic").length})` },
               ].map((src) => (
                 <button
                   key={src.id}
                   onClick={() => setSourceFilter(src.id)}
                   style={{
-                    padding: "5px 12px", borderRadius: 16, fontSize: 12, fontWeight: 500,
+                    padding: "5px 12px", borderRadius: 4, fontSize: 12, fontWeight: 600,
                     border: "none", cursor: "pointer", transition: "all 0.15s ease",
-                    background: sourceFilter === src.id ? "#ffffff" : "transparent",
-                    color: sourceFilter === src.id ? "var(--google-blue)" : "var(--text-secondary)",
-                    boxShadow: sourceFilter === src.id ? "0 1px 2px rgba(60,64,67,0.15)" : "none"
+                    background: sourceFilter === src.id ? "var(--rzp-blue)" : "transparent",
+                    color: sourceFilter === src.id ? "#ffffff" : "var(--text-secondary)",
+                    boxShadow: sourceFilter === src.id ? "0 2px 6px rgba(12, 131, 255, 0.3)" : "none"
                   }}
                 >
                   {src.label}
@@ -538,7 +539,7 @@ export default function UnifiedRecoveryHubPage() {
             </div>
 
             {/* Segmented Status Pills */}
-            <div style={{ display: "flex", gap: 4, background: "var(--bg-hover)", padding: 4, borderRadius: 20 }}>
+            <div style={{ display: "flex", gap: 3, background: "#F0F4F9", padding: 3, borderRadius: 6 }}>
               {[
                 { id: "ALL", label: "All Status" },
                 { id: "ACTION_NEEDED", label: "⚡ Action Needed" },
@@ -550,11 +551,11 @@ export default function UnifiedRecoveryHubPage() {
                   key={tab.id}
                   onClick={() => setFilterTab(tab.id)}
                   style={{
-                    padding: "5px 12px", borderRadius: 16, fontSize: 12, fontWeight: 500,
+                    padding: "5px 12px", borderRadius: 4, fontSize: 12, fontWeight: 600,
                     border: "none", cursor: "pointer", transition: "all 0.15s ease",
-                    background: filterTab === tab.id ? "#ffffff" : "transparent",
-                    color: filterTab === tab.id ? "var(--google-blue)" : "var(--text-secondary)",
-                    boxShadow: filterTab === tab.id ? "0 1px 2px rgba(60,64,67,0.15)" : "none"
+                    background: filterTab === tab.id ? "var(--rzp-blue)" : "transparent",
+                    color: filterTab === tab.id ? "#ffffff" : "var(--text-secondary)",
+                    boxShadow: filterTab === tab.id ? "0 2px 6px rgba(12, 131, 255, 0.3)" : "none"
                   }}
                 >
                   {tab.label}
@@ -572,13 +573,13 @@ export default function UnifiedRecoveryHubPage() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left" }}>
             <thead>
-              <tr style={{ background: "#f8f9fa", borderBottom: "1px solid var(--border)", color: "var(--text-secondary)", fontSize: 11, textTransform: "uppercase" }}>
-                <th style={{ padding: "10px 16px", fontWeight: 600 }}>ID / Source / Created</th>
-                <th style={{ padding: "10px 16px", fontWeight: 600 }}>Amount (₹)</th>
-                <th style={{ padding: "10px 16px", fontWeight: 600 }}>Decline Reason</th>
-                <th style={{ padding: "10px 16px", fontWeight: 600 }}>Score (IVEN)</th>
-                <th style={{ padding: "10px 16px", fontWeight: 600 }}>Status</th>
-                <th style={{ padding: "10px 16px", fontWeight: 600, textAlign: "right" }}>Actions</th>
+              <tr style={{ background: "#F8F9FD", borderBottom: "1px solid var(--border)", color: "#525D7E", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                <th style={{ padding: "12px 16px", fontWeight: 700 }}>Opportunity ID / Gateway</th>
+                <th style={{ padding: "12px 16px", fontWeight: 700 }}>Amount (₹)</th>
+                <th style={{ padding: "12px 16px", fontWeight: 700 }}>Decline Reason</th>
+                <th style={{ padding: "12px 16px", fontWeight: 700 }}>Score (IVEN)</th>
+                <th style={{ padding: "12px 16px", fontWeight: 700 }}>Status</th>
+                <th style={{ padding: "12px 16px", fontWeight: 700, textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -589,10 +590,10 @@ export default function UnifiedRecoveryHubPage() {
                       maxWidth: 440, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center"
                     }}>
                       <div style={{
-                        width: 44, height: 44, borderRadius: "50%", background: "var(--google-green-light)",
+                        width: 44, height: 44, borderRadius: "50%", background: "var(--rzp-emerald-light)",
                         display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12
                       }}>
-                        <CheckCircle2 size={24} color="var(--google-green)" />
+                        <CheckCircle2 size={24} color="var(--rzp-emerald)" />
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
                         {sourceFilter === "REAL" ? "Live Gateway Active & Protected" : "No Opportunities Found"}
@@ -632,7 +633,7 @@ export default function UnifiedRecoveryHubPage() {
                     key={opp.id}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
-                      background: selectedOpp?.id === opp.id ? "var(--google-blue-light)" : "#ffffff",
+                      background: selectedOpp?.id === opp.id ? "var(--rzp-blue-light)" : "#ffffff",
                       transition: "background 0.15s ease",
                       cursor: "pointer"
                     }}
@@ -707,10 +708,10 @@ export default function UnifiedRecoveryHubPage() {
                         <button
                           onClick={() => setWhatsappModalOpp(opp)}
                           className="btn btn-secondary"
-                          style={{ padding: "5px 10px", fontSize: 11, gap: 4, borderRadius: 14 }}
+                          style={{ padding: "5px 10px", fontSize: 11, gap: 4, borderRadius: 4 }}
                           title="Open WhatsApp Recovery Preview"
                         >
-                          <Smartphone size={13} color="var(--google-green)" />
+                          <Smartphone size={13} color="var(--rzp-emerald-hover)" />
                           <span>WhatsApp</span>
                         </button>
 
@@ -721,7 +722,7 @@ export default function UnifiedRecoveryHubPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-primary"
-                            style={{ padding: "5px 10px", fontSize: 11, gap: 4, borderRadius: 14 }}
+                            style={{ padding: "5px 10px", fontSize: 11, gap: 4, borderRadius: 4 }}
                           >
                             <span>Pay Link</span>
                             <ExternalLink size={11} />
