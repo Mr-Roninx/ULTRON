@@ -34,6 +34,7 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **ULTRON V11 Phase 5: Resilient Execution Engine** (Completed & Audited)
 - [x] **ULTRON V11 Phase 6: Multi-Tenant Row-Level Isolation** (Completed & Audited)
 - [x] **ULTRON V11 Phase 7: Enhanced Economic Engine** (Completed & Audited)
+- [x] **ULTRON V11 Phase 8: Advanced Observability Dashboard (Frontend V11)** (Completed & Audited)
 
 ---
 
@@ -478,6 +479,34 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - `npx tsc --noEmit` passed with **0 errors**.
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+### Phase 8: Advanced Observability Dashboard (Frontend V11) (Completed & Verified)
+- **What was built**:
+  - Built `frontend/src/lib/sse-client.ts`: Resilient Server-Sent Events client featuring exponential backoff auto-reconnect (< 2s recovery constraint), heartbeat timeout detection, message deduplication, and typed event listeners (`OPPORTUNITY_UPDATED`, `SWEEP_COMPLETED`, etc.).
+  - Built `frontend/src/components/IVENBadge.tsx`: Reusable economic priority badge supporting `STRONG` (≥ ₹150), `MODERATE` (₹50-₹149), `WEAK` (< ₹50), and `NEGATIVE` (≤ ₹0 / ABSTAIN) with explicit `*Model-estimated` disclaimer labeling.
+  - Built Tenant Command Center (`frontend/src/app/dashboard/command-center/page.tsx`):
+    - Real-time SSE connection health indicator.
+    - Global emergency kill-switch with one-click halt / resume control.
+    - Capacity budget bound meter (5 links max per run) and marginal shadow price admission cutoff.
+    - Live feed of in-flight opportunities with real-time two-stage Action Authority gate status.
+    - Instant agent reasoning cycle dispatch (`POST /v1/agent/run`).
+  - Built Economic Intelligence Panel (`frontend/src/app/dashboard/economics/page.tsx`):
+    - Causal Attribution Hero: Difference-in-Differences (Diff-in-Diff) Average Treatment Effect on the Treated (ATT), p-value significance, and parallel trends check (< 15% pre divergence).
+    - Continuous Learning Bayesian Priors: Static baseline vs calibrated Beta posteriors, 95% Bayesian credible intervals, sample sizes, and lift vs baseline.
+    - Thompson Sampling Contextual Bandit Arms: Visualizing explore-exploit arm statistics across decline codes and amount tiers.
+    - Strict compliance with Invariant #8: All probabilities and rates labeled as model-estimated counterfactuals.
+  - Built Audit & Compliance Timeline (`frontend/src/app/dashboard/audit/page.tsx`):
+    - Cryptographic ledger verification check (`/v1/audit/verify-ledger`).
+    - One-click JSON (`/v1/audit/export/json`) and CSV (`/v1/audit/export/csv`) export.
+    - Verdict filtering (`ALL`, `AUTHORIZED`, `BLOCKED`, `ABSTAIN`, `WAIT`) and search.
+    - Two-stage decision visualization reading durable stored fields (Invariant #7: zero post-hoc LLM generation).
+  - Updated `frontend/src/app/dashboard/layout.tsx`: Added Command Center, Economic Intelligence, and Audit Timeline to sidebar navigation.
+- **Verification Gate**:
+  - Next.js Turbopack production build (`npm run build` in `frontend`) compiled **18/18 static & dynamic routes with 0 errors**.
+  - Backend TypeScript compilation `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
 
 
 
