@@ -98,31 +98,52 @@ import { CacheManager } from './cache/redis.js';
 import { isKillSwitchActive } from './authority/gate.js';
 import { auditLogger } from './middleware/audit_logger.js';
 
-// Middlewares
-// 1. Helmet Security Headers (HSTS, CSP, X-Frame-Options)
-app.use(
-  helmet({
-    contentSecurityPolicy: false, // allow local React/Next.js dashboard embedding
-    crossOriginEmbedderPolicy: false,
-  })
-);
+import { getSecurityHeadersMiddleware } from './security/csp_headers.js';
+import { inputSanitizerMiddleware } from './security/input_sanitizer.js';
 
-// 2. CORS Configuration (Allows localhost, Vercel deployments, and production origins)
+// Middlewares
+// 1. Enterprise Security Headers (CSP, HSTS, X-Frame-Options)
+app.use(getSecurityHeadersMiddleware());
+
+// 2. CORS Configuration with strict production allowlist
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (
-        !origin ||
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin.endsWith('.vercel.app') ||
-        (process.env.APP_URL && origin.startsWith(process.env.APP_URL)) ||
-        process.env.NODE_ENV !== 'production'
-      ) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Allow configured frontend domain
+      if (!origin) {
+        // Allow server-to-server or non-browser requests
+        return callback(null, true);
       }
+
+      if (process.env.NODE_ENV !== 'production') {
+        // Development / testing: allow localhost, 127.0.0.1, vercel preview deployments
+        if (
+          origin.includes('localhost') ||
+          origin.includes('127.0.0.1') ||
+          origin.endsWith('.vercel.app')
+        ) {
+          return callback(null, true);
+        }
+      }
+
+      // Production checks: configured ALLOWED_ORIGINS or APP_URL
+      if (
+        allowedOrigins.includes(origin) ||
+        (process.env.APP_URL && origin === process.env.APP_URL) ||
+        (process.env.NEXT_PUBLIC_APP_URL && origin === process.env.NEXT_PUBLIC_APP_URL)
+      ) {
+        return callback(null, true);
+      }
+
+      if (process.env.NODE_ENV === 'production') {
+        return callback(new Error(`CORS policy rejection: Origin '${origin}' is not authorized.`), false);
+      }
+
+      return callback(null, true);
     },
     credentials: true,
   })
@@ -172,6 +193,7 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(inputSanitizerMiddleware);
 app.use(tracingMiddleware);
 
 // Enterprise Prometheus Metrics Export Endpoint

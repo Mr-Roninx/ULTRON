@@ -136,7 +136,10 @@ export class ApiKeyService {
   /**
    * Authenticates a raw Bearer API key token (with Supabase fallback).
    */
-  public static async authenticateKey(rawKey: string): Promise<{
+  public static async authenticateKey(
+    rawKey: string,
+    requiredScope?: ApiKeyScope
+  ): Promise<{
     valid: boolean;
     tenantId?: string;
     environment?: 'live' | 'test';
@@ -269,12 +272,34 @@ export class ApiKeyService {
       ? JSON.parse(record.scopes)
       : record.scopes;
 
+    if (requiredScope && !scopes.includes(requiredScope) && !scopes.includes('*' as any)) {
+      return {
+        valid: false,
+        tenantId: record.tenant_id,
+        environment: record.environment || 'test',
+        scopes,
+        errorReason: `Forbidden: API key lacks required scope '${requiredScope}'`,
+      };
+    }
+
     return {
       valid: true,
       tenantId: record.tenant_id,
       environment: record.environment || 'test',
       scopes,
     };
+  }
+
+  /**
+   * Checks per-key rate limits in Redis or memory bucket.
+   */
+  public static async checkKeyRateLimit(
+    keyId: string,
+    limit: number = 1000,
+    windowSec: number = 60
+  ): Promise<{ allowed: boolean; remaining: number }> {
+    const { DistributedRateLimiter } = await import('../cache/rate_limiter.js');
+    return DistributedRateLimiter.checkLimit(`ratelimit:apikey:${keyId}`, limit, windowSec);
   }
 
   /**

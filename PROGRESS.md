@@ -396,6 +396,21 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
 
+### Phase 4: Advanced Security Hardening (Completed & Verified)
+- **What was built**:
+  - Fixed CORS wildcard vulnerability in `src/server.ts`: Enforced strict origin allowlist parsed from `ALLOWED_ORIGINS` / `APP_URL`, throwing structured 403 / CORS policy rejection for unauthorized domains in production.
+  - Built `src/security/csp_headers.ts`: Enterprise Content Security Policy via helmet with precise directives (`script-src 'self'`, `connect-src` to Razorpay / Supabase / Resend, `frame-ancestors 'none'`, HSTS preload).
+  - Built `src/security/input_sanitizer.ts`: Input sanitization middleware stripping null bytes and dangerous control characters, plus reusable `validateRequestBody()` Zod schema validator.
+  - Updated `src/security/auth.ts`: Added token pair rotation (`accessToken` 15m + `refreshToken` 7d) with unique cryptographic `jti` and Redis/in-memory token blacklist revocation (`revokeToken`, `isTokenRevoked`).
+  - Updated `src/security/api_keys.ts`: Added mandatory scope validation parameter (`requiredScope`) to `authenticateKey()` and Redis-backed per-key rate limiter `checkKeyRateLimit()`.
+  - Created test suite `tests/security/test_security_hardening.ts`: Validates input sanitization, Zod validation failure handling, JWT revocation, and API key scope enforcement.
+- **Verification Gate**:
+  - `npx tsx --test tests/security/test_security_hardening.ts` passed **5/5 tests (100%)**.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+
 
 
 

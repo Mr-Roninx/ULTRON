@@ -3,7 +3,12 @@ import { Request, Response, NextFunction } from 'express';
 import { verifySupabaseToken } from './supabase.js';
 import { ApiKeyService } from './api_keys.js';
 
+import { randomUUID } from 'node:crypto';
+import { CacheManager } from '../cache/redis.js';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'ultron_secure_jwt_secret_key_2026';
+const ACCESS_TOKEN_EXPIRY = '15m';
+const REFRESH_TOKEN_EXPIRY = '7d';
 const SESSION_EXPIRY = '7d'; // 7-day session expiry for uninterrupted testing
 
 export enum UserRole {
@@ -18,6 +23,15 @@ export interface AuthUser {
   role: UserRole | string;
   merchant_id?: string;
   tenantId?: string;
+  jti?: string;
+  tokenType?: 'access' | 'refresh' | 'session';
+}
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+  jti: string;
+  expiresInSeconds: number;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -25,10 +39,53 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Generates a signed JWT session token with 30-minute expiration.
+ * Revokes a JWT by its unique ID (jti).
+ */
+export async function revokeToken(jti: string, ttlSeconds: number = 7 * 24 * 3600): Promise<void> {
+  const cache = CacheManager.getInstance();
+  await cache.set(`revoked:jti:${jti}`, '1', ttlSeconds);
+}
+
+/**
+ * Checks whether a given jti has been blacklisted / revoked.
+ */
+export async function isTokenRevoked(jti?: string): Promise<boolean> {
+  if (!jti) return false;
+  const cache = CacheManager.getInstance();
+  const val = await cache.get<string>(`revoked:jti:${jti}`);
+  return val === '1';
+}
+
+/**
+ * Generates an access token (15m) + refresh token (7d) pair with unique jti.
+ */
+export function generateTokenPair(payload: AuthUser): TokenPair {
+  const jti = randomUUID();
+  const accessToken = jwt.sign(
+    { ...payload, jti, tokenType: 'access' },
+    JWT_SECRET,
+    { expiresIn: ACCESS_TOKEN_EXPIRY as any }
+  );
+  const refreshToken = jwt.sign(
+    { userId: payload.userId, role: payload.role, tenantId: payload.tenantId, jti, tokenType: 'refresh' },
+    JWT_SECRET,
+    { expiresIn: REFRESH_TOKEN_EXPIRY as any }
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+    jti,
+    expiresInSeconds: 15 * 60,
+  };
+}
+
+/**
+ * Generates a signed JWT session token with expiration.
  */
 export function generateSessionToken(payload: AuthUser, expiresIn: string = SESSION_EXPIRY): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn as any });
+  const jti = payload.jti || randomUUID();
+  return jwt.sign({ ...payload, jti }, JWT_SECRET, { expiresIn: expiresIn as any });
 }
 
 /**
@@ -119,11 +176,16 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
   // 2. Try local session JWT token
   try {
     const user = verifySessionToken(token) as any;
+    if (user?.jti && (await isTokenRevoked(user.jti))) {
+      res.status(401).json({ error: 'Unauthorized: Token has been revoked.' });
+      return;
+    }
     req.user = {
       userId: user.userId || user.id || 'dev_operator',
       role: user.role || UserRole.ADMIN,
       tenantId: user.tenantId || user.merchant_id || 'tenant_system_default',
       merchant_id: user.merchant_id || user.tenantId || 'tenant_system_default',
+      jti: user.jti,
     };
     return next();
   } catch (localErr: any) {
