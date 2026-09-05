@@ -91,7 +91,7 @@ export class AntiBlastEngine {
 
     const savings = this.calculateSavings(opp, reason);
     const id = `prev_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const tenantId = (opp as any).tenant_id || 'tenant_system_default';
+    const tenantId = opp.tenant_id || 'tenant_system_default';
     const now = new Date().toISOString();
 
     // Deduplicate: do not record duplicate prevented intervention for same opportunity

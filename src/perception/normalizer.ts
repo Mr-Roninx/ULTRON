@@ -166,7 +166,7 @@ export function normalizeOpportunity(
     created_at: now,
     status: 'pending',
     tenant_id: options.tenantId || 'tenant_default',
-    environment: options.environment,
+    environment: options.environment || 'test',
     razorpay_event_id: eventId || null,
     raw_payload_ref: JSON.stringify({
       error_source: errorSource,

@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { TenancyEnforcer, TenantScopedRequest } from '../security/tenancy.js';
 import { CanonicalPaymentEventSchema, WebAppPingSchema } from '../security/schemas.js';
 import { DatabaseAdapter } from '../db/adapter.js';
@@ -598,6 +598,10 @@ eventsRouter.post(
 // 6. GET /v1/events/opportunity/:id - Direct status and recovery link check for client store
 eventsRouter.get('/opportunity/:id', async (req: Request, res: Response): Promise<void> => {
   const oppId = req.params.id;
+  if (!oppId || typeof oppId !== 'string') {
+    res.status(400).json({ error: 'Invalid or missing opportunity ID' });
+    return;
+  }
   const opp = getOpportunityById(oppId);
   if (!opp) {
     res.status(404).json({ error: 'Opportunity not found', id: oppId });

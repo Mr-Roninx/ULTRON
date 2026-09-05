@@ -470,7 +470,12 @@ app.get('/pitch-video', (_req, res) => {
 });
 
 // Start server if run directly
-const isDirectRun = process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE && !process.env.SUPPRESS_LISTEN;
+const isDirectRun =
+  process.env.NODE_ENV !== 'test' &&
+  !process.env.TEST_MODE &&
+  !process.env.SUPPRESS_LISTEN &&
+  !process.argv.some((arg) => arg.includes('test')) &&
+  !process.env.npm_lifecycle_event?.includes('test');
 
 if (isDirectRun) {
   const server = app.listen(PORT, () => {

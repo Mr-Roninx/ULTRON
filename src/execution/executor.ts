@@ -41,6 +41,7 @@ export interface SingleExecutionResult {
   opportunity_id: string;
   success: boolean;
   created_new: boolean;
+  test_mode_fallback?: boolean;
   record?: ExecutionRecord;
   error?: string;
 }
@@ -100,11 +101,11 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
   }
 
   // 3. Call Razorpay API — dynamically resolve client for tenant's active environment ('live' vs 'test')
-  const tenantId = (opp as any).tenant_id || 'tenant_system_default';
-  let executionEnv: 'test' | 'live' = (opp as any).environment || 'test';
+  const tenantId = opp.tenant_id;
+  let executionEnv: 'test' | 'live' = opp.environment;
   try {
     const tenantRow = db.prepare('SELECT environment FROM tenants WHERE id = ? LIMIT 1;').get(tenantId) as any;
-    if (tenantRow?.environment === 'live' || (opp as any).environment === 'live') {
+    if (tenantRow?.environment === 'live' || opp.environment === 'live') {
       executionEnv = 'live';
     }
   } catch {}
@@ -303,7 +304,9 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
     }
 
     // Handle Test Mode rate limit / sandbox quota / circuit breaker in Test Mode
+    // NOTE: Returns test_mode_fallback: true so consumers can distinguish simulated from real
     if (executionEnv === 'test') {
+      console.warn(`⚠️ [TEST_MODE_FALLBACK] Razorpay API failed for ${opp.id}: ${userFacingError}. Substituting simulated payment link.`);
       const now = new Date().toISOString();
       const mockPlinkId = `plink_test_${opp.id.replace(/[^a-zA-Z0-9]/g, '').slice(-12)}`;
       const linkUrl = `https://rzp.io/i/${mockPlinkId}`;
@@ -311,7 +314,7 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
         opportunity_id: opp.id,
         razorpay_payment_link_id: mockPlinkId,
         link_url: linkUrl,
-        status: 'created',
+        status: 'simulated',
         idempotency_key: `ref_${opp.id}`,
         created_at: now,
       };
@@ -330,6 +333,7 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
           short_url: linkUrl,
           amount_paise: opp.amount_paise,
           test_mode_fallback: true,
+          simulated: true,
           original_error: userFacingError,
         }),
       });
@@ -338,8 +342,8 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
         id: `notif_link_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         tenant_id: tenantId,
         type: 'LINK_CREATED',
-        title: 'Payment Link Created (Test Mode)',
-        message: `Recovery link created for opportunity ${opp.id} (₹${(opp.amount_paise / 100).toFixed(2)})`,
+        title: 'Simulated Payment Link (Razorpay API Unavailable)',
+        message: `Simulated recovery link for opportunity ${opp.id} (₹${(opp.amount_paise / 100).toFixed(2)}) — Razorpay API was unavailable in test mode`,
         link_url: '/dashboard',
         created_at: now,
       });
@@ -348,6 +352,7 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
         opportunity_id: opp.id,
         success: true,
         created_new: true,
+        test_mode_fallback: true,
         record: executionRecord,
       };
     }

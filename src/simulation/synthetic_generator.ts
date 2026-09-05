@@ -112,6 +112,8 @@ export class SyntheticDataGenerator {
         customer_trust_score: Math.floor(Math.random() * 50) + 50, // 50-99
         created_at: evt.occurred_at,
         status: 'pending',
+        tenant_id: 'tenant_system_default',
+        environment: 'test',
       });
     }
 

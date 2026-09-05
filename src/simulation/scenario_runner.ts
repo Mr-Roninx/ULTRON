@@ -62,6 +62,8 @@ export class ScenarioRunner {
           customer_trust_score: 20,
           created_at: evt.occurred_at,
           status: 'pending',
+          tenant_id: 'tenant_system_default',
+          environment: 'test',
         });
       }
     } else if (type === 'CAPACITY_STRESS') {
@@ -84,6 +86,8 @@ export class ScenarioRunner {
           customer_trust_score: 90,
           created_at: evt.occurred_at,
           status: 'pending',
+          tenant_id: 'tenant_system_default',
+          environment: 'test',
         });
       }
     } else {

@@ -39,6 +39,8 @@ describe('V6 Enterprise: Online Lagrangian Dual Budget Pacer & Anti-Blast Saving
       customer_trust_score: 10,
       created_at: new Date().toISOString(),
       status: 'blocked',
+      tenant_id: 'tenant_enterprise_test',
+      environment: 'test',
     };
 
     const savings = AntiBlastEngine.calculateSavings(opp, 'Hard decline fraud filter');

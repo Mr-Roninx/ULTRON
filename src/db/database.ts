@@ -1029,6 +1029,8 @@ export function ensureOpportunity(oppId: string): void {
       customer_trust_score: 0.65,
       created_at: new Date().toISOString(),
       status: 'pending',
+      tenant_id: 'tenant_system_default',
+      environment: 'test',
     });
   }
 }

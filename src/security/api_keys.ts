@@ -22,6 +22,17 @@ export const VALID_API_KEY_SCOPES: ApiKeyScope[] = [
   'integrations:write',
 ];
 
+/**
+ * Explicit allowlist of demo key IDs. Only these exact IDs are accepted as demo keys.
+ * Replaces wildcard .includes('demo') matching to prevent unintended auto-authentication.
+ * Demo keys are ONLY valid when NODE_ENV !== 'production'.
+ */
+const ALLOWED_DEMO_KEY_IDS = new Set([
+  'live_key_demo',
+  'test_live_key_demo',
+  'demo_merchant',
+]);
+
 export interface ApiKeyRecord {
   id: string;
   tenant_id: string;
@@ -157,21 +168,10 @@ export class ApiKeyService {
       // Client-side Publishable Key format for ultron.js browser interceptors (e.g. ul_test_key_...)
       const cleanKeyId = rawKey.replace(/^ul_(live|test)_/, '');
 
-      // Allow built-in demo keys used by storefront demo, integration wizard, or test suites
-      if (
-        cleanKeyId === 'live_key_demo' ||
-        cleanKeyId === 'test_live_key_demo' ||
-        cleanKeyId === 'demo_merchant' ||
-        cleanKeyId.includes('demo')
-      ) {
-        const demoScopes: ApiKeyScope[] = [
-          'events:write',
-          'events:read',
-          'recovery:write',
-          'recovery:read',
-          'analytics:read',
-          'killswitch:write',
-        ];
+      // Allow built-in demo keys — ONLY in non-production environments
+      const isDemoAllowed = process.env.NODE_ENV !== 'production';
+      if (isDemoAllowed && ALLOWED_DEMO_KEY_IDS.has(cleanKeyId)) {
+        const demoScopes: ApiKeyScope[] = [...VALID_API_KEY_SCOPES];
         if (requiredScope && !demoScopes.includes(requiredScope) && !demoScopes.includes('*' as any)) {
           return {
             valid: false,
@@ -187,6 +187,8 @@ export class ApiKeyService {
           environment: rawKey.startsWith('ul_live_') ? 'live' : 'test',
           scopes: demoScopes,
         };
+      } else if (!isDemoAllowed && ALLOWED_DEMO_KEY_IDS.has(cleanKeyId)) {
+        return { valid: false, errorReason: 'Demo keys are disabled in production environment' };
       }
 
       const pubRows = await db.query<any>(
@@ -282,15 +284,12 @@ export class ApiKeyService {
     }
 
     if (rows.length === 0) {
-      if (keyId.includes('demo') || keyId === 'live_key_demo') {
-        const demoScopes: ApiKeyScope[] = [
-          'events:write',
-          'events:read',
-          'recovery:write',
-          'recovery:read',
-          'analytics:read',
-          'killswitch:write',
-        ];
+      const isDemoAllowed = process.env.NODE_ENV !== 'production';
+      if (ALLOWED_DEMO_KEY_IDS.has(keyId) || keyId === 'live_key_demo') {
+        if (!isDemoAllowed) {
+          return { valid: false, errorReason: 'Demo keys are disabled in production environment' };
+        }
+        const demoScopes: ApiKeyScope[] = [...VALID_API_KEY_SCOPES];
         return {
           valid: true,
           tenantId: 'tenant_system_default',
