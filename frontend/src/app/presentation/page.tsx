@@ -23,8 +23,18 @@ import {
   ChevronDown,
   RotateCcw,
   Sliders,
+  Captions,
+  CaptionsOff,
 } from "lucide-react";
 import "./presentation.css";
+
+/* ── Sentence splitter for seamless speech synthesis without repeats ── */
+export function parseSentences(text: string): string[] {
+  if (!text) return [];
+  const matches = text.match(/[^.!?]+[.!?]+(?:\s|$)/g);
+  if (!matches || matches.length === 0) return [text.trim()];
+  return matches.map((s) => s.trim()).filter(Boolean);
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    NARRATION SCRIPTS — CEO KEYNOTE VOICE (COMBINED TOTAL: 4m 45s / 285s)
@@ -181,10 +191,27 @@ export default function LuxuryFintechPresentationPage() {
   const speechDoneRef = useRef(false);
   const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── Enterprise HUD & Audio Controls ── */
+  /* ── Enterprise HUD, Captions & Audio Controls ── */
+  const [showCaptions, setShowCaptions] = useState<boolean>(true);
   const [speechRate, setSpeechRate] = useState<number>(0.92);
   const [currentSentence, setCurrentSentence] = useState<string>("");
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
   const [isHudMinimized, setIsHudMinimized] = useState<boolean>(false);
+
+  /* ── Queue Refs to prevent sentence repeat/overlap bugs ── */
+  const speechCancelledRef = useRef<boolean>(false);
+  const activeSlideSpeakingRef = useRef<number>(-1);
+  const currentSentenceIdxRef = useRef<number>(0);
+  const speechRateRef = useRef<number>(0.92);
+  const selectedVoiceNameRef = useRef<string>("");
+
+  useEffect(() => {
+    speechRateRef.current = speechRate;
+  }, [speechRate]);
+
+  useEffect(() => {
+    selectedVoiceNameRef.current = selectedVoiceName;
+  }, [selectedVoiceName]);
 
   /* ── Interactive Slide Widgets ── */
   const [simDecision, setSimDecision] = useState<"ACT" | "WAIT" | "ABSTAIN">("ACT");
@@ -290,15 +317,18 @@ export default function LuxuryFintechPresentationPage() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       setActive(i);
       setProgress(0);
-      const sentences = NARRATIONS[i]?.match(/[^.!?]+[.!?]+/g) || [NARRATIONS[i] || ""];
-      setCurrentSentence(sentences[0]?.trim() || "");
+      const sentences = parseSentences(NARRATIONS[i] || "");
+      setCurrentSentence(sentences[0] || "");
+      setCurrentSentenceIndex(0);
       const startOffset = SLIDE_TIMINGS.slice(0, i).reduce((acc, curr) => acc + curr.duration, 0);
       setElapsedSeconds(startOffset);
     }
   }, []);
 
-  /* ── Stop speech ── */
+  /* ── Stop speech cleanly ── */
   const stopSpeech = useCallback(() => {
+    speechCancelledRef.current = true;
+    activeSlideSpeakingRef.current = -1;
     if (keepAliveRef.current) {
       clearInterval(keepAliveRef.current);
       keepAliveRef.current = null;
@@ -309,27 +339,40 @@ export default function LuxuryFintechPresentationPage() {
     setSpeaking(false);
   }, []);
 
-  /* ── Speak narration (calls onEnd when speech finishes) ── */
-  const speak = useCallback(
-    (text: string, onEnd?: () => void) => {
-      if (typeof window === "undefined" || !window.speechSynthesis) {
-        onEnd?.();
+  /* ── Speak individual sentence sequentially — NO CHUNKING / HEARTBEAT REPEAT BUGS ── */
+  const speakSentence = useCallback(
+    (sentences: string[], index: number, slideIdx: number, onSlideEnd?: () => void) => {
+      if (speechCancelledRef.current || activeSlideSpeakingRef.current !== slideIdx) {
         return;
       }
-      stopSpeech();
 
-      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-      setCurrentSentence(sentences[0]?.trim() || text);
+      if (index >= sentences.length) {
+        setSpeaking(false);
+        onSlideEnd?.();
+        return;
+      }
 
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.rate = speechRate;   // Confident, crisp keynote pace
-      utt.pitch = 1.12;        // Slightly elevated pitch for natural female voice timbre
+      const sentenceText = sentences[index];
+      currentSentenceIdxRef.current = index;
+      setCurrentSentenceIndex(index);
+      setCurrentSentence(sentenceText);
+
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        onSlideEnd?.();
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      const utt = new SpeechSynthesisUtterance(sentenceText);
+      utt.rate = speechRateRef.current;
+      utt.pitch = 1.12;
       utt.volume = 1.0;
 
       const currentVoices = window.speechSynthesis.getVoices();
       let chosenVoice: SpeechSynthesisVoice | null = null;
-      if (selectedVoiceName) {
-        chosenVoice = currentVoices.find((v) => v.name === selectedVoiceName) || null;
+      if (selectedVoiceNameRef.current) {
+        chosenVoice = currentVoices.find((v) => v.name === selectedVoiceNameRef.current) || null;
       }
       if (!chosenVoice) {
         chosenVoice = findBestFemaleVoice(currentVoices);
@@ -338,49 +381,63 @@ export default function LuxuryFintechPresentationPage() {
         utt.voice = chosenVoice;
       }
 
-      utt.onboundary = (event: SpeechSynthesisEvent) => {
-        if (event.charIndex !== undefined) {
-          let accumulated = 0;
-          for (const s of sentences) {
-            accumulated += s.length;
-            if (accumulated > event.charIndex) {
-              setCurrentSentence(s.trim());
-              break;
-            }
-          }
-        }
-      };
-
       utt.onstart = () => {
-        setSpeaking(true);
-        // Chromium keepalive heartbeat
-        if (keepAliveRef.current) clearInterval(keepAliveRef.current);
-        keepAliveRef.current = setInterval(() => {
-          if (typeof window !== "undefined" && window.speechSynthesis && window.speechSynthesis.speaking) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          }
-        }, 8000);
-      };
-
-      const finish = () => {
-        if (keepAliveRef.current) {
-          clearInterval(keepAliveRef.current);
-          keepAliveRef.current = null;
+        if (speechCancelledRef.current || activeSlideSpeakingRef.current !== slideIdx) {
+          window.speechSynthesis.cancel();
+          return;
         }
-        setSpeaking(false);
-        onEnd?.();
+        setSpeaking(true);
       };
 
-      utt.onend = finish;
-      utt.onerror = finish;
+      const advanceToNext = () => {
+        if (speechCancelledRef.current || activeSlideSpeakingRef.current !== slideIdx) return;
+        // Natural breath pause between sentences (80ms)
+        setTimeout(() => {
+          if (speechCancelledRef.current || activeSlideSpeakingRef.current !== slideIdx) return;
+          speakSentence(sentences, index + 1, slideIdx, onSlideEnd);
+        }, 80);
+      };
+
+      utt.onend = advanceToNext;
+      utt.onerror = (e) => {
+        if (
+          speechCancelledRef.current ||
+          activeSlideSpeakingRef.current !== slideIdx ||
+          e.error === "interrupted" ||
+          e.error === "canceled"
+        ) {
+          return;
+        }
+        advanceToNext();
+      };
+
       synthRef.current = utt;
       window.speechSynthesis.speak(utt);
     },
-    [selectedVoiceName, speechRate, stopSpeech]
+    []
   );
 
-  /* ── Autoplay engine — SPEECH-DRIVEN (Combined 4m 45s flow) ── */
+  /* ── Speak slide narration cleanly via sentence queue ── */
+  const speakSlide = useCallback(
+    (slideIdx: number, onSlideEnd?: () => void) => {
+      stopSpeech();
+      speechCancelledRef.current = false;
+      activeSlideSpeakingRef.current = slideIdx;
+
+      const text = NARRATIONS[slideIdx];
+      const sentences = parseSentences(text);
+
+      if (sentences.length === 0) {
+        onSlideEnd?.();
+        return;
+      }
+
+      speakSentence(sentences, 0, slideIdx, onSlideEnd);
+    },
+    [stopSpeech, speakSentence]
+  );
+
+  /* ── Autoplay engine — SPEECH-DRIVEN (Zero repeating sentence bugs) ── */
   useEffect(() => {
     if (!playing) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -393,14 +450,13 @@ export default function LuxuryFintechPresentationPage() {
     const currentTiming = SLIDE_TIMINGS[active] || { duration: 35 };
     const estimatedMs = currentTiming.duration * 1000;
 
-    // Start narration — when it finishes, wait 1s pause then advance smoothly
-    speak(NARRATIONS[active], () => {
+    // Start slide speech queue
+    speakSlide(active, () => {
       speechDoneRef.current = true;
       advanceTimeoutRef.current = setTimeout(() => {
         const next = active + 1;
         if (next < SLIDES.length) {
           goTo(next);
-          setActive(next);
         } else {
           setPlaying(false);
           setProgress(100);
@@ -410,21 +466,14 @@ export default function LuxuryFintechPresentationPage() {
     });
 
     // Progress bar: smooth fill over estimated duration
-    const tick = 400;
+    const tick = 250;
     const totalTicks = Math.ceil(estimatedMs / tick);
     let count = 0;
-    const currentSentences = NARRATIONS[active]?.match(/[^.!?]+[.!?]+/g) || [NARRATIONS[active] || ""];
 
     timerRef.current = setInterval(() => {
       count++;
-      const pct = Math.min((count / totalTicks) * 100, speechDoneRef.current ? 100 : 95);
+      const pct = Math.min((count / totalTicks) * 100, speechDoneRef.current ? 100 : 98);
       setProgress(pct);
-
-      // Smooth sentence update fallback for browsers without boundary events
-      const sIdx = Math.min(Math.floor((count / totalTicks) * currentSentences.length), currentSentences.length - 1);
-      if (currentSentences[sIdx]) {
-        setCurrentSentence(currentSentences[sIdx].trim());
-      }
 
       if (speechDoneRef.current) {
         setProgress(100);
@@ -436,7 +485,7 @@ export default function LuxuryFintechPresentationPage() {
       if (timerRef.current) clearInterval(timerRef.current);
       if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
     };
-  }, [playing, active, speak, stopSpeech, goTo]);
+  }, [playing, active, speakSlide, stopSpeech, goTo]);
 
   /* ── Toggle autoplay ── */
   const togglePlay = useCallback(() => {
@@ -516,6 +565,16 @@ export default function LuxuryFintechPresentationPage() {
               )}
             </select>
           </div>
+
+          <button
+            type="button"
+            className={`caption-toggle-btn ${showCaptions ? "active" : ""}`}
+            onClick={() => setShowCaptions((prev) => !prev)}
+            title={showCaptions ? "Turn Closed Captions OFF" : "Turn Closed Captions ON"}
+          >
+            {showCaptions ? <Captions size={13} /> : <CaptionsOff size={13} />}
+            <span>{showCaptions ? "CC ON" : "CC OFF"}</span>
+          </button>
 
           <button className="deck-btn" onClick={() => setShowScriptModal(true)} title="View Combined 4m 45s Speech Script">
             <FileText size={13} /> Full Script
@@ -1174,6 +1233,28 @@ export default function LuxuryFintechPresentationPage() {
         </div>
       </section>
 
+      {/* ── CLOSED CAPTIONS (CC) OVERLAY ── */}
+      {showCaptions && (speaking || playing) && currentSentence && (
+        <div className={`deck-caption-overlay ${isHudMinimized ? "hud-minimized" : ""}`}>
+          <div className="caption-tag">
+            <span className="caption-tag-pulse" />
+            <span>CC · {SLIDES[active].stage}</span>
+          </div>
+          <div className="caption-text-content">
+            <span>{currentSentence}</span>
+          </div>
+          <button
+            type="button"
+            className="caption-close-btn"
+            onClick={() => setShowCaptions(false)}
+            title="Hide Closed Captions"
+            aria-label="Hide Closed Captions"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* ── ENTERPRISE TELEPROMPTER HUD ── */}
       <div className={`deck-teleprompter-hud ${isHudMinimized ? "minimized" : ""}`}>
         <div className="hud-left">
@@ -1214,7 +1295,7 @@ export default function LuxuryFintechPresentationPage() {
                   onClick={() => {
                     setSpeechRate(r);
                     if (speaking) {
-                      speak(NARRATIONS[active]);
+                      speakSlide(active);
                     }
                   }}
                 >
@@ -1226,8 +1307,22 @@ export default function LuxuryFintechPresentationPage() {
 
           <button
             type="button"
+            className={`hud-rate-btn ${showCaptions ? "active" : ""}`}
+            style={{
+              background: showCaptions ? "rgba(56, 189, 248, 0.25)" : undefined,
+              color: showCaptions ? "#38bdf8" : undefined,
+              borderColor: showCaptions ? "rgba(56, 189, 248, 0.45)" : undefined,
+            }}
+            onClick={() => setShowCaptions((prev) => !prev)}
+            title={showCaptions ? "Turn Closed Captions OFF" : "Turn Closed Captions ON"}
+          >
+            {showCaptions ? <Captions size={12} /> : <CaptionsOff size={12} />}
+          </button>
+
+          <button
+            type="button"
             className="hud-rate-btn"
-            onClick={speaking ? stopSpeech : () => speak(NARRATIONS[active])}
+            onClick={speaking ? stopSpeech : () => speakSlide(active)}
             title={speaking ? "Pause speech" : "Speak current slide"}
           >
             {speaking ? <VolumeX size={12} /> : <Volume2 size={12} />}
