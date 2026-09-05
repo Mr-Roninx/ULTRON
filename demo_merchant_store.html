@@ -1,5 +1,3 @@
-<!-- Standalone Merchant Store Demo -->
-<!-- Same as public/demo_merchant_store.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +10,7 @@
   <!-- Razorpay Official Checkout -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <!-- ULTRON Autonomous Payment Interceptor (Single File Drop-In) -->
-  <script src="http://localhost:3001/sdk/ultron.js" data-api-url="http://localhost:3001" data-api-key="ul_test_live_key_demo" defer></script>
+  <script src="/sdk/ultron.js" data-api-url="http://localhost:3001" data-api-key="ul_test_live_key_demo" defer></script>
   <style>
     :root {
       --primary: #1a73e8;
@@ -93,12 +91,13 @@
       color: #334155; display: flex; align-items: center; gap: 8px;
     }
 
+    /* Recovery Modal / Alert */
     #recoveryAlert {
       display: none; margin-top: 20px; padding: 18px; border-radius: 12px;
       background: #eff6ff; border: 1px solid #bfdbfe; animation: slideDown 0.3s ease;
     }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    .alert-title { font-weight: 700; font-size: 14px; color: #1e40af; margin-bottom: 4px; }
+    .alert-title { font-weight: 700; font-size: 14px; color: #1e40af; margin-bottom: 4px; display: flex; items-center; gap: 6px; }
     .alert-desc { font-size: 13px; color: #3b82f6; margin-bottom: 12px; }
     .recovery-link-btn {
       display: inline-block; padding: 10px 18px; background: #10b981;
@@ -140,12 +139,12 @@
           <input type="text" value="Flat 402, Highline Towers, Indiranagar, Bengaluru 560038">
         </div>
 
-        <button class="btn-pay" id="payBtn" onclick="launchRazorpayCheckout()">
+        <button class="btn-pay" id="payBtn">
           <span>Pay ₹1,499 via Razorpay</span>
           <span>&rarr;</span>
         </button>
 
-        <button class="btn-fail-sim" onclick="simulatePaymentFailure()">
+        <button class="btn-fail-sim" id="simFailBtn">
           🧪 Test Trigger: Simulate Bank 3DS Failure
         </button>
 
@@ -154,16 +153,23 @@
           <span><strong>Protected by ULTRON:</strong> If payment fails due to bank timeout, your order & address are held securely.</span>
         </div>
 
-        <div id="recoveryAlert">
-          <div class="alert-title">
-            <span>🛡️ ULTRON Auto-Recovery Triggered!</span>
+        <!-- Real-Time Recovery Card (Appears on failure) -->
+        <div id="recoveryAlert" style="display: none; margin-top: 20px; padding: 20px; border-radius: 12px; background: #eff6ff; border: 1.5px solid #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.15);">
+          <div style="font-weight: 700; font-size: 15px; color: #1e3a8a; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+            <span>🛡️ ULTRON Autonomous Recovery Active!</span>
+            <span id="recoveryBadge" style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-weight: 700;">INTERCEPTED</span>
           </div>
-          <div class="alert-desc" id="alertMessage">
-            Payment failed due to bank timeout. ULTRON calculated positive recovery value and generated a 1-click Razorpay payment link.
+          <div id="alertMessage" style="font-size: 13px; color: #1e40af; line-height: 1.5; margin-bottom: 14px;">
+            Payment failed due to bank communication timeout. ULTRON calculated positive incremental value and validated Action Authority compliance.
           </div>
-          <a href="#" id="recoveryLink" class="recovery-link-btn" target="_blank">
-            Complete Order via 1-Click Link &rarr;
-          </a>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <a href="#" id="recoveryLink" style="display: inline-flex; align-items: center; gap: 6px; padding: 11px 20px; background: #059669; color: white; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px;" target="_blank">
+              ⚡ Complete Order via 1-Click Link &rarr;
+            </a>
+            <a href="http://localhost:3000/dashboard" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 11px 16px; background: #0f172a; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">
+              📊 View Recovery Hub &rarr;
+            </a>
+          </div>
         </div>
       </div>
 
@@ -200,18 +206,24 @@
   </main>
 
   <script>
+    // 1. Launch Real Razorpay Checkout
     function launchRazorpayCheckout() {
       const name = document.getElementById('custName').value;
       const email = document.getElementById('custEmail').value;
       const phone = document.getElementById('custPhone').value;
 
       const options = {
-        key: 'rzp_test_TVWDFQCezsOvv2',
-        amount: 149900,
+        key: 'rzp_test_TVWDFQCezsOvv2', // Default Razorpay Test Key
+        amount: 149900, // ₹1,499 in paise
         currency: 'INR',
         name: 'Apex Sound Labs',
         description: 'Apex Pro Wireless Headphones',
-        prefill: { name: name, email: email, contact: phone },
+        order_id: '',
+        prefill: {
+          name: name,
+          email: email,
+          contact: phone
+        },
         theme: { color: '#1a73e8' },
         handler: function (response) {
           alert('✅ Payment Successful! Payment ID: ' + response.razorpay_payment_id);
@@ -223,53 +235,125 @@
         return;
       }
 
+      // Open Razorpay modal (ULTRON interceptor automatically wraps this)
       const rzp = new window.Razorpay(options);
       rzp.open();
     }
 
+    // 2. Direct Failure Simulation (Triggers ULTRON Interceptor manually)
     async function simulatePaymentFailure() {
       const name = document.getElementById('custName').value;
       const email = document.getElementById('custEmail').value;
       const phone = document.getElementById('custPhone').value;
 
-      if (window.Ultron && typeof window.Ultron.reportFailure === 'function') {
-        window.Ultron.reportFailure({
-          payment_id: 'pay_sim_' + Date.now(),
-          order_id: 'ord_sim_' + Date.now(),
-          amount_paise: 149900,
-          currency: 'INR',
-          error_code: 'BAD_REQUEST_PAYMENT_FAILED',
-          error_description: 'Bank server communication timeout during 3DS OTP verification',
-          email: email,
-          contact: phone,
-          metadata: {
-            store: 'Apex Sound Labs',
-            product: 'Apex Pro Wireless Headphones',
-            url: window.location.href
-          }
-        });
+      showProcessingRecovery('Intercepting bank 3DS failure... ULTRON Economic Scorer & Action Authority evaluating...');
 
-        setTimeout(async () => {
-          try {
-            const res = await fetch('http://localhost:3001/dashboard/summary');
-            const data = await res.json();
-            const recent = (data.opportunities || [])[0];
-            
-            document.getElementById('recoveryAlert').style.display = 'block';
-            if (recent && recent.execution_link) {
-              document.getElementById('recoveryLink').href = recent.execution_link;
-              document.getElementById('alertMessage').innerText = 'Payment recovered! ULTRON evaluated IVEN (Incremental Value) and generated a Razorpay link: ' + recent.execution_link;
-            } else {
-              document.getElementById('recoveryLink').href = 'http://localhost:3000/dashboard';
-              document.getElementById('alertMessage').innerText = 'ULTRON intercepted the failure! View decision and shadow price on the dashboard.';
+      if (window.Ultron && typeof window.Ultron.reportFailure === 'function') {
+        try {
+          const res = await window.Ultron.reportFailure({
+            payment_id: 'pay_sim_' + Date.now(),
+            order_id: 'ord_sim_' + Date.now(),
+            amount_paise: 149900,
+            currency: 'INR',
+            error_code: 'BAD_REQUEST_PAYMENT_FAILED',
+            error_description: 'Bank server communication timeout during 3DS OTP verification',
+            email: email,
+            contact: phone,
+            metadata: {
+              store: 'Apex Sound Labs',
+              product: 'Apex Pro Wireless Headphones',
+              url: window.location.href
             }
-          } catch(e) {
-            document.getElementById('recoveryAlert').style.display = 'block';
-          }
-        }, 1500);
+          });
+
+          handleRecoverySuccess(res);
+        } catch (err) {
+          console.error('Ultron report error:', err);
+          document.getElementById('alertMessage').innerText = 'Failed to report failure to ULTRON: ' + (err.message || 'Network error');
+        }
       } else {
         alert('ULTRON SDK not loaded yet. Make sure ULTRON backend is running on port 3001.');
       }
+    }
+
+    // 3. UI Helpers
+    function showProcessingRecovery(msg) {
+      const alertBox = document.getElementById('recoveryAlert');
+      const alertMsg = document.getElementById('alertMessage');
+      const badge = document.getElementById('recoveryBadge');
+      const recLink = document.getElementById('recoveryLink');
+
+      alertBox.style.display = 'block';
+      alertMsg.innerText = msg;
+      badge.innerText = 'PROCESSING';
+      badge.style.background = '#fef3c7';
+      badge.style.color = '#b45309';
+      recLink.style.display = 'none';
+      alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function handleRecoverySuccess(data) {
+      const alertBox = document.getElementById('recoveryAlert');
+      const alertMsg = document.getElementById('alertMessage');
+      const badge = document.getElementById('recoveryBadge');
+      const recLink = document.getElementById('recoveryLink');
+
+      alertBox.style.display = 'block';
+
+      if (data && data.payment_link_url) {
+        badge.innerText = 'RECOVERY LINK READY';
+        badge.style.background = '#d1fae5';
+        badge.style.color = '#065f46';
+        alertMsg.innerHTML = `<strong>ULTRON Autonomous Recovery Successful!</strong><br>Opportunity <code>${data.opportunity_id}</code> cleared Economic Allocation & Action Authority. A secure 1-click Razorpay payment link was generated for ₹1,499.00.`;
+        recLink.href = data.payment_link_url;
+        recLink.innerText = '⚡ Complete Order via 1-Click Link \u2192';
+        recLink.style.display = 'inline-flex';
+      } else if (data && data.opportunity_id) {
+        // Poll status endpoint
+        pollOpportunityStatus(data.opportunity_id);
+      } else {
+        alertMsg.innerText = 'ULTRON intercepted the failure! View decision and shadow price on the dashboard.';
+      }
+    }
+
+    async function pollOpportunityStatus(oppId, attempts = 0) {
+      if (attempts >= 10) return;
+      try {
+        const res = await fetch('http://localhost:3001/v1/events/opportunity/' + oppId);
+        if (!res.ok) return;
+        const info = await res.json();
+
+        if (info.execution && info.execution.link_url) {
+          handleRecoverySuccess({
+            opportunity_id: oppId,
+            payment_link_url: info.execution.link_url,
+          });
+        } else {
+          setTimeout(() => pollOpportunityStatus(oppId, attempts + 1), 500);
+        }
+      } catch (e) {
+        setTimeout(() => pollOpportunityStatus(oppId, attempts + 1), 800);
+      }
+    }
+
+    // 4. Listen to Interceptor Event from SDK
+    window.addEventListener('ultron:failure_intercepted', function(event) {
+      if (event.detail) {
+        handleRecoverySuccess(event.detail);
+      }
+    });
+
+    // 5. Button Click Listeners (Strict CSP compliant, no inline eval)
+    function attachListeners() {
+      var payBtn = document.getElementById('payBtn');
+      var simFailBtn = document.getElementById('simFailBtn');
+      if (payBtn) payBtn.onclick = launchRazorpayCheckout;
+      if (simFailBtn) simFailBtn.onclick = simulatePaymentFailure;
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attachListeners);
+    } else {
+      attachListeners();
     }
   </script>
 </body>

@@ -73,12 +73,14 @@ export class ExecutionDLQ {
       status = 'DEAD_LETTER';
       console.error(`🚨 ExecutionDLQ: Opportunity ${opportunityId} dead-lettered after ${newCount} attempts. Routing to HITL review.`);
 
-      // Automatically forward permanently failed dead-lettered opportunities to HITL queue
+      // Automatically forward permanently failed dead-lettered opportunities to HITL queue and mark blocked
       try {
         const { HITLManager } = await import('../agents/hitl/hitl_manager.js');
-        const { getOpportunityById } = await import('../db/database.js');
+        const { getOpportunityById, updateOpportunityStatus, db } = await import('../db/database.js');
         const opp = getOpportunityById(opportunityId);
         if (opp) {
+          updateOpportunityStatus(opportunityId, 'blocked');
+          db.prepare('UPDATE recovery_opportunities SET attempt_count = ? WHERE id = ?').run(newCount, opportunityId);
           HITLManager.createRequest({
             opportunity: opp,
             proposedAction: 'ACT',

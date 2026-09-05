@@ -99,13 +99,13 @@ const ULTRON_SDK_JS = `/**
   function reportPaymentFailure(details) {
     if (!apiKey) {
       console.warn('⚠️ [ULTRON] Cannot report payment failure: data-api-key not provided.');
-      return;
+      return Promise.reject(new Error('Missing API key'));
     }
     var endpoint = apiUrl + '/v1/events';
     var amount = details.amount_paise || details.amount;
     var parsedAmount = Number(amount);
     if (!parsedAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
-      parsedAmount = 10000; // default 100 INR if missing
+      parsedAmount = 149900; // default to ₹1,499 if unspecified
     }
 
     var payload = {
@@ -127,27 +127,30 @@ const ULTRON_SDK_JS = `/**
       metadata: details.metadata || { url: window.location.href, title: document.title }
     };
 
-    try {
-      fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + apiKey
-        },
-        body: JSON.stringify(payload),
-        keepalive: true
-      }).then(function(res) {
-        return res.json().then(function(data) {
-          if (res.ok) {
-            console.log('🛡️ [ULTRON] Payment failure successfully captured and sent to Control Plane (Opportunity: ' + (data.opportunity_id || 'created') + ').');
-          } else {
-            console.warn('⚠️ [ULTRON] Gateway rejected failure event (' + res.status + '):', data.error || data.message || data.details);
-          }
-        });
-      }).catch(function(e) {
-        console.warn('⚠️ [ULTRON] Background dispatch error:', e.message);
+    return fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).then(function(res) {
+      return res.json().then(function(data) {
+        if (res.ok) {
+          console.log('🛡️ [ULTRON] Payment failure captured & processed (Opportunity: ' + (data.opportunity_id || 'created') + ').');
+          try {
+            window.dispatchEvent(new CustomEvent('ultron:failure_intercepted', { detail: data }));
+          } catch(e) {}
+        } else {
+          console.warn('⚠️ [ULTRON] Gateway rejected failure event (' + res.status + '):', data.error || data.message || data.details);
+        }
+        return data;
       });
-    } catch(err) {}
+    }).catch(function(e) {
+      console.warn('⚠️ [ULTRON] Background dispatch error:', e.message);
+      throw e;
+    });
   }
 
   // 3. Dispatch Payment Success (Reconciliation)
@@ -291,7 +294,7 @@ const ULTRON_SDK_JS = `/**
     },
     init: function(opts) {
       if (opts && opts.apiKey) apiKey = opts.apiKey;
-      if (opts && opts.apiUrl) apiUrl = opts.apiUrl.replace(/\/+$/, '');
+      if (opts && opts.apiUrl) apiUrl = opts.apiUrl.replace(/\\/+$/, '');
       sendPing();
       wrapRazorpay();
     }

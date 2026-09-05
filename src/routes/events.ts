@@ -11,6 +11,9 @@ import {
   upsertWebAppConnection,
   getWebAppConnections,
   getAllExecutionRecords,
+  getExecutionRecordByOpportunityId,
+  getScoreByOpportunityId,
+  getAllocationDecisionByOpportunityId,
   insertEventIngestionLog,
   getEventIngestionLogs,
 } from '../db/database.js';
@@ -320,28 +323,47 @@ eventsRouter.post(
 
         console.log(`📥 [ULTRON Gateway] Ingested failed payment opportunity ${opportunity.id} (₹${(opportunity.amount_paise / 100).toFixed(2)}) for tenant ${tenantContext.tenantId}`);
 
-        // Automatically trigger recovery control plane for this opportunity
-        setImmediate(async () => {
-          try {
-            const { scoreOpportunity } = await import('../economics/scorer.js');
-            const { runMarketAllocation } = await import('../market/allocator.js');
-            const { executeOpportunity } = await import('../execution/executor.js');
-            
-            // 1. Deterministic Economic Scoring
-            scoreOpportunity(opportunity);
+        // Run autonomous recovery control plane: Economic Scoring -> Action Authority Gate -> Execution
+        let execRecordResult: any = null;
+        let authVerdict: string = 'PENDING';
+        let authReason: string = '';
 
-            // 2. Recovery Market Allocation under portfolio capacity
-            runMarketAllocation({ tenantId: tenantContext.tenantId, capacity: 5 });
+        try {
+          const { scoreOpportunity } = await import('../economics/scorer.js');
+          const { runAuthorityPipeline } = await import('../authority/gate.js');
+          const { executeOpportunity } = await import('../execution/executor.js');
 
-            // 3. Action Authority Compliance Check & Razorpay Link Generation
+          // 1. Deterministic Economic Scoring
+          scoreOpportunity(opportunity);
+
+          // 2. Recovery Market Allocation + Action Authority Gate under portfolio capacity
+          const pipelineResult = runAuthorityPipeline({
+            tenantId: tenantContext.tenantId,
+            capacity: 5,
+            environment: (opportunity as any).environment || 'test',
+          });
+
+          const evalItem = pipelineResult.results.find((r) => r.opportunity_id === opportunity.id);
+          if (evalItem) {
+            authVerdict = evalItem.verdict;
+            authReason = evalItem.summary_reason;
+          }
+
+          // 3. Action Authority Compliance Check & Razorpay Link Generation
+          if (authVerdict === 'AUTHORIZED') {
             const execResult = await executeOpportunity(opportunity.id);
             if (execResult.success && execResult.record) {
+              execRecordResult = execResult.record;
               console.log(`⚡ [ULTRON Autonomous Engine] Generated recovery payment link for ${opportunity.id}: ${execResult.record.link_url}`);
             }
-          } catch (sweepErr: any) {
-            console.warn('⚠️ Automatic recovery trigger:', sweepErr?.message);
+          } else {
+            console.log(`🛡️ [ULTRON Action Authority] Opportunity ${opportunity.id} held with verdict ${authVerdict}: ${authReason}`);
           }
-        });
+        } catch (sweepErr: any) {
+          console.warn('⚠️ Autonomous recovery trigger warning:', sweepErr?.message);
+        }
+
+        const currentOpp = getOpportunityById(opportunity.id) || opportunity;
 
         res.status(201).json({
           received: true,
@@ -349,7 +371,10 @@ eventsRouter.post(
           event_id: event.event_id,
           decline_type: opportunity.decline_type,
           customer_trust_score: opportunity.customer_trust_score,
-          status: opportunity.status,
+          status: currentOpp.status,
+          authority_verdict: authVerdict,
+          payment_link_url: execRecordResult?.link_url || null,
+          razorpay_payment_link_id: execRecordResult?.razorpay_payment_link_id || null,
         });
         return;
       }
@@ -570,7 +595,54 @@ eventsRouter.post(
   }
 );
 
-// 6. GET /v1/events/:id - Query Ingested Event Status (Requires events:read scope)
+// 6. GET /v1/events/opportunity/:id - Direct status and recovery link check for client store
+eventsRouter.get('/opportunity/:id', async (req: Request, res: Response): Promise<void> => {
+  const oppId = req.params.id;
+  const opp = getOpportunityById(oppId);
+  if (!opp) {
+    res.status(404).json({ error: 'Opportunity not found', id: oppId });
+    return;
+  }
+  const score = getScoreByOpportunityId(oppId);
+  const decision = getAllocationDecisionByOpportunityId(oppId);
+  const execRecord = getExecutionRecordByOpportunityId(oppId);
+
+  res.json({
+    opportunity_id: opp.id,
+    status: opp.status,
+    amount_paise: opp.amount_paise,
+    currency: opp.currency,
+    decline_type: opp.decline_type,
+    created_at: opp.created_at,
+    score: score
+      ? {
+          natural_recovery_prob: score.natural_recovery_prob,
+          intervention_recovery_prob: score.intervention_recovery_prob,
+          incremental_prob: score.incremental_prob,
+          expected_incremental_value_paise: score.expected_incremental_value_paise,
+          confidence: score.confidence,
+        }
+      : null,
+    decision: decision
+      ? {
+          decision: decision.decision,
+          rank_in_batch: decision.rank_in_batch,
+          shadow_price_paise_at_decision: decision.shadow_price_paise_at_decision,
+          reason: decision.reason,
+        }
+      : null,
+    execution: execRecord
+      ? {
+          razorpay_payment_link_id: execRecord.razorpay_payment_link_id,
+          link_url: execRecord.link_url,
+          status: execRecord.status,
+          created_at: execRecord.created_at,
+        }
+      : null,
+  });
+});
+
+// 7. GET /v1/events/:id - Query Ingested Event Status (Requires events:read scope)
 eventsRouter.get(
   '/:id',
   TenancyEnforcer.authenticateTenant('events:read'),

@@ -144,7 +144,13 @@ export class CircuitBreaker {
       } catch (err: any) {
         lastError = err;
 
-        if (attempt === this.maxRetries) {
+        const isRateLimitOrClientError =
+          err?.statusCode === 429 ||
+          err?.statusCode === 400 ||
+          err?.error?.description?.includes('Too many requests') ||
+          err?.error?.code === 'BAD_REQUEST_ERROR';
+
+        if (attempt === this.maxRetries || isRateLimitOrClientError) {
           break;
         }
 
