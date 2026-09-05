@@ -32,6 +32,7 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **ULTRON V11 Phase 3: OpenTelemetry Distributed Tracing** (Completed & Audited)
 - [x] **ULTRON V11 Phase 4: Advanced Security Hardening** (Completed & Audited)
 - [x] **ULTRON V11 Phase 5: Resilient Execution Engine** (Completed & Audited)
+- [x] **ULTRON V11 Phase 6: Multi-Tenant Row-Level Isolation** (Completed & Audited)
 
 ---
 
@@ -425,6 +426,26 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - Created test suite `tests/execution/test_resilient_execution.ts`: Verifies DLQ backoff progression, dead-letter transitions, HITL forwarding, circuit breaker trip/probe/reset, and scheduler lifecycle.
 - **Verification Gate**:
   - `npx tsx tests/execution/test_resilient_execution.ts` passed **19/19 tests (100%)**.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+### Phase 6: Multi-Tenant Row-Level Isolation (Completed & Verified)
+- **What was built**:
+  - Built `src/security/tenant_guard.ts`: Unified tenant resolver across JWT decoded sessions, machine-to-machine API keys, `x-tenant-id` internal gateway headers, and tenant query params. Includes `assertTenantAccess()` cross-tenant assertion and `tenantGuard()` middleware that automatically binds connection-level tenant context for database RLS (`DatabaseAdapter.setTenantContext`).
+  - Upgraded Database Layer (`src/db/database.ts`): Enforced `tenantId` parameter filtering on `getCustomerById`, `getOrCreateCustomer`, `upsertCustomer`, `countPriorAttempts`, `getOpportunityById`, `getAllScores`, and `getAllLedgerEntries`, guaranteeing zero cross-tenant row contamination.
+  - Hardened API Routes (`src/routes/`):
+    - `opportunities.ts`: Scoped `GET /`, `POST /score-all`, `GET /:id/score`, `GET /:id/authority`, `GET /:id`, and `GET /:id/explain` strictly to the authenticated tenant.
+    - `market.ts`: Scoped allocation runs and decision lookups strictly to tenant portfolio capacity.
+    - `authority.ts`: Evaluated deterministic compliance checks strictly against tenant-owned records.
+    - `execution.ts`: Prevented cross-tenant batch execution and single-opportunity dispatch (`POST /opportunity/:id` and `GET /records/:id`).
+    - `audit.ts`: Eliminated global ledger fallback data leak when tenant ledger entries are empty.
+    - `audit_export.ts`: Scoped cryptographic ledger verification, JSON export, and CSV export strictly to the requesting tenant.
+    - `dashboard.ts`: Scoped summary and analytics metrics calculation strictly to tenant.
+  - Scoped Autonomous AI Agent Loop (`src/agents/agent_loop.ts`): Scoped opportunity lookup and market allocation runs strictly to tenant ID.
+  - Created test suite `tests/security/test_tenant_isolation.ts`: Validates identity resolution, cross-tenant access rejection, row-level database query isolation (Alpha vs Beta), customer isolation, market allocation boundary isolation, and middleware RLS context binding.
+- **Verification Gate**:
+  - `npx tsx tests/security/test_tenant_isolation.ts` passed **19/19 tests (100%)**.
   - `npx tsc --noEmit` passed with **0 errors**.
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.

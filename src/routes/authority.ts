@@ -10,6 +10,7 @@ import {
   getScoreByOpportunityId,
   getAllocationDecisionByOpportunityId,
 } from '../db/database.js';
+import { resolveTenantId } from '../security/tenant_guard.js';
 
 export const authorityRouter = Router();
 
@@ -45,7 +46,7 @@ authorityRouter.post('/kill-switch', (req: Request, res: Response) => {
 // GET /authority/run?capacity=5
 authorityRouter.get('/run', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const capacityParam = req.query.capacity as string | undefined;
     const capacity = capacityParam ? parseInt(capacityParam, 10) : undefined;
     const environment = (req.query.environment === 'live' || req.query.environment === 'test') ? req.query.environment : undefined;
@@ -61,7 +62,7 @@ authorityRouter.get('/run', (req: Request, res: Response) => {
 // POST /authority/run
 authorityRouter.post('/run', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const capacity = req.body.capacity !== undefined ? Number(req.body.capacity) : undefined;
     const environment = (req.body.environment === 'live' || req.query.environment === 'live') ? 'live'
                       : (req.body.environment === 'test' || req.query.environment === 'test') ? 'test'
@@ -83,7 +84,8 @@ const handleEvaluateSingleOpportunity = (req: Request, res: Response): void => {
       return;
     }
 
-    const opp = getOpportunityById(oppId);
+    const tenantId = resolveTenantId(req) || undefined;
+    const opp = getOpportunityById(oppId, tenantId);
     if (!opp) {
       res.status(404).json({ error: 'Opportunity not found' });
       return;

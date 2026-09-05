@@ -127,11 +127,12 @@ export class AgentLoop {
    */
   public async run(params: {
     opportunityId: string;
+    tenantId?: string;
     environment?: 'SYNTHETIC' | 'FIXTURE' | 'RAZORPAY_TEST' | 'PROVIDER_VERIFIED';
   }): Promise<AgentLoopResult> {
-    const opp = getOpportunityById(params.opportunityId);
+    const opp = getOpportunityById(params.opportunityId, params.tenantId);
     if (!opp) {
-      throw new Error(`AgentLoop: Opportunity '${params.opportunityId}' not found.`);
+      throw new Error(`AgentLoop: Opportunity '${params.opportunityId}' not found${params.tenantId ? ` for tenant '${params.tenantId}'` : ''}.`);
     }
 
     // Create run record
@@ -291,10 +292,11 @@ export class AgentLoop {
     this.stateMachine.transition('PLAN', 'MARKET_ALLOCATION');
     this.budgetTracker.recordStep();
 
+    const oppTenantId = opp.tenant_id || (opp as any).merchant_id;
     const marketRun = await withSpan(
       ULTRON_SPANS.MARKET_ALLOCATION,
       { opportunity_id: opp.id, run_id: this.runId },
-      async () => runMarketAllocation({ capacity: 5 })
+      async () => runMarketAllocation({ capacity: 5, tenantId: oppTenantId })
     );
     const marketItem = marketRun.items.find(d => d.opportunity_id === opp.id);
     const allocation: AllocationDecision = marketItem

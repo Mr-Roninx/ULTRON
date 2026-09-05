@@ -11,6 +11,7 @@ import { pollAndReconcile } from '../reconciliation/poller.js';
 import { AntiBlastEngine } from '../economics/anti_blast_engine.js';
 import { ThompsonSamplingBandit } from '../economics/bandit_policy.js';
 import { DualMirrorBudgetPacer } from '../market/capacity_policy.js';
+import { resolveTenantId } from '../security/tenant_guard.js';
 
 export const dashboardRouter = Router();
 
@@ -18,7 +19,7 @@ export const dashboardRouter = Router();
 dashboardRouter.get('/summary', async (req: Request, res: Response) => {
 
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const envQuery = req.query.environment as string | undefined;
     const environment = (envQuery === 'live' || envQuery === 'test') ? envQuery : undefined;
     const allOpps = getAllOpportunities(tenantId, environment);
@@ -113,7 +114,7 @@ dashboardRouter.post('/reconcile-poll', async (_req: Request, res: Response) => 
 // GET /dashboard/analytics
 dashboardRouter.get('/analytics', async (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id || 'tenant_system_default';
+    const tenantId = resolveTenantId(req) || 'tenant_system_default';
     const allOpps = getAllOpportunities(tenantId);
 
     const bankGroups: Record<string, {

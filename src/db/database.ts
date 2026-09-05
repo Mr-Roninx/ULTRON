@@ -630,24 +630,28 @@ export function initDatabase(): void {
 initDatabase();
 
 // Customers queries
-export function getCustomerById(id: string): Customer | undefined {
+export function getCustomerById(id: string, tenantId?: string): Customer | undefined {
+  if (tenantId) {
+    const stmt = db.prepare('SELECT * FROM customers WHERE id = ? AND (tenant_id = ? OR merchant_id = ?)');
+    return stmt.get(id, tenantId, tenantId) as unknown as Customer | undefined;
+  }
   const stmt = db.prepare('SELECT * FROM customers WHERE id = ?');
   return stmt.get(id) as unknown as Customer | undefined;
 }
 
-export function getOrCreateCustomer(id: string, defaultTrustScore: number = 0.65): Customer {
-  const existing = getCustomerById(id);
+export function getOrCreateCustomer(id: string, defaultTrustScore: number = 0.65, tenantId: string = 'tenant_system_default'): Customer {
+  const existing = getCustomerById(id, tenantId);
   if (existing) {
     return existing;
   }
 
   const now = new Date().toISOString();
   const insertStmt = db.prepare(`
-    INSERT INTO customers (id, trust_score, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO customers (id, trust_score, created_at, updated_at, tenant_id, merchant_id)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at
   `);
-  insertStmt.run(id, defaultTrustScore, now, now);
+  insertStmt.run(id, defaultTrustScore, now, now, tenantId, tenantId);
 
   return {
     id,
@@ -658,17 +662,33 @@ export function getOrCreateCustomer(id: string, defaultTrustScore: number = 0.65
 }
 
 export function upsertCustomer(customer: Customer): void {
+  const tenantId = (customer as any).tenant_id || 'tenant_system_default';
   const stmt = db.prepare(`
-    INSERT INTO customers (id, trust_score, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO customers (id, trust_score, created_at, updated_at, tenant_id, merchant_id)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       trust_score = excluded.trust_score,
       updated_at = excluded.updated_at
   `);
-  stmt.run(customer.id, customer.trust_score, customer.created_at, customer.updated_at);
+  stmt.run(customer.id, customer.trust_score, customer.created_at, customer.updated_at, tenantId, tenantId);
 }
 
-export function countPriorAttempts(customerId: string, rawPayloadSubstring?: string): number {
+export function countPriorAttempts(customerId: string, rawPayloadSubstring?: string, tenantId?: string): number {
+  if (tenantId) {
+    if (rawPayloadSubstring) {
+      const stmt = db.prepare(`
+        SELECT COUNT(*) as count FROM recovery_opportunities 
+        WHERE customer_id = ? AND (raw_payload_ref LIKE ? OR id LIKE ?) AND (tenant_id = ? OR merchant_id = ?)
+      `);
+      const res = stmt.get(customerId, `%${rawPayloadSubstring}%`, `%${rawPayloadSubstring}%`, tenantId, tenantId) as { count: number };
+      return res?.count || 0;
+    }
+
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM recovery_opportunities WHERE customer_id = ? AND (tenant_id = ? OR merchant_id = ?)');
+    const res = stmt.get(customerId, tenantId, tenantId) as { count: number };
+    return res?.count || 0;
+  }
+
   if (rawPayloadSubstring) {
     const stmt = db.prepare(`
       SELECT COUNT(*) as count FROM recovery_opportunities 
@@ -684,7 +704,11 @@ export function countPriorAttempts(customerId: string, rawPayloadSubstring?: str
 }
 
 // Opportunity queries
-export function getOpportunityById(id: string): RecoveryOpportunity | undefined {
+export function getOpportunityById(id: string, tenantId?: string): RecoveryOpportunity | undefined {
+  if (tenantId) {
+    const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE id = ? AND (tenant_id = ? OR merchant_id = ?)');
+    return stmt.get(id, tenantId, tenantId) as unknown as RecoveryOpportunity | undefined;
+  }
   const stmt = db.prepare('SELECT * FROM recovery_opportunities WHERE id = ?');
   return stmt.get(id) as unknown as RecoveryOpportunity | undefined;
 }
@@ -922,7 +946,15 @@ export function upsertScore(score: Score): void {
   }, 'opportunity_id');
 }
 
-export function getAllScores(): (Score & { opportunity_id: string })[] {
+export function getAllScores(tenantId?: string): (Score & { opportunity_id: string })[] {
+  if (tenantId) {
+    const stmt = db.prepare(`
+      SELECT s.* FROM scores s
+      JOIN recovery_opportunities ro ON s.opportunity_id = ro.id
+      WHERE ro.tenant_id = ? OR ro.merchant_id = ?
+    `);
+    return stmt.all(tenantId, tenantId) as unknown as (Score & { opportunity_id: string })[];
+  }
   const stmt = db.prepare('SELECT * FROM scores');
   return stmt.all() as unknown as (Score & { opportunity_id: string })[];
 }
@@ -1135,6 +1167,20 @@ export function insertLedgerEntry(entry: LedgerEntry): void {
 export function getLedgerEntriesByOpportunity(oppId: string): LedgerEntry[] {
   const stmt = db.prepare('SELECT * FROM ledger_entries WHERE opportunity_id = ? ORDER BY timestamp ASC');
   return stmt.all(oppId) as unknown as LedgerEntry[];
+}
+
+export function getAllLedgerEntries(tenantId?: string): LedgerEntry[] {
+  if (tenantId) {
+    const stmt = db.prepare(`
+      SELECT le.* FROM ledger_entries le
+      JOIN recovery_opportunities ro ON le.opportunity_id = ro.id
+      WHERE ro.tenant_id = ? OR ro.merchant_id = ?
+      ORDER BY le.timestamp DESC
+    `);
+    return stmt.all(tenantId, tenantId) as unknown as LedgerEntry[];
+  }
+  const stmt = db.prepare('SELECT * FROM ledger_entries ORDER BY timestamp DESC');
+  return stmt.all() as unknown as LedgerEntry[];
 }
 
 // ========================================================

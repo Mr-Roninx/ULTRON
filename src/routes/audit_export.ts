@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { DatabaseAdapter } from '../db/adapter.js';
 import { DoubleEntryLedger } from '../truth/double_entry_ledger.js';
 import { createHmac, createHash } from 'node:crypto';
+import { resolveTenantId } from '../security/tenant_guard.js';
 
 export const auditExportRouter = Router();
 
@@ -12,9 +13,12 @@ export const auditExportRouter = Router();
 auditExportRouter.get('/verify', async (req: Request, res: Response) => {
   try {
     const db = DatabaseAdapter.getInstance();
-    const rows = await db.query(
-      'SELECT rowid, id, tenant_id, opportunity_id, event_type, debit_account, credit_account, amount_paise, timestamp, prev_hash, entry_hash FROM double_entry_ledger ORDER BY rowid ASC;'
-    );
+    const tenantId = resolveTenantId(req);
+    const sql = tenantId && tenantId !== 'tenant_system_default'
+      ? 'SELECT rowid, id, tenant_id, opportunity_id, event_type, debit_account, credit_account, amount_paise, timestamp, prev_hash, entry_hash FROM double_entry_ledger WHERE tenant_id = ? ORDER BY rowid ASC;'
+      : 'SELECT rowid, id, tenant_id, opportunity_id, event_type, debit_account, credit_account, amount_paise, timestamp, prev_hash, entry_hash FROM double_entry_ledger ORDER BY rowid ASC;';
+    const params = tenantId && tenantId !== 'tenant_system_default' ? [tenantId] : [];
+    const rows = await db.query(sql, params);
 
     if (rows.length === 0) {
       return res.json({
@@ -73,12 +77,18 @@ auditExportRouter.get('/verify', async (req: Request, res: Response) => {
 auditExportRouter.get('/export/json', async (req: Request, res: Response) => {
   try {
     const db = DatabaseAdapter.getInstance();
-    const ledger = await db.query(
-      'SELECT rowid, id, tenant_id, opportunity_id, event_type, debit_account, credit_account, amount_paise, timestamp, prev_hash, entry_hash FROM double_entry_ledger ORDER BY rowid DESC LIMIT 500;'
-    );
-    const opportunities = await db.query(
-      'SELECT id, amount_paise, status, reason_code, created_at FROM recovery_opportunities ORDER BY created_at DESC LIMIT 500;'
-    );
+    const tenantId = resolveTenantId(req);
+    const ledgerSql = tenantId && tenantId !== 'tenant_system_default'
+      ? 'SELECT rowid, id, tenant_id, opportunity_id, event_type, debit_account, credit_account, amount_paise, timestamp, prev_hash, entry_hash FROM double_entry_ledger WHERE tenant_id = ? ORDER BY rowid DESC LIMIT 500;'
+      : 'SELECT rowid, id, tenant_id, opportunity_id, event_type, debit_account, credit_account, amount_paise, timestamp, prev_hash, entry_hash FROM double_entry_ledger ORDER BY rowid DESC LIMIT 500;';
+    const oppsSql = tenantId && tenantId !== 'tenant_system_default'
+      ? 'SELECT id, amount_paise, status, reason_code, created_at FROM recovery_opportunities WHERE tenant_id = ? OR merchant_id = ? ORDER BY created_at DESC LIMIT 500;'
+      : 'SELECT id, amount_paise, status, reason_code, created_at FROM recovery_opportunities ORDER BY created_at DESC LIMIT 500;';
+    const ledgerParams = tenantId && tenantId !== 'tenant_system_default' ? [tenantId] : [];
+    const oppsParams = tenantId && tenantId !== 'tenant_system_default' ? [tenantId, tenantId] : [];
+
+    const ledger = await db.query(ledgerSql, ledgerParams);
+    const opportunities = await db.query(oppsSql, oppsParams);
 
     const exportPayload = {
       export_timestamp: new Date().toISOString(),
@@ -112,9 +122,12 @@ auditExportRouter.get('/export/json', async (req: Request, res: Response) => {
 auditExportRouter.get('/export/csv', async (req: Request, res: Response) => {
   try {
     const db = DatabaseAdapter.getInstance();
-    const rows = await db.query(
-      'SELECT rowid, timestamp, opportunity_id, event_type, debit_account, credit_account, amount_paise, prev_hash, entry_hash FROM double_entry_ledger ORDER BY rowid ASC;'
-    );
+    const tenantId = resolveTenantId(req);
+    const sql = tenantId && tenantId !== 'tenant_system_default'
+      ? 'SELECT rowid, timestamp, opportunity_id, event_type, debit_account, credit_account, amount_paise, prev_hash, entry_hash FROM double_entry_ledger WHERE tenant_id = ? ORDER BY rowid ASC;'
+      : 'SELECT rowid, timestamp, opportunity_id, event_type, debit_account, credit_account, amount_paise, prev_hash, entry_hash FROM double_entry_ledger ORDER BY rowid ASC;';
+    const params = tenantId && tenantId !== 'tenant_system_default' ? [tenantId] : [];
+    const rows = await db.query(sql, params);
 
     const headers = ['Sequence', 'Timestamp', 'Opportunity_ID', 'Event_Type', 'Debit_Account', 'Credit_Account', 'Amount_INR', 'Prev_Hash', 'Entry_Hash'];
     const csvLines = [headers.join(',')];

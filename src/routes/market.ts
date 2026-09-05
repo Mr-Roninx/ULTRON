@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { runMarketAllocation } from '../market/allocator.js';
 import { getAllAllocationDecisions } from '../db/database.js';
+import { resolveTenantId } from '../security/tenant_guard.js';
 
 export const marketRouter = Router();
 
 // GET /market/run?capacity=5
 marketRouter.get('/run', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const capacityParam = req.query.capacity as string | undefined;
     const capacity = capacityParam ? parseInt(capacityParam, 10) : undefined;
 
@@ -22,7 +23,7 @@ marketRouter.get('/run', (req: Request, res: Response) => {
 // POST /market/run
 marketRouter.post('/run', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const capacity = req.body.capacity !== undefined ? Number(req.body.capacity) : undefined;
     const result = runMarketAllocation({ capacity, tenantId });
     res.json(result);
@@ -35,7 +36,7 @@ marketRouter.post('/run', (req: Request, res: Response) => {
 // GET /market/decisions
 marketRouter.get('/decisions', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const decisions = getAllAllocationDecisions(tenantId);
     res.json({
       count: decisions.length,

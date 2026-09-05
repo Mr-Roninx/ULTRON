@@ -11,13 +11,14 @@ import {
 import { scoreOpportunity } from '../economics/scorer.js';
 import { evaluateOpportunity } from '../authority/gate.js';
 import { explainOpportunityDecision } from '../llm/explainer.js';
+import { resolveTenantId } from '../security/tenant_guard.js';
 
 export const opportunitiesRouter = Router();
 
 // GET all opportunities
 opportunitiesRouter.get('/', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const envQuery = req.query.environment as string | undefined;
     const environment = (envQuery === 'live' || envQuery === 'test') ? envQuery : undefined;
     const opportunities = getAllOpportunities(tenantId, environment);
@@ -34,7 +35,7 @@ opportunitiesRouter.get('/', (req: Request, res: Response) => {
 // POST score all opportunities
 opportunitiesRouter.post('/score-all', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const opportunities = getAllOpportunities(tenantId);
     const scoredList = opportunities.map((opp) => scoreOpportunity(opp));
     res.json({
@@ -57,7 +58,8 @@ opportunitiesRouter.get('/:id/score', (req: Request, res: Response) => {
       return;
     }
 
-    const opp = getOpportunityById(oppId);
+    const tenantId = resolveTenantId(req) || undefined;
+    const opp = getOpportunityById(oppId, tenantId);
     if (!opp) {
       res.status(404).json({ error: 'Opportunity not found' });
       return;
@@ -104,7 +106,8 @@ opportunitiesRouter.get('/:id/authority', (req: Request, res: Response) => {
       return;
     }
 
-    const opp = getOpportunityById(oppId);
+    const tenantId = resolveTenantId(req) || undefined;
+    const opp = getOpportunityById(oppId, tenantId);
     if (!opp) {
       res.status(404).json({ error: 'Opportunity not found' });
       return;
@@ -188,7 +191,8 @@ opportunitiesRouter.get('/:id', (req: Request, res: Response) => {
       return;
     }
 
-    const opp = getOpportunityById(oppId);
+    const tenantId = resolveTenantId(req) || undefined;
+    const opp = getOpportunityById(oppId, tenantId);
     if (!opp) {
       res.status(404).json({ error: 'Opportunity not found' });
       return;
@@ -197,7 +201,7 @@ opportunitiesRouter.get('/:id', (req: Request, res: Response) => {
     const score = getScoreByOpportunityId(oppId);
     const decision = getAllocationDecisionByOpportunityId(oppId);
     const authority_checks = getAuthorityChecksByOpportunityId(oppId);
-    const customer = opp.customer_id ? getCustomerById(opp.customer_id) : undefined;
+    const customer = opp.customer_id ? getCustomerById(opp.customer_id, tenantId) : undefined;
     const ledger = getLedgerEntriesByOpportunity(oppId);
 
     res.json({
@@ -223,7 +227,8 @@ const handleExplainRequest = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const opp = getOpportunityById(oppId);
+    const tenantId = resolveTenantId(req) || undefined;
+    const opp = getOpportunityById(oppId, tenantId);
     if (!opp) {
       res.status(404).json({ error: 'Opportunity not found' });
       return;

@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { executeAuthorizedBatch, executeOpportunity } from '../execution/executor.js';
-import { getAllExecutionRecords, getExecutionRecordByOpportunityId } from '../db/database.js';
+import { getAllExecutionRecords, getExecutionRecordByOpportunityId, getOpportunityById } from '../db/database.js';
+import { resolveTenantId } from '../security/tenant_guard.js';
 
 export const executionRouter = Router();
 
 // POST /execution/run & POST /execution/batch
 const handleExecuteBatch = async (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const maxLinks = req.body.maxLinks !== undefined ? Number(req.body.maxLinks) : undefined;
     const capacity = req.body.capacity !== undefined ? Number(req.body.capacity) : undefined;
     const environment = (req.body.environment === 'live' || req.query.environment === 'live') ? 'live'
@@ -34,6 +35,13 @@ executionRouter.post('/opportunity/:id', async (req: Request, res: Response) => 
       return;
     }
 
+    const tenantId = resolveTenantId(req) || undefined;
+    const opp = getOpportunityById(oppId, tenantId);
+    if (!opp) {
+      res.status(404).json({ error: 'Opportunity not found or access denied.' });
+      return;
+    }
+
     const result = await executeOpportunity(oppId);
     res.json(result);
   } catch (error: any) {
@@ -45,7 +53,7 @@ executionRouter.post('/opportunity/:id', async (req: Request, res: Response) => 
 // GET /execution/records
 executionRouter.get('/records', (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).user?.tenantId || (req as any).user?.merchant_id;
+    const tenantId = resolveTenantId(req) || undefined;
     const records = getAllExecutionRecords(tenantId);
     res.json({
       count: records.length,
@@ -63,6 +71,13 @@ executionRouter.get('/records/:id', (req: Request, res: Response) => {
     const oppId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     if (!oppId) {
       res.status(400).json({ error: 'Missing opportunity ID' });
+      return;
+    }
+
+    const tenantId = resolveTenantId(req) || undefined;
+    const opp = getOpportunityById(oppId, tenantId);
+    if (!opp) {
+      res.status(404).json({ error: 'Opportunity not found or access denied.' });
       return;
     }
 
