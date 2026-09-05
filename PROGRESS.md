@@ -370,6 +370,19 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth verification `npm run verify:v6-truth` passed **100% with 0 discrepancies**.
 
+### Phase 2: PostgreSQL Migration (SQLite → Supabase / Postgres) (Completed & Verified)
+- **What was built**:
+  - Built `scripts/backup_sqlite.ts`: Pre-migration SQLite snapshot generator creating immutable timestamped backups in `archive/backups/`. Verified creation of a 132.55 MB snapshot.
+  - Built `scripts/migrate_sqlite_to_postgres.ts`: Batch streaming migrator with 500-row batching, dependency-order iteration across all 20 tables, and idempotent `ON CONFLICT DO NOTHING` inserts.
+  - Built `src/db/migrations/v11_001_rls.sql`: Supabase Row-Level Security policies for `recovery_opportunities`, `scores`, `allocation_decisions`, `execution_records`, `ledger_entries`, `double_entry_ledger`, `audit_records`, `agent_runs`, and `outreach_drafts` with `current_app_tenant_id()` isolation and service-role bypass.
+  - Upgraded `src/db/adapter.ts`: Configured PostgreSQL connection pool with `max: 20`, `idleTimeoutMillis: 30000`, and `connectionTimeoutMillis: 5000`. Added `setTenantContext(tenantId)` for session-level RLS context injection.
+- **Verification Gate**:
+  - `npm run db:supabase-test` passed with Supabase Auth API reachable and responsive.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+
 
 
 

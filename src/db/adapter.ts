@@ -65,12 +65,12 @@ export class DatabaseAdapter {
 
     if (dbUrl.startsWith('postgres://') || dbUrl.startsWith('postgresql://')) {
       try {
-        const poolSize = Number(process.env.DATABASE_POOL_SIZE) || 10;
+        const poolSize = Number(process.env.DATABASE_POOL_SIZE) || 20;
         this.pgPool = new pg.Pool({
           connectionString: dbUrl,
           max: poolSize,
           idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 10000,
+          connectionTimeoutMillis: 5000,
           ssl: { rejectUnauthorized: false },
         });
         this.engine = 'PostgreSQL';
@@ -94,6 +94,12 @@ export class DatabaseAdapter {
 
   public getEngine(): 'PostgreSQL' | 'SQLite' {
     return this.engine;
+  }
+
+  public async setTenantContext(tenantId: string): Promise<void> {
+    if (this.engine === 'PostgreSQL' && tenantId) {
+      await this.execute(`SET LOCAL app.current_tenant_id = ?;`, [tenantId]);
+    }
   }
 
   public getPoolMetrics(): PoolMetrics {
