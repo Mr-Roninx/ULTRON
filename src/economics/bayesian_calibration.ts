@@ -5,6 +5,7 @@ export const STATIC_PROBABILITY_TABLE: Record<string, { natural_recovery_prob: n
   expired_card: { natural_recovery_prob: 0.05, intervention_recovery_prob: 0.60 },
   generic_decline: { natural_recovery_prob: 0.25, intervention_recovery_prob: 0.45 },
   network_error: { natural_recovery_prob: 0.45, intervention_recovery_prob: 0.75 },
+  bank_gateway_timeout: { natural_recovery_prob: 0.60, intervention_recovery_prob: 0.70 },
   hard_decline: { natural_recovery_prob: 0.02, intervention_recovery_prob: 0.02 },
   default: { natural_recovery_prob: 0.15, intervention_recovery_prob: 0.35 },
 };
@@ -233,7 +234,8 @@ export class BayesianProbabilityCalibrator {
     if (!staticBase) {
       if (normReason.includes('insufficient_funds')) staticBase = STATIC_PROBABILITY_TABLE['insufficient_funds'];
       else if (normReason.includes('expired_card') || normReason.includes('card_expired')) staticBase = STATIC_PROBABILITY_TABLE['expired_card'];
-      else if (normReason.includes('timeout') || normReason.includes('network') || normReason.includes('bank_gateway_timeout')) staticBase = STATIC_PROBABILITY_TABLE['network_error'];
+      else if (normReason.includes('bank_gateway_timeout') || normReason.includes('gateway_timeout')) staticBase = STATIC_PROBABILITY_TABLE['bank_gateway_timeout'];
+      else if (normReason.includes('timeout') || normReason.includes('network')) staticBase = STATIC_PROBABILITY_TABLE['network_error'];
       else if (normReason.includes('generic_decline') || normReason.includes('do_not_honor')) staticBase = STATIC_PROBABILITY_TABLE['generic_decline'];
       else staticBase = STATIC_PROBABILITY_TABLE['default'];
     }

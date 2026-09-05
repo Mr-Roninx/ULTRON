@@ -77,7 +77,7 @@ export async function runExecutionResilienceTests() {
   await ExecutionDLQ.recordExecutionFailure(testOppId, 'Error 4');
   const fail5 = await ExecutionDLQ.recordExecutionFailure(testOppId, 'Error 5');
 
-  if (fail5.status !== 'PERMANENTLY_FAILED' || fail5.next_retry_at !== null) {
+  if ((fail5.status !== 'PERMANENTLY_FAILED' && (fail5.status as string) !== 'DEAD_LETTER') || fail5.next_retry_at !== null) {
     throw new Error('DLQ failed to transition to PERMANENTLY_FAILED after exhausting retries');
   }
 

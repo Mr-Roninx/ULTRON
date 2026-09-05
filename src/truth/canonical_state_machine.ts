@@ -95,8 +95,8 @@ export class CanonicalStateMachine {
       };
     }
 
-    // 2. Created / Issued / Payment Pending
-    if (rawStatus === 'created' || rawStatus === 'issued' || (rawStatus === 'partially_paid' && amountPaid === 0)) {
+    // 2. Created / Issued / Payment Pending / Simulated Fallback
+    if (rawStatus === 'created' || rawStatus === 'issued' || rawStatus === 'simulated' || (rawStatus === 'partially_paid' && amountPaid === 0)) {
       return {
         canonical_state: 'PROVIDER_OBJECT_CREATED',
         is_terminal: false,

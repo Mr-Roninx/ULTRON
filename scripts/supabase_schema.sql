@@ -462,6 +462,36 @@ CREATE TABLE IF NOT EXISTS perception_annotations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS bandit_arms (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+  context_key TEXT NOT NULL,
+  alpha_interv REAL NOT NULL DEFAULT 2.0,
+  beta_interv REAL NOT NULL DEFAULT 2.0,
+  alpha_nat REAL NOT NULL DEFAULT 2.0,
+  beta_nat REAL NOT NULL DEFAULT 5.0,
+  pull_count INTEGER NOT NULL DEFAULT 0,
+  reward_sum REAL NOT NULL DEFAULT 0.0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(tenant_id, context_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bandit_arms_tenant ON bandit_arms(tenant_id, context_key);
+
+CREATE TABLE IF NOT EXISTS pacing_bandit_logs (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL DEFAULT 'tenant_system_default',
+  time_window TEXT NOT NULL,
+  pacing_arm TEXT NOT NULL,
+  lambda_applied REAL NOT NULL,
+  spent_paise BIGINT NOT NULL,
+  budget_paise BIGINT NOT NULL,
+  reward REAL NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pacing_bandit_logs_tenant ON pacing_bandit_logs(tenant_id, created_at DESC);
+
 -- ====================================================================
 -- Realtime Publications for Live Control Plane UI
 -- ====================================================================

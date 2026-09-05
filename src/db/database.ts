@@ -38,13 +38,44 @@ function syncToSupabase(table: string, payload: Record<string, any>, onConflictK
 
   try {
     const sb = getSupabaseClient();
-    Promise.resolve(
-      sb.from(table).upsert(payload, { onConflict: onConflictKey })
-    )
+    const query = onConflictKey
+      ? sb.from(table).upsert(payload, { onConflict: onConflictKey })
+      : sb.from(table).insert(payload);
+    Promise.resolve(query)
       .then(({ error }) => {
         if (error) {
           const currentNow = Date.now();
           supabaseBrokenUntil = currentNow + 60000; // Trip circuit breaker for 60 seconds
+          if (currentNow - lastSupabaseWarn > 30000) {
+            lastSupabaseWarn = currentNow;
+            const shortMsg = (error.message || String(error)).slice(0, 120).replace(/\s+/g, ' ');
+            console.warn(`⚠️ [SUPABASE SYNC] Remote sync circuit opened for 60s (${table}): ${shortMsg}`);
+          }
+        }
+      })
+      .catch(() => {
+        supabaseBrokenUntil = Date.now() + 60000;
+      });
+  } catch {
+    supabaseBrokenUntil = Date.now() + 60000;
+  }
+}
+
+function updateInSupabase(table: string, id: string, payload: Record<string, any>): void {
+  const now = Date.now();
+  if (now < supabaseBrokenUntil) {
+    return; // Circuit open: skip remote sync while Supabase is unreachable
+  }
+
+  try {
+    const sb = getSupabaseClient();
+    Promise.resolve(
+      sb.from(table).update(payload).eq('id', id)
+    )
+      .then(({ error }) => {
+        if (error) {
+          const currentNow = Date.now();
+          supabaseBrokenUntil = currentNow + 60000;
           if (currentNow - lastSupabaseWarn > 30000) {
             lastSupabaseWarn = currentNow;
             const shortMsg = (error.message || String(error)).slice(0, 120).replace(/\s+/g, ' ');
@@ -885,20 +916,45 @@ export function upsertOpportunity(opp: RecoveryOpportunity): void {
 }
 
 export function updateOpportunityStatus(id: string, status: OpportunityStatus): void {
-  // Terminal state immutability guard: Once recovered, state is irreversible
   const current = getOpportunityById(id);
-  if (current?.status === 'recovered' && status !== 'recovered') {
+  if (!current) return;
+
+  // Terminal state immutability guard: Once recovered, state is irreversible
+  if (current.status === 'recovered' && status !== 'recovered') {
+    return;
+  }
+
+  // Finite State Machine (FSM) integrity validation:
+  // Reject illegal transitions and backward regressions
+  const currentStatus = current.status;
+  if (currentStatus === status) {
+    return;
+  }
+
+  const invalidTransitions: Record<OpportunityStatus, OpportunityStatus[]> = {
+    pending: ['executing', 'recovered', 'not_recovered'],
+    scored: ['executing', 'pending', 'recovered', 'not_recovered'],
+    allocated: ['pending', 'scored', 'recovered'],
+    authorized: ['pending', 'scored', 'allocated'],
+    deferred: ['executing', 'recovered'],
+    blocked: ['pending', 'scored', 'allocated', 'authorized', 'executing', 'recovered'],
+    abstained: ['pending', 'allocated', 'authorized', 'executing', 'recovered'],
+    executing: ['pending', 'scored', 'allocated', 'authorized'],
+    recovered: ['pending', 'scored', 'allocated', 'authorized', 'deferred', 'blocked', 'abstained', 'executing', 'not_recovered'],
+    not_recovered: ['pending', 'scored', 'allocated', 'authorized', 'executing'],
+  };
+
+  if (invalidTransitions[currentStatus]?.includes(status)) {
+    console.warn(`🛡️ FSM Guard: Blocked illegal state transition from '${currentStatus}' to '${status}' for opportunity ${id}`);
     return;
   }
 
   const stmt = db.prepare('UPDATE recovery_opportunities SET status = ? WHERE id = ?');
   stmt.run(status, id);
 
-  syncToSupabase('recovery_opportunities', {
-    id,
+  updateInSupabase('recovery_opportunities', id, {
     status,
-    updated_at: new Date().toISOString(),
-  }, 'id');
+  });
 }
 
 // Scores queries
@@ -1051,14 +1107,16 @@ export function insertAuthorityCheck(check: AuthorityCheck): void {
     check.reason
   );
 
-  syncToSupabase('authority_checks', {
-    id: check.id || `chk_${check.opportunity_id}_${check.check_name}`,
+  const authPayload: Record<string, any> = {
     opportunity_id: check.opportunity_id,
     check_name: check.check_name,
     passed: Boolean(check.passed),
     reason: check.reason,
-    created_at: new Date().toISOString(),
-  }, 'id');
+  };
+  if (typeof check.id === 'number') {
+    authPayload.id = check.id;
+  }
+  syncToSupabase('authority_checks', authPayload, typeof check.id === 'number' ? 'id' : undefined);
 }
 
 export function getAuthorityChecksByOpportunityId(oppId: string): AuthorityCheck[] {

@@ -11,6 +11,7 @@ import {
   getOpportunityById,
 } from '../src/db/database.js';
 import { runAuthorityPipeline, setKillSwitch } from '../src/authority/gate.js';
+import { seedSyntheticData } from './seed_synthetic.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 initDatabase();
@@ -20,6 +21,9 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 async function runExecutionAcceptanceTests() {
   console.log('🧪 Starting Execution Engine Acceptance Tests...\n');
+
+  // Seed fresh synthetic opportunities for idempotent test execution
+  seedSyntheticData();
 
   // Ensure normal operation
   setKillSwitch(false);

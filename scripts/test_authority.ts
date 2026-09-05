@@ -10,6 +10,7 @@ import {
   getOpportunityById,
   getAuthorityChecksByOpportunityId,
 } from '../src/db/database.js';
+import { seedSyntheticData } from './seed_synthetic.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 initDatabase();
@@ -19,6 +20,9 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 async function runAuthorityAcceptanceTests() {
   console.log('🧪 Starting Action Authority Compliance Acceptance Tests...\n');
+
+  // Seed fresh synthetic opportunities for idempotent testing
+  seedSyntheticData();
 
   // Ensure kill switch is clean before starting
   setKillSwitch(false);

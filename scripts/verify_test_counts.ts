@@ -8,9 +8,15 @@ function verifyTestCounts() {
 
   const cwd = process.cwd();
   const reconPath = path.join(cwd, 'results/agent/v51/test_count_reconciliation.json');
-  const completeTruthJsonPath = path.join(cwd, 'ULTRON_V5_1_COMPLETE_TRUTH.json');
-  const completeTruthMdPath = path.join(cwd, 'ULTRON_V5_1_COMPLETE_TRUTH.md');
-  const finalAcceptanceMdPath = path.join(cwd, 'ULTRON_V5_1_FINAL_ACCEPTANCE_REPORT.md');
+  const completeTruthJsonPath = fs.existsSync(path.join(cwd, 'ULTRON_V5_1_COMPLETE_TRUTH.json'))
+    ? path.join(cwd, 'ULTRON_V5_1_COMPLETE_TRUTH.json')
+    : path.join(cwd, 'archive/historical_reports/ULTRON_V5_1_COMPLETE_TRUTH.json');
+  const completeTruthMdPath = fs.existsSync(path.join(cwd, 'ULTRON_V5_1_COMPLETE_TRUTH.md'))
+    ? path.join(cwd, 'ULTRON_V5_1_COMPLETE_TRUTH.md')
+    : path.join(cwd, 'archive/historical_reports/ULTRON_V5_1_COMPLETE_TRUTH.md');
+  const finalAcceptanceMdPath = fs.existsSync(path.join(cwd, 'ULTRON_V5_1_FINAL_ACCEPTANCE_REPORT.md'))
+    ? path.join(cwd, 'ULTRON_V5_1_FINAL_ACCEPTANCE_REPORT.md')
+    : path.join(cwd, 'archive/historical_reports/ULTRON_V5_1_FINAL_ACCEPTANCE_REPORT.md');
   const finalAcceptanceJsonPath = path.join(cwd, 'results/agent/v51/final_acceptance.json');
 
   let errors = 0;

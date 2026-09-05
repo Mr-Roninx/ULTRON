@@ -15,8 +15,8 @@ export interface DLQJobRecord {
 export type ExecutionFailureRecord = DLQJobRecord;
 
 export class ExecutionDLQ {
-  // Exponential backoff intervals in minutes: 30s (0.5m), 2m, 5m, 15m, 60m
-  private static retryIntervalsMin = [0.5, 2, 5, 15, 60];
+  // Exponential backoff intervals in minutes: 5m, 15m, 60m (1h), 240m (4h)
+  private static retryIntervalsMin = [5, 15, 60, 240];
 
   public static async initTable(db?: DatabaseAdapter): Promise<void> {
     const adapter = db || DatabaseAdapter.getInstance();

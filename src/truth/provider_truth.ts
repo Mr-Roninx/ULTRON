@@ -76,7 +76,7 @@ export class ProviderTruthEvaluator {
     }
 
     // Case 2: Link exists and verified in provider system, but payment has not completed yet
-    if (status === 'created' || status === 'issued' || (status === 'partially_paid' && amountPaid === 0)) {
+    if (status === 'created' || status === 'issued' || status === 'simulated' || (status === 'partially_paid' && amountPaid === 0)) {
       return {
         payment_link_id: payload.id,
         provider_status: status,
@@ -84,7 +84,7 @@ export class ProviderTruthEvaluator {
         amount_paid_paise: amountPaid,
         payment_id: paymentId,
         evidence_state: 'PROVIDER_OBJECT_VERIFIED',
-        evidence_class: sourceEnv === 'RAZORPAY_TEST' ? 'RAZORPAY_TEST' : sourceEnv,
+        evidence_class: status === 'simulated' ? 'SYNTHETIC' : (sourceEnv === 'RAZORPAY_TEST' ? 'RAZORPAY_TEST' : sourceEnv),
         payment_confirmed: false,
         is_recovered: false,
         reconciliation_status: 'PENDING',
