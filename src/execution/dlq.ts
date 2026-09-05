@@ -166,3 +166,5 @@ export class ExecutionDLQ {
     return { replayed, errors };
   }
 }
+
+export const replayPendingRetries = (limit?: number) => ExecutionDLQ.replayPendingRetries(limit);

@@ -135,7 +135,16 @@ export class AutonomousRecoveryDaemon {
     
     this.timer = setTimeout(async () => {
       try {
-        await this.sweepOnce();
+        if (process.env.DISTRIBUTED_WORKERS === 'true') {
+          const { DistributedJobQueue } = await import('../queue/job_queue.js');
+          await DistributedJobQueue.getInstance().push({
+            type: 'AGENT_REASONING_CYCLE',
+            tenantId: 'tenant_system_default',
+            payload: { capacity: this.config.capacity },
+          });
+        } else {
+          await this.sweepOnce();
+        }
       } catch (err) {
         console.error('Autonomous daemon sweep error:', err);
       } finally {
@@ -144,6 +153,13 @@ export class AutonomousRecoveryDaemon {
         }
       }
     }, intervalMs);
+  }
+
+  /**
+   * Triggers an immediate sweep execution or queues it to workers.
+   */
+  public async triggerInstantSweep(): Promise<void> {
+    await this.sweepOnce();
   }
 
   /**

@@ -36,6 +36,7 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **ULTRON V11 Phase 7: Enhanced Economic Engine** (Completed & Audited)
 - [x] **ULTRON V11 Phase 8: Advanced Observability Dashboard (Frontend V11)** (Completed & Audited)
 - [x] **ULTRON V11 Phase 9: Enterprise API Gateway Layer** (Completed & Audited)
+- [x] **ULTRON V11 Phase 10: Horizontal Scalability & Worker Architecture** (Completed & Audited)
 
 ---
 
@@ -522,6 +523,21 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - `npx tsc --noEmit` passed with **0 errors**.
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+### Phase 10: Horizontal Scalability & Worker Architecture (Completed & Verified)
+- **What was built**:
+  - Built `src/queue/job_queue.ts`: Enterprise distributed background job queue backed by Redis List (`LPUSH` / `BRPOP`) with transparent in-memory fallback, supporting job types `AGENT_REASONING_CYCLE`, `MARKET_ALLOCATION_RUN`, `EXECUTION_DISPATCH`, `RECONCILIATION_SWEEP`, `DLQ_RETRY_SWEEP`, queue depth tracking, automatic retry progression with max attempt exhaustion, and OpenTelemetry traceparent context propagation.
+  - Upgraded `src/worker.ts`: Completely decoupled horizontal background agent runner process that blocks on `JobQueue.pop()` across job types, executes tasks inside contextual OpenTelemetry spans (`ultron.worker.job.*`), binds tenant RLS database context (`setTenantContext`), and gracefully terminates (`waitForDrain`) on `SIGTERM` / `SIGINT`.
+  - Updated `src/agents/daemon.ts`: Integrated distributed queue dispatch (`DISTRIBUTED_WORKERS=true`) allowing autonomous agents to enqueue reasoning sweeps directly to Redis worker pools without running heavy cycles in-process. Added `triggerInstantSweep()` alias.
+  - Updated `docker-compose.yml`: Added scalable `worker` service (`npx tsx src/worker.ts`), `jaeger` (all-in-one OTLP tracing collector on ports 16686 & 4318), and `prometheus` metrics scraping service.
+  - Exported `replayPendingRetries` from `src/execution/dlq.ts`.
+  - Created test suite `tests/queue/test_worker_queue.ts`: Tested FIFO push/pop, queue depth tracking, failed job retry counter progression, and worker job processing under OpenTelemetry span with tenant context binding.
+- **Verification Gate**:
+  - `npx tsx tests/queue/test_worker_queue.ts` passed **4/4 tests (100%)**.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
 
 
 

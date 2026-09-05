@@ -100,6 +100,53 @@ services:
     networks:
       - ultron-net
 
+  # --- ULTRON Decoupled Horizontal Background Workers (V11) ---
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["npx", "tsx", "src/worker.ts"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://ultron:ultron_secure_password@postgres:5432/ultron_db
+      REDIS_URL: redis://redis:6379
+      DISTRIBUTED_WORKERS: "true"
+      AUTONOMOUS_AGENT_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ultron-net
+
+  # --- OpenTelemetry All-in-One Jaeger Tracing ---
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: ultron-jaeger
+    restart: unless-stopped
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Web UI
+      - "4318:4318"   # OTLP HTTP receiver
+    networks:
+      - ultron-net
+
+  # --- Prometheus Metrics Collection ---
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: ultron-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    networks:
+      - ultron-net
+
 volumes:
   pg_data:
     driver: local
