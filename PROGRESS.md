@@ -27,6 +27,11 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **README.md Codebase Forensic Audit & 100% Accuracy Verification** (Completed & Verified)
 - [x] **ULTRON Production Real Money Mode & Test ↔ Production Switcher** (Completed & Audited)
 - [x] **ULTRON Phase 14: Autonomous AI Agent Architecture (8 Phases)** (Completed & Audited)
+- [x] **ULTRON V11 Phase 1: TypeScript Strict Mode & Code Quality Hardening** (Completed & Audited)
+- [x] **ULTRON V11 Phase 2: PostgreSQL Migration (SQLite → Supabase / Postgres)** (Completed & Audited)
+- [x] **ULTRON V11 Phase 3: OpenTelemetry Distributed Tracing** (Completed & Audited)
+- [x] **ULTRON V11 Phase 4: Advanced Security Hardening** (Completed & Audited)
+- [x] **ULTRON V11 Phase 5: Resilient Execution Engine** (Completed & Audited)
 
 ---
 
@@ -406,6 +411,20 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - Created test suite `tests/security/test_security_hardening.ts`: Validates input sanitization, Zod validation failure handling, JWT revocation, and API key scope enforcement.
 - **Verification Gate**:
   - `npx tsx --test tests/security/test_security_hardening.ts` passed **5/5 tests (100%)**.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+### Phase 5: Resilient Execution Engine (Completed & Verified)
+- **What was built**:
+  - Upgraded `src/execution/dlq.ts`: Backed by persistent `dlq_jobs` table in database, implementing deterministic exponential backoff intervals (`[0.5, 2, 5, 15, 60]` minutes), automatic HITL escalation upon 5 exhausted attempts, idempotent retry resolution (`markRetrySuccess`), and automated batch replay sweeper (`replayPendingRetries`).
+  - Upgraded `src/execution/circuit_breaker.ts`: Persistent state management via Redis/CacheManager (`ultron:cb:{key}`), resilient exponential backoff with jitter, fast-failing while `OPEN`, and transition to `HALF_OPEN` probing after cooldown. Added shorthand `execute()` alias.
+  - Created `src/execution/job_scheduler.ts`: Unified background maintenance scheduler handling periodic DLQ retry sweeps (every 60s), authoritative reconciliation sweeps (every 5m), and health diagnostics (every 30s) with clean drain lifecycle management.
+  - Upgraded `src/agents/daemon.ts` & `src/server.ts`: Added graceful shutdown handling (`SIGTERM`/`SIGINT`), draining in-flight iterations up to 30s (`waitForDrain`), stopping job schedulers, flushing OpenTelemetry traces, and cleanly terminating database pools.
+  - Hardened `src/cache/redis.ts`: Added unhandled error event silencing and retry limits on PubSub subscriber to ensure zero crash on offline Redis.
+  - Created test suite `tests/execution/test_resilient_execution.ts`: Verifies DLQ backoff progression, dead-letter transitions, HITL forwarding, circuit breaker trip/probe/reset, and scheduler lifecycle.
+- **Verification Gate**:
+  - `npx tsx tests/execution/test_resilient_execution.ts` passed **19/19 tests (100%)**.
   - `npx tsc --noEmit` passed with **0 errors**.
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.

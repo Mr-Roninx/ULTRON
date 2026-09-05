@@ -24,6 +24,7 @@ import { playgroundRouter } from './routes/playground.js';
 import { auditExportRouter } from './routes/audit_export.js';
 import { hitlRouter } from './agents/hitl/hitl_routes.js';
 import { AutonomousRecoveryDaemon } from './agents/daemon.js';
+import { JobScheduler } from './execution/job_scheduler.js';
 import { WebhookQueueEngine } from './webhooks/queue.js';
 import { metrics } from './observability/metrics.js';
 import { tracingMiddleware } from './middleware/tracing.js';
@@ -461,7 +462,7 @@ app.get('/pitch-video', (_req, res) => {
 const isDirectRun = process.env.NODE_ENV !== 'test' && !process.env.TEST_MODE && !process.env.SUPPRESS_LISTEN;
 
 if (isDirectRun) {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
     logger.info(`🚀 ULTRON Event Fabric running on http://localhost:${PORT}`);
     logger.info(`📡 Real Webhook endpoint: POST http://localhost:${PORT}/webhooks/razorpay`);
@@ -473,5 +474,48 @@ if (isDirectRun) {
     AutonomousRecoveryDaemon.getInstance().start({ interval_seconds: 10, capacity: 5 });
     console.log(`🤖 24/7 Autonomous Recovery Engine ACTIVE: auto-sweeping every 10s without manual intervention`);
     logger.info(`🤖 24/7 Autonomous Recovery Engine ACTIVE: auto-sweeping every 10s without manual intervention`);
+
+    // Automatically start Unified Background Maintenance Job Scheduler
+    JobScheduler.getInstance().start();
+    console.log(`⏱️ Background JobScheduler ACTIVE: automated DLQ sweeps (60s) and reconciliation (5m)`);
+    logger.info(`⏱️ Background JobScheduler ACTIVE: automated DLQ sweeps (60s) and reconciliation (5m)`);
   });
+
+  // Graceful shutdown handler
+  let isShuttingDown = false;
+  const gracefulShutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    console.log(`🛑 Received ${signal}. Draining in-flight iterations and shutting down cleanly...`);
+    logger.info(`🛑 Received ${signal}. Draining in-flight iterations and shutting down cleanly...`);
+
+    // Stop accepting new HTTP requests
+    server.close(() => {
+      logger.info('HTTP server closed.');
+    });
+
+    try {
+      // Drain background jobs and active iterations (up to 30s)
+      await JobScheduler.getInstance().stop();
+      await AutonomousRecoveryDaemon.getInstance().waitForDrain(30000);
+
+      // Cleanly flush & close OpenTelemetry
+      await shutdownOpenTelemetry();
+
+      // Cleanly terminate DB connections
+      const { DatabaseAdapter } = await import('./db/adapter.js');
+      await DatabaseAdapter.getInstance().close();
+
+      console.log('✅ Graceful shutdown complete. Process terminated cleanly.');
+      logger.info('✅ Graceful shutdown complete. Process terminated cleanly.');
+      process.exit(0);
+    } catch (err: any) {
+      console.error('❌ Error during graceful shutdown:', err?.message || err);
+      logger.error({ err }, 'Error during graceful shutdown');
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }

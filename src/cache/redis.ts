@@ -30,6 +30,8 @@ export class CacheManager {
         this.redisSubscriber = new RedisClass(redisUrl, {
           maxRetriesPerRequest: 2,
           connectTimeout: 4000,
+          retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 2000)),
+          enableOfflineQueue: false,
         });
 
         this.redisClient.on('connect', () => {
@@ -40,6 +42,10 @@ export class CacheManager {
         this.redisClient.on('error', (err: any) => {
           this.isRedisConnected = false;
           console.warn('⚠️ CacheManager: Redis error, operating in resilient memory fallback mode:', err.message);
+        });
+
+        this.redisSubscriber.on('error', () => {
+          // Resilient memory fallback handles subscriber outages without throwing unhandled events
         });
 
         // Setup Pub/Sub subscriber

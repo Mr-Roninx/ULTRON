@@ -5,7 +5,8 @@ export type HITLTriggerReason =
   | 'LOW_CONFIDENCE'
   | 'OUTREACH_REVIEW'
   | 'HARD_DECLINE_REVIEW'
-  | 'MERCHANT_POLICY';
+  | 'MERCHANT_POLICY'
+  | 'EXECUTION_DLQ_EXHAUSTED';
 
 export type HITLRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'OVERRIDDEN' | 'TIMED_OUT';
 

@@ -79,8 +79,19 @@ export class AutonomousRecoveryDaemon {
       this.timer = null;
     }
     this.state = 'STOPPED';
-    this.isSweeping = false;
     this.next_sweep_at = null;
+  }
+
+  /**
+   * Wait for any active in-flight sweep to complete cleanly before terminating.
+   */
+  public async waitForDrain(timeoutMs = 30000): Promise<void> {
+    this.stop();
+    if (!this.isSweeping) return;
+    const start = Date.now();
+    while (this.isSweeping && Date.now() - start < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
   }
 
   /**

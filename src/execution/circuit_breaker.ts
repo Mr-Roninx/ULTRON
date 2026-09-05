@@ -1,3 +1,5 @@
+import { CacheManager } from '../cache/redis.js';
+
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 export interface CircuitBreakerOptions {
@@ -5,6 +7,7 @@ export interface CircuitBreakerOptions {
   cooldownMs?: number; // default: 30,000ms (30s)
   requestTimeoutMs?: number; // default: 10,000ms (10s)
   maxRetries?: number; // default: 5
+  key?: string; // Cache key for persistence
 }
 
 export class CircuitBreaker {
@@ -15,6 +18,7 @@ export class CircuitBreaker {
   private successCount: number = 0;
   private lastFailureTime: number = 0;
   private lastStateChange: number = Date.now();
+  private cacheKey: string;
 
   private readonly failureThreshold: number;
   private readonly cooldownMs: number;
@@ -26,6 +30,33 @@ export class CircuitBreaker {
     this.cooldownMs = options.cooldownMs ?? 30000;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 10000;
     this.maxRetries = options.maxRetries ?? 5;
+    this.cacheKey = `ultron:cb:${options.key || 'default'}`;
+
+    // Load persisted state asynchronously
+    this.loadPersistedState().catch(() => {});
+  }
+
+  private async loadPersistedState(): Promise<void> {
+    try {
+      const cache = CacheManager.getInstance();
+      const saved = await cache.get<{ state: CircuitState; failureCount: number; lastFailureTime: number }>(this.cacheKey);
+      if (saved) {
+        this.state = saved.state;
+        this.failureCount = saved.failureCount;
+        this.lastFailureTime = saved.lastFailureTime;
+      }
+    } catch {}
+  }
+
+  private persistState(): void {
+    try {
+      const cache = CacheManager.getInstance();
+      cache.set(this.cacheKey, {
+        state: this.state,
+        failureCount: this.failureCount,
+        lastFailureTime: this.lastFailureTime,
+      }, Math.ceil(this.cooldownMs / 1000) * 2).catch(() => {});
+    } catch {}
   }
 
   public static getInstance(): CircuitBreaker {
@@ -56,6 +87,7 @@ export class CircuitBreaker {
       if (elapsed >= this.cooldownMs) {
         this.state = 'HALF_OPEN';
         this.lastStateChange = Date.now();
+        this.persistState();
         console.log('⚡ CircuitBreaker: Cooldown elapsed. Transitioned to HALF_OPEN (probing)');
       }
     }
@@ -67,6 +99,7 @@ export class CircuitBreaker {
     if (this.state === 'HALF_OPEN') {
       this.state = 'CLOSED';
       this.lastStateChange = Date.now();
+      this.persistState();
       console.log('✅ CircuitBreaker: Probe successful. Circuit CLOSED.');
     }
   }
@@ -80,6 +113,7 @@ export class CircuitBreaker {
       this.lastStateChange = Date.now();
       console.warn(`🚨 CircuitBreaker: Failure threshold reached (${this.failureCount}). Circuit OPEN.`);
     }
+    this.persistState();
   }
 
   /**
@@ -134,6 +168,13 @@ export class CircuitBreaker {
 
     this.recordFailure(lastError);
     throw lastError;
+  }
+
+  /**
+   * Shorthand alias for executeWithResilience
+   */
+  public async execute<T>(operation: () => Promise<T>): Promise<T> {
+    return this.executeWithResilience(operation);
   }
 
   public reset(): void {
