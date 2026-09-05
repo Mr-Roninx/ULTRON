@@ -19,6 +19,10 @@ import {
   Minimize2,
   FileText,
   Sparkles,
+  ChevronUp,
+  ChevronDown,
+  RotateCcw,
+  Sliders,
 } from "lucide-react";
 import "./presentation.css";
 
@@ -177,6 +181,17 @@ export default function LuxuryFintechPresentationPage() {
   const speechDoneRef = useRef(false);
   const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Enterprise HUD & Audio Controls ── */
+  const [speechRate, setSpeechRate] = useState<number>(0.92);
+  const [currentSentence, setCurrentSentence] = useState<string>("");
+  const [isHudMinimized, setIsHudMinimized] = useState<boolean>(false);
+
+  /* ── Interactive Slide Widgets ── */
+  const [simDecision, setSimDecision] = useState<"ACT" | "WAIT" | "ABSTAIN">("ACT");
+  const [gateHardDecline, setGateHardDecline] = useState(false);
+  const [gateRetryCap, setGateRetryCap] = useState(false);
+  const [gateKillSwitch, setGateKillSwitch] = useState(false);
+
   /* ── Preload & monitor available voices for female CEO voice ── */
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -275,6 +290,8 @@ export default function LuxuryFintechPresentationPage() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       setActive(i);
       setProgress(0);
+      const sentences = NARRATIONS[i]?.match(/[^.!?]+[.!?]+/g) || [NARRATIONS[i] || ""];
+      setCurrentSentence(sentences[0]?.trim() || "");
       const startOffset = SLIDE_TIMINGS.slice(0, i).reduce((acc, curr) => acc + curr.duration, 0);
       setElapsedSeconds(startOffset);
     }
@@ -301,9 +318,12 @@ export default function LuxuryFintechPresentationPage() {
       }
       stopSpeech();
 
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+      setCurrentSentence(sentences[0]?.trim() || text);
+
       const utt = new SpeechSynthesisUtterance(text);
-      utt.rate = 0.90;   // Confident, crisp CEO keynote pace
-      utt.pitch = 1.15;  // Slightly elevated pitch for natural female voice timbre
+      utt.rate = speechRate;   // Confident, crisp keynote pace
+      utt.pitch = 1.12;        // Slightly elevated pitch for natural female voice timbre
       utt.volume = 1.0;
 
       const currentVoices = window.speechSynthesis.getVoices();
@@ -317,6 +337,19 @@ export default function LuxuryFintechPresentationPage() {
       if (chosenVoice) {
         utt.voice = chosenVoice;
       }
+
+      utt.onboundary = (event: SpeechSynthesisEvent) => {
+        if (event.charIndex !== undefined) {
+          let accumulated = 0;
+          for (const s of sentences) {
+            accumulated += s.length;
+            if (accumulated > event.charIndex) {
+              setCurrentSentence(s.trim());
+              break;
+            }
+          }
+        }
+      };
 
       utt.onstart = () => {
         setSpeaking(true);
@@ -344,7 +377,7 @@ export default function LuxuryFintechPresentationPage() {
       synthRef.current = utt;
       window.speechSynthesis.speak(utt);
     },
-    [selectedVoiceName, stopSpeech]
+    [selectedVoiceName, speechRate, stopSpeech]
   );
 
   /* ── Autoplay engine — SPEECH-DRIVEN (Combined 4m 45s flow) ── */
@@ -380,11 +413,19 @@ export default function LuxuryFintechPresentationPage() {
     const tick = 400;
     const totalTicks = Math.ceil(estimatedMs / tick);
     let count = 0;
+    const currentSentences = NARRATIONS[active]?.match(/[^.!?]+[.!?]+/g) || [NARRATIONS[active] || ""];
 
     timerRef.current = setInterval(() => {
       count++;
       const pct = Math.min((count / totalTicks) * 100, speechDoneRef.current ? 100 : 95);
       setProgress(pct);
+
+      // Smooth sentence update fallback for browsers without boundary events
+      const sIdx = Math.min(Math.floor((count / totalTicks) * currentSentences.length), currentSentences.length - 1);
+      if (currentSentences[sIdx]) {
+        setCurrentSentence(currentSentences[sIdx].trim());
+      }
+
       if (speechDoneRef.current) {
         setProgress(100);
         if (timerRef.current) clearInterval(timerRef.current);
@@ -424,6 +465,7 @@ export default function LuxuryFintechPresentationPage() {
   return (
     <div className="deck-viewport">
       <div className="deck-3d-background" />
+      <div className="deck-ambient-aura" />
       <div className="deck-3d-scrim" />
 
       {/* ── HEADER ── */}
@@ -640,6 +682,56 @@ export default function LuxuryFintechPresentationPage() {
             </div>
           </div>
 
+          {/* ── Interactive Decision Simulator ── */}
+          <div className="interactive-widget-box reveal d4" style={{ marginTop: "24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <span style={{ fontSize: "11px", fontFamily: "var(--ff-mono)", color: "#38bdf8", fontWeight: 700, letterSpacing: "0.5px" }}>
+                ⚡ LIVE DECISION SIMULATOR (Try changing portfolio decision)
+              </span>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={`interactive-toggle-btn btn-act ${simDecision === "ACT" ? "active" : ""}`}
+                  onClick={() => setSimDecision("ACT")}
+                >
+                  ACT (Rank #1 / K=5)
+                </button>
+                <button
+                  type="button"
+                  className={`interactive-toggle-btn btn-wait ${simDecision === "WAIT" ? "active" : ""}`}
+                  onClick={() => setSimDecision("WAIT")}
+                >
+                  WAIT (Rank #7 / Cap Reached)
+                </button>
+                <button
+                  type="button"
+                  className={`interactive-toggle-btn btn-abstain ${simDecision === "ABSTAIN" ? "active" : ""}`}
+                  onClick={() => setSimDecision("ABSTAIN")}
+                >
+                  ABSTAIN (Holdout / Negative IVEN)
+                </button>
+              </div>
+            </div>
+
+            <div className="sim-result-badge">
+              {simDecision === "ACT" && (
+                <span>
+                  <strong style={{ color: "#10b981" }}>ACT APPROVED:</strong> Opp #8924 (₹4,500) · ΔP: +48% · IVEN: +₹2,155 · Rank #1 ≤ K=5 · Link Dispatched
+                </span>
+              )}
+              {simDecision === "WAIT" && (
+                <span>
+                  <strong style={{ color: "#f59e0b" }}>WAIT DEFERRED:</strong> Opp #4102 (₹1,200) · IVEN: +₹283 · Rank #7 &gt; K=5 · Shadow Price λ: ₹420
+                </span>
+              )}
+              {simDecision === "ABSTAIN" && (
+                <span>
+                  <strong style={{ color: "#94a3b8" }}>ABSTAIN PRESERVED:</strong> Opp #1055 (₹400) · ΔP: +2% · IVEN: -₹3.95 · Anti-Blast saves ₹4.85 + Goodwill
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="divider reveal d5" />
           <p className="subline reveal d5" style={{ marginBottom: 0 }}>
             <strong>The Anti-Blast Advantage:</strong> While traditional systems fire 100 links blindly, ULTRON sends 5 — proves via Bayesian IVEN that every one was worth sending, and measures true causal lift via Difference-in-Differences on the holdout.
@@ -665,6 +757,7 @@ export default function LuxuryFintechPresentationPage() {
           </p>
 
           <div className="pipeline-flow reveal-scale d4">
+            <div className="pipeline-laser-beam" />
             {[
               { n: "01", name: "Intercept",  desc: "HMAC webhook + 300s replay window" },
               { n: "02", name: "Perceive",   desc: "Razorpay & NPCI UPI taxonomy" },
@@ -877,6 +970,72 @@ export default function LuxuryFintechPresentationPage() {
               </div>
             </div>
           </div>
+
+          {/* ── Interactive Action Authority Gate Simulator ── */}
+          {(() => {
+            const isTripped = gateHardDecline || gateRetryCap || gateKillSwitch;
+            return (
+              <div className="gate-sim-container reveal d5">
+                <div className="gate-sim-header">
+                  <div className="gate-sim-title">
+                    <Lock size={14} style={{ color: isTripped ? "#fb7185" : "#34d399" }} />
+                    <span>ACTION AUTHORITY GATE SIMULATOR (Deterministic Compliance Layer)</span>
+                  </div>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "var(--ff-mono)" }}>
+                    Stage 5 / 8 Verification Gate
+                  </span>
+                </div>
+
+                <div className="gate-chips-row">
+                  <button
+                    type="button"
+                    className={`gate-chip-toggle ${gateHardDecline ? "tripped" : ""}`}
+                    onClick={() => setGateHardDecline((prev) => !prev)}
+                  >
+                    {gateHardDecline ? <X size={13} /> : <Check size={13} />}
+                    Hard Decline: ZA / Stolen Card
+                  </button>
+                  <button
+                    type="button"
+                    className={`gate-chip-toggle ${gateRetryCap ? "tripped" : ""}`}
+                    onClick={() => setGateRetryCap((prev) => !prev)}
+                  >
+                    {gateRetryCap ? <X size={13} /> : <Check size={13} />}
+                    Retry Cap: Attempt &gt; 3
+                  </button>
+                  <button
+                    type="button"
+                    className={`gate-chip-toggle ${gateKillSwitch ? "tripped" : ""}`}
+                    onClick={() => setGateKillSwitch((prev) => !prev)}
+                  >
+                    {gateKillSwitch ? <X size={13} /> : <Check size={13} />}
+                    Kill Switch: Global Freeze
+                  </button>
+                </div>
+
+                <div className={`gate-sim-status ${isTripped ? "vetoed" : "passed"}`}>
+                  {isTripped ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <AlertTriangle size={15} style={{ color: "#fb7185" }} />
+                      <span>
+                        <strong>DETERMINISTIC VETO ENGAGED:</strong> Opportunity blocked despite positive IVEN (+₹1,850.00). Compliance gate overrides economics. Zero LLM bypass.
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Check size={15} style={{ color: "#34d399" }} />
+                      <span>
+                        <strong>ALL 5 COMPLIANCE CHECKS PASSED:</strong> Soft decline code, under attempt cap, kill switch inactive. Authorized for Razorpay link creation.
+                      </span>
+                    </div>
+                  )}
+                  <span style={{ fontSize: "11px", fontWeight: 700, opacity: 0.85 }}>
+                    {isTripped ? "EXECUTION ABORTED" : "AUTHORIZED"}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </section>
 
@@ -1014,6 +1173,76 @@ export default function LuxuryFintechPresentationPage() {
           </div>
         </div>
       </section>
+
+      {/* ── ENTERPRISE TELEPROMPTER HUD ── */}
+      <div className={`deck-teleprompter-hud ${isHudMinimized ? "minimized" : ""}`}>
+        <div className="hud-left">
+          <div className={`hud-pill ${speaking ? "active" : ""}`}>
+            {speaking ? "● LIVE SPEECH" : "STANDBY"}
+          </div>
+
+          <div className="hud-wave" title={speaking ? "Speech synthesis active" : "Speech synthesis idle"}>
+            <div className="hud-wave-bar" style={{ animationPlayState: speaking ? "running" : "paused" }} />
+            <div className="hud-wave-bar" style={{ animationPlayState: speaking ? "running" : "paused" }} />
+            <div className="hud-wave-bar" style={{ animationPlayState: speaking ? "running" : "paused" }} />
+            <div className="hud-wave-bar" style={{ animationPlayState: speaking ? "running" : "paused" }} />
+            <div className="hud-wave-bar" style={{ animationPlayState: speaking ? "running" : "paused" }} />
+            <div className="hud-wave-bar" style={{ animationPlayState: speaking ? "running" : "paused" }} />
+          </div>
+
+          {!isHudMinimized && (
+            <div className="hud-speech-text" title={currentSentence || NARRATIONS[active]}>
+              <span className="hud-speech-highlight">{SLIDES[active].stage}: </span>
+              <span>{currentSentence || NARRATIONS[active]}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="hud-actions">
+          {!isHudMinimized && (
+            <div className="hud-rate-group" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              {[0.8, 0.92, 1.15].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className="hud-rate-btn"
+                  style={{
+                    background: speechRate === r ? "rgba(56, 189, 248, 0.25)" : undefined,
+                    color: speechRate === r ? "#38bdf8" : undefined,
+                    borderColor: speechRate === r ? "rgba(56, 189, 248, 0.4)" : undefined,
+                  }}
+                  onClick={() => {
+                    setSpeechRate(r);
+                    if (speaking) {
+                      speak(NARRATIONS[active]);
+                    }
+                  }}
+                >
+                  {r === 0.92 ? "1.0x" : `${r}x`}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="hud-rate-btn"
+            onClick={speaking ? stopSpeech : () => speak(NARRATIONS[active])}
+            title={speaking ? "Pause speech" : "Speak current slide"}
+          >
+            {speaking ? <VolumeX size={12} /> : <Volume2 size={12} />}
+          </button>
+
+          <button
+            type="button"
+            className="hud-rate-btn"
+            onClick={() => setIsHudMinimized((prev) => !prev)}
+            title={isHudMinimized ? "Expand teleprompter" : "Minimize teleprompter"}
+          >
+            {isHudMinimized ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+        </div>
+      </div>
 
       {/* ── FULL KEYNOTE SCRIPT MODAL (4m 45s Combined Speech) ── */}
       {showScriptModal && (
