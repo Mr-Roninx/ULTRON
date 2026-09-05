@@ -29,14 +29,14 @@ import "./presentation.css";
 export const TOTAL_KEYNOTE_SECONDS = 285; // Exactly 4 minutes 45 seconds
 
 export const SLIDE_TIMINGS = [
-  { id: "hook",         title: "01 / The Hook",             duration: 33, range: "00:00 - 00:33", targetWords: 68 },
+  { id: "hook",         title: "01 / The Hook",             duration: 33, range: "00:00 - 00:33", targetWords: 76 },
   { id: "problem",      title: "02 / The Problem",          duration: 35, range: "00:34 - 01:09", targetWords: 68 },
-  { id: "solution",     title: "03 / The Solution",         duration: 37, range: "01:10 - 01:47", targetWords: 67 },
-  { id: "architecture", title: "04 / Architecture",         duration: 37, range: "01:48 - 02:25", targetWords: 69 },
-  { id: "innovation",   title: "05 / Innovation",           duration: 34, range: "02:26 - 03:00", targetWords: 63 },
-  { id: "ai-boundary",  title: "06 / LLM vs Determinism",   duration: 37, range: "03:01 - 03:38", targetWords: 71 },
-  { id: "razorpay",     title: "07 / Razorpay Integration", duration: 35, range: "03:39 - 04:14", targetWords: 63 },
-  { id: "conclusion",   title: "08 / Conclusion",           duration: 37, range: "04:15 - 04:45", targetWords: 68 },
+  { id: "solution",     title: "03 / The Solution",         duration: 37, range: "01:10 - 01:47", targetWords: 73 },
+  { id: "architecture", title: "04 / Architecture",         duration: 37, range: "01:48 - 02:25", targetWords: 78 },
+  { id: "innovation",   title: "05 / Innovation",           duration: 34, range: "02:26 - 03:00", targetWords: 64 },
+  { id: "ai-boundary",  title: "06 / LLM vs Determinism",   duration: 37, range: "03:01 - 03:38", targetWords: 79 },
+  { id: "razorpay",     title: "07 / Razorpay Integration", duration: 35, range: "03:39 - 04:14", targetWords: 74 },
+  { id: "conclusion",   title: "08 / Conclusion",           duration: 37, range: "04:15 - 04:45", targetWords: 76 },
 ];
 
 const NARRATIONS: string[] = [

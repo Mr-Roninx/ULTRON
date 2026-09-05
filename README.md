@@ -20,23 +20,26 @@
 </p>
 
 <p align="center">
-  <a href="#-architecture"><img src="https://img.shields.io/badge/Architecture-7_Stage_Pipeline-0d1117?style=for-the-badge&logo=buffer&logoColor=3b82f6" alt="Architecture" /></a>
-  <a href="#-tech-stack"><img src="https://img.shields.io/badge/Stack-TypeScript_+_React_+_SQLite-0d1117?style=for-the-badge&logo=typescript&logoColor=3178C6" alt="Stack" /></a>
+  <a href="#-architecture"><img src="https://img.shields.io/badge/Architecture-8_Stage_Pipeline-0d1117?style=for-the-badge&logo=buffer&logoColor=3b82f6" alt="Architecture" /></a>
+  <a href="#-tech-stack"><img src="https://img.shields.io/badge/Stack-TypeScript_+_React_+_SQLite_+_Postgres-0d1117?style=for-the-badge&logo=typescript&logoColor=3178C6" alt="Stack" /></a>
   <a href="#-real-money-production-vs-sandbox-test-mode"><img src="https://img.shields.io/badge/Razorpay-Test_Sandbox_+_Real_Money_Live-0d1117?style=for-the-badge&logo=razorpay&logoColor=528FF0" alt="Razorpay" /></a>
   <a href="#-strategic-positioning-ultron-vs-razorpay-2026-ai-vulcan--agent-studio"><img src="https://img.shields.io/badge/AI_Comparison-ULTRON_vs_Vulcan_&_Studio-7928CA?style=for-the-badge&logo=anthropic&logoColor=white" alt="AI Comparison" /></a>
-  <a href="#-api-reference"><img src="https://img.shields.io/badge/API-RESTful_v6.0-0d1117?style=for-the-badge&logo=fastapi&logoColor=10b981" alt="API" /></a>
+  <a href="#-api-reference"><img src="https://img.shields.io/badge/API-RESTful_v11.0-0d1117?style=for-the-badge&logo=fastapi&logoColor=10b981" alt="API" /></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Backend_LOC-21,748-blue?style=flat-square" alt="Backend LOC" />
-  <img src="https://img.shields.io/badge/Frontend_LOC-4,697-purple?style=flat-square" alt="Frontend LOC" />
-  <img src="https://img.shields.io/badge/Test_Scripts-165-green?style=flat-square" alt="Tests" />
-  <img src="https://img.shields.io/badge/Modules-23-orange?style=flat-square" alt="Modules" />
-  <img src="https://img.shields.io/badge/Version-6.0.0-cyan?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Backend_LOC-25,000+-blue?style=flat-square" alt="Backend LOC" />
+  <img src="https://img.shields.io/badge/Frontend_Routes-18-purple?style=flat-square" alt="Frontend Routes" />
+  <img src="https://img.shields.io/badge/Enterprise_Pillars-11-success?style=flat-square" alt="Enterprise Pillars" />
+  <img src="https://img.shields.io/badge/Test_Suites-89-green?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/Modules-150+-orange?style=flat-square" alt="Modules" />
+  <img src="https://img.shields.io/badge/Version-11.0.0_Enterprise-cyan?style=flat-square" alt="Version" />
 </p>
 
 <p align="center">
   🌐 <strong>Real Working Website:</strong> <a href="https://ultron-power.vercel.app/dashboard" target="_blank"><strong>https://ultron-power.vercel.app/dashboard</strong></a>
+  &nbsp;·&nbsp;
+  🎙️ <strong>Executive Launch Keynote:</strong> <a href="https://ultron-power.vercel.app/presentation" target="_blank"><strong>https://ultron-power.vercel.app/presentation</strong></a>
 </p>
 
 ---
@@ -46,11 +49,13 @@
 - [🌐 Live Working Website](#-live-working-website)
 - [Why ULTRON Exists](#-why-ultron-exists)
 - [Core Philosophy](#-core-philosophy)
+- [⚡ The Six Core Breakthroughs](#-the-six-core-breakthroughs)
 - [⚔️ Strategic Positioning: ULTRON vs. Razorpay 2026 AI (Vulcan & Agent Studio)](#-strategic-positioning-ultron-vs-razorpay-2026-ai-vulcan--agent-studio)
 - [Architecture](#-architecture)
-- [The 7-Stage Pipeline](#-the-7-stage-pipeline)
+- [The 8-Stage Pipeline](#-the-8-stage-pipeline)
 - [Advanced Economic Engine](#-advanced-economic-engine)
 - [🤖 AI Agent System & Specialist Network](#-ai-agent-system--specialist-network)
+- [🏛️ The 11 Pillars of ULTRON V11 Enterprise](#-the-11-pillars-of-ultron-v11-enterprise)
 - [⚡ Real Money (Production) vs Sandbox (Test Mode)](#-real-money-production-vs-sandbox-test-mode)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
@@ -75,8 +80,13 @@ Experience the live ULTRON autonomous recovery control plane running in producti
   <a href="https://ultron-power.vercel.app/dashboard" target="_blank">
     <img src="https://img.shields.io/badge/🚀_LAUNCH_LIVE_DASHBOARD-ultron--power.vercel.app%2Fdashboard-00DC82?style=for-the-badge&logo=vercel&logoColor=white" alt="Launch Live Dashboard" />
   </a>
+  <a href="https://ultron-power.vercel.app/presentation" target="_blank">
+    <img src="https://img.shields.io/badge/🎙️_KEYNOTE_PRESENTATION-4m_45s_Executive_Speech-7928CA?style=for-the-badge&logo=slides&logoColor=white" alt="Launch Keynote Presentation" />
+  </a>
   <br/><br/>
   <strong>🔗 Direct Dashboard URL:</strong> <a href="https://ultron-power.vercel.app/dashboard" target="_blank"><strong>https://ultron-power.vercel.app/dashboard</strong></a>
+  <br/>
+  <strong>🎙️ Interactive Launch Keynote Deck:</strong> <a href="https://ultron-power.vercel.app/presentation" target="_blank"><strong>https://ultron-power.vercel.app/presentation</strong></a>
   <br/>
   <strong>🎨 Interactive Failure Lab & Showcase:</strong> <a href="https://ultron-power.vercel.app/showcase" target="_blank"><strong>https://ultron-power.vercel.app/showcase</strong></a>
   <br/><br/>
@@ -138,6 +148,21 @@ Traditional Retry Systems          ULTRON Control Plane
 <td><strong>Built-In Audit Trail</strong><br/>Every stage writes its reasoning to a durable log as it happens. The "Why?" screen reads stored fields, never generates explanations after the fact.</td>
 </tr>
 </table>
+
+---
+
+## ⚡ The Six Core Breakthroughs
+
+ULTRON departs fundamentally from traditional retry tools through six interconnected mathematical and architectural innovations:
+
+| # | Breakthrough | Mathematical / Architectural Foundation | Real-World Impact |
+|:---:|:---|:---|:---|
+| **01** | **Incremental Lift ($\Delta P$)** | $\Delta P = \max(0, P(\text{ACT}) - P(\text{NATURAL}))$ | Isolates true causal recovery. Never spends money claiming credit for payments that settle naturally. |
+| **02** | **Shadow Pricing ($\lambda$)** | $\lambda^* = \text{IVEN}_{(K)}$ via Dual-Mirror Descent | Dynamically prices scarce contact capacity, mathematically clearing the portfolio at the marginal threshold. |
+| **03** | **Two-Stage Sovereign Separation** | Stage 1 (Economics) $\to$ Stage 2 (Deterministic Veto) | Compliance (hard declines, RBI 3-attempt caps, kill switches) can veto any economic case without exception. |
+| **04** | **Live Bayesian Calibration** | Beta-Binomial conjugate posteriors: $\text{Beta}(\alpha_0 + k, \beta_0 + n - k)$ | Probability tables continuously learn from incoming settlement webhooks; rare codes regularize to global prior. |
+| **05** | **Causal Attribution Engine** | Difference-in-Differences (DiD) ATT with 5% synthetic holdout | Computes Average Treatment Effect on the Treated with automated parallel-trends validation ($\Delta_{\text{pre}} < 15\%$). |
+| **06** | **Autonomous AI Agent Subsystem** | 8-Phase Loop, MCP JSON-RPC 2.0, 64-dim Vector Memory, Multi-Provider Cascade | Investigates failures via specialist agents with zero execution risk — strict invariant: **No LLM on financial path**. |
 
 ---
 
@@ -229,42 +254,44 @@ In modern fintech architecture, Vulcan, Agent Studio, and ULTRON form a unified,
 ## 🏗 Architecture
 
 <p align="center">
-  <img src="docs/assets/pipeline_flow.jpg" alt="ULTRON 7-Stage Pipeline Architecture" width="100%" />
+  <img src="docs/assets/pipeline_flow.jpg" alt="ULTRON 8-Stage Pipeline Architecture" width="100%" />
 </p>
 
-ULTRON processes every failed payment through a strict **7-stage pipeline** where each stage reads from and writes to a shared SQLite database, producing a complete, auditable decision trail.
+ULTRON processes every failed payment through a strict **8-stage deterministic pipeline** where each stage reads from and writes to durable state, producing an immutable, mathematically provable decision trail across 150+ TypeScript modules.
 
 ```mermaid
 graph LR
-    A[🔔 Event Fabric] --> B[👁 Perception]
-    B --> C[🧮 Economic Reasoning]
-    C --> D[📊 Recovery Market]
-    D --> E[🛡 Action Authority]
-    E --> F[⚡ Execution]
-    F --> G[✅ Truth Engine]
-    G -.->|Bayesian Feedback| C
+    A[🔔 1. Event Fabric] --> B[👁 2. Perception]
+    B --> C[🧮 3. Bayesian IVEN]
+    C --> D[📊 4. Recovery Market]
+    D --> E[🛡 5. Action Authority]
+    E --> F[🤖 6. AI Agent Reasoning]
+    F --> G[⚡ 7. Resilient Execution]
+    G --> H[✅ 8. Truth Engine]
+    H -.->|Closed-Loop Bayesian Feedback| C
     
     style A fill:#1e3a5f,stroke:#3b82f6,color:#f1f5f9
     style B fill:#1e3a5f,stroke:#8b5cf6,color:#f1f5f9
     style C fill:#1e3a5f,stroke:#f59e0b,color:#f1f5f9
     style D fill:#1e3a5f,stroke:#10b981,color:#f1f5f9
     style E fill:#1e3a5f,stroke:#ef4444,color:#f1f5f9
-    style F fill:#1e3a5f,stroke:#06b6d4,color:#f1f5f9
-    style G fill:#1e3a5f,stroke:#22c55e,color:#f1f5f9
+    style F fill:#1e3a5f,stroke:#8b5cf6,color:#f1f5f9
+    style G fill:#1e3a5f,stroke:#06b6d4,color:#f1f5f9
+    style H fill:#1e3a5f,stroke:#22c55e,color:#f1f5f9
 ```
 
 ---
 
-## 🔗 The 7-Stage Pipeline
+## 🔗 The 8-Stage Pipeline
 
 ### Stage 1 — 🔔 Event Fabric
-> **Webhook ingestion with HMAC-SHA256 signature verification and event deduplication**
+> **Webhook ingestion with timing-safe HMAC-SHA256 verification and distributed idempotency guard**
 
 | Capability | Implementation |
 |---|---|
 | Webhook endpoint | `POST /webhooks/razorpay/:tenant_id` |
 | Signature verification | Timing-safe HMAC-SHA256 against per-tenant secrets |
-| Event deduplication | By `event_id` and `payment_id` lookups |
+| Event deduplication | By `event_id` and `payment_id` lookups via Redis & SQLite |
 | Multi-event support | `payment.failed`, `payment_link.paid`, `payment_link.expired` |
 | Simulation endpoint | `POST /internal/simulate-webhook/:tenant_id` (source=`synthetic`) |
 | Source labeling | Real webhooks → `source='real'` · Simulations → `source='synthetic'` |
@@ -274,7 +301,7 @@ Every incoming event is verified, deduplicated, and routed to the Perception lay
 ---
 
 ### Stage 2 — 👁 Perception
-> **Decline taxonomy classification and opportunity normalization**
+> **Decline taxonomy classification, temporal cycle extraction, and opportunity normalization**
 
 The Perception layer transforms raw Razorpay payment failure payloads into standardized `RecoveryOpportunity` records using a deterministic decline taxonomy:
 
@@ -294,8 +321,9 @@ The Perception layer transforms raw Razorpay payment failure payloads into stand
 
 Each opportunity also receives:
 - **Customer profile** with trust score (default `0.65` for new customers)
+- **Temporal signals** (salary deposit window 28th–5th, nocturnal banking maintenance 02:00–04:00 IST)
 - **Attempt count** derived from prior opportunity history
-- **Tenant scoping** for multi-merchant isolation
+- **Tenant scoping** for multi-merchant row-level isolation
 
 ---
 
@@ -309,24 +337,25 @@ IVEN = (incremental_prob × amount_paise) − operational_cost − fatigue_cost
 
 where:
   incremental_prob = P(recovery | intervention) − P(recovery | no intervention)
-  operational_cost = ₹4.00 (fixed per payment link)
+  operational_cost = ₹4.00 (400 paise fixed per payment link)
   fatigue_cost     = f(attempt_count)  →  [₹0, ₹2.50, ₹7.50, ₹15+]
 ```
 
+**IVEN Priority Bands (Phase 7):**
+- **`STRONG`** ($\ge ₹150.00$): Highest expected ROI; allocated first.
+- **`MODERATE`** ($₹50.00\text{--}₹149.99$): Positive economic lift; standard recovery queue.
+- **`WEAK`** ($₹0.01\text{--}₹49.99$): Marginal return; cleared only when capacity is abundant.
+- **`NEGATIVE`** ($\le ₹0.00$): Unconditional `ABSTAIN` (prevents capital and goodwill loss).
+
 **Probability Sources:**
-
-| Engine | Description | When Used |
-|---|---|---|
-| **Static Probability Table** | Hand-coded baselines per decline type | Default (< 100 observations) |
-| **Bayesian Calibration** | Beta-Binomial posterior with sample-size gated auto-promotion | ≥ 100 observations per reason code |
-| **Thompson Sampling Bandit** | Marsaglia-Tsang Gamma sampler with Box-Muller transform for exploration | Opt-in via `ENABLE_THOMPSON_SAMPLING` |
-
-**Key Invariant:** Hard declines **always** produce `IVEN ≤ 0`. This is enforced at both the probability estimation and final score computation stages.
+- **Static Baseline Table:** Conservative default for cold-start reason codes.
+- **Hierarchical Bayesian Calibration:** Beta-Binomial conjugate updating continuously adjusting priors from settlement events ($N \ge 100$, lift $> 5\%$, $p < 0.05$).
+- **Thompson Sampling Bandit:** Exploration vs. exploitation balancing using Marsaglia-Tsang Gamma sampler with Box-Muller variates.
 
 ---
 
 ### Stage 4 — 📊 Recovery Market
-> **Portfolio-level greedy allocation with shadow pricing and capacity constraints**
+> **Portfolio-level greedy allocation with shadow pricing and Lagrangian Dual-Mirror budget pacing**
 
 The Recovery Market treats opportunities as competing for **scarce recovery capacity**:
 
@@ -338,85 +367,100 @@ The Recovery Market treats opportunities as competing for **scarce recovery capa
     │
     ├─ Sort remaining by IVEN descending
     │
-    ├─ Top K (capacity limit) → ACT
-    ├─ Remainder             → WAIT (deferred)
+    ├─ Top K (capacity limit = 5) → ACT
+    ├─ Remainder                   → WAIT (deferred to subsequent cycle)
     │
-    └─ Shadow Price = IVEN of the Kth (marginal) opportunity
+    └─ Shadow Price = IVEN of the Kth (marginal) accepted opportunity
 ```
 
 | Concept | Definition |
 |---|---|
-| **Shadow Price** | The IVEN of the last opportunity accepted — the minimum value for which capacity was allocated |
-| **Capacity** | Configurable per-tenant or per-run (default: 5 payment links per run) |
-| **Anti-Blast Engine** | Calculates exact savings from _not_ acting (messaging fees, provider fees, customer goodwill) |
-| **Dual-Mirror Budget Pacer** | Daily/hourly budget tracking with Lagrangian shadow multiplier |
-| **Holdout Group** | 5% deterministic holdout for continuous counterfactual measurement |
+| **Shadow Price ($\lambda$)** | The IVEN of the marginal accepted opportunity — the exact boundary where additional retries turn negative. |
+| **Capacity ($K$)** | Configurable per-tenant limit (hard cap of 5 payment links per run in Test Mode). |
+| **Dual-Mirror Budget Pacer** | Online subgradient descent dynamically adjusting $\lambda(t)$ to pace contact budget across intraday spikes. |
+| **Anti-Blast Valuation** | Computes capital saved by abstaining: messaging fees (₹0.85), provider fees (₹4.00), and customer goodwill (₹5.00–₹50.00). |
+| **5% Synthetic Holdout** | Deterministic djb2 hash assigns 5% to uncontacted control for Difference-in-Differences causal attribution. |
 
 ---
 
 ### Stage 5 — 🛡 Action Authority
-> **Deterministic compliance gate with multi-level kill switch — vetoes economic decisions**
+> **Independent, deterministic compliance gate with multi-level kill switch — absolute veto supremacy**
 
-**This is an independent, deterministic gate that runs _after_ allocation and can veto an ACT decision.** The two-stage design (economic decision → compliance veto) is intentional.
+**Action Authority is an independent, deterministic gate that runs _after_ market allocation and can veto any ACT decision.** Economics proposes, compliance disposes.
 
 ```
-  ┌──────────────────────────────────────────────────────────────────┐
-  │  Check 1: Hard Decline Check     → BLOCKED if decline_type='hard'│
-  │  Check 2: Retry Cap Check        → BLOCKED if attempt_count ≥ 3  │
-  │  Check 3: Kill Switch Check      → BLOCKED if kill switch active  │
-  │  Check 4: Confidence Recheck     → ABSTAIN if confidence='low'   │
-  │  Check 5: Capacity Recheck       → WAIT if not in ACT batch      │
-  └──────────────────────────────────────────────────────────────────┘
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │  Check 1: Hard Decline Check     → BLOCKED if decline_type='hard'      │
+  │  Check 2: Retry Cap Check        → BLOCKED if attempt_count ≥ 3 (RBI)  │
+  │  Check 3: Kill Switch Check      → BLOCKED if emergency switch engaged │
+  │  Check 4: Confidence Recheck     → ABSTAIN if confidence='low'         │
+  │  Check 5: Capacity Recheck       → WAIT if not in top K batch          │
+  └────────────────────────────────────────────────────────────────────────┘
 
   Verdict: AUTHORIZED | BLOCKED | ABSTAIN | WAIT
 ```
 
-**Multi-Level Kill Switch:**
-- 🔴 **Global** — halts all recovery activity system-wide
-- 🟠 **Per-Tenant** — halts recovery for a specific merchant
-- 🟡 **Per-Provider** — halts recovery for a specific payment provider
+**Multi-Level Kill Switch Hierarchy:**
+- 🔴 **Global Kill Switch** — halts all link creation and execution across all tenants immediately.
+- 🟠 **Tenant Kill Switch** — halts recovery actions for an individual merchant.
+- 🟡 **Provider Kill Switch** — isolates a specific payment gateway (Razorpay, Cashfree, Stripe) upon external incident.
 
 ---
 
-### Stage 6 — ⚡ Execution
-> **Razorpay payment link creation with circuit breaker, DLQ, and omnichannel dispatch**
+### Stage 6 — 🤖 Autonomous AI Agent Subsystem
+> **8-phase autonomous agent loop with specialist routing, MCP tooling, and zero financial execution authority**
 
-Only `AUTHORIZED` opportunities reach the Execution stage. Key safeguards:
+When an opportunity is authorized, the Autonomous Agent Subsystem performs forensic analysis, hypothesis generation, and tone-calibrated outreach formulation:
 
-| Safeguard | Description |
+```
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │  Agent Loop: OBSERVE → HYPOTHESIZE → PLAN → ACT (Tools) → REFLECT → PROPOSE  │
+  └──────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Capability | Architecture & Safeguards |
 |---|---|
-| **Zero-Bypass Authority Assertion** | Re-evaluates authority verdict before every execution — no shortcut |
-| **Idempotency** | Local SQLite + remote Razorpay `reference_id` deduplication |
-| **Circuit Breaker** | 3-state (CLOSED→OPEN→HALF_OPEN) with 5-failure threshold and 30s cooldown |
-| **Dead Letter Queue** | Failed executions recorded with actionable error messages for replay |
-| **Rate Limiter** | Tiered: webhooks (100/min), execution (10/min), general (600/min) |
-
-**Omnichannel Recovery Dispatch:**
-- 📱 **WhatsApp** via Meta Cloud API (automated recovery link delivery)
-- 📧 **Email** via Resend API / Custom SMTP (branded recovery notifications)
-- 🔗 **Payment Link** with SMS+Email via Razorpay native notifications
+| **Specialist Network** | 4 domain specialists: `PerceptionAgent`, `StrategyAgent`, `OutreachAgent`, and `ComplianceCopilot`. |
+| **Model Context Protocol (MCP)** | JSON-RPC 2.0 server with 5 diagnostic tools: card network status, interaction history, retry simulation, discount elasticity, risk profiling. |
+| **Multi-Provider Cascade** | Claude 3.5 Sonnet $\to$ Gemini 1.5 Pro $\to$ GPT-4o $\to$ Deterministic Fallback with 60s circuit breakers. |
+| **64-Dim Vector Memory** | In-memory orthogonal semantic projection with 90-day exponential temporal decay firewall. |
+| **Human-in-the-Loop (HITL)** | High-ticket transactions ($> ₹25,000$) escalate to human review with 30-minute SLA fallback. |
+| **Strict AI Red Line** | **No LLM sits on the execution path.** Language models only investigate and explain; all execution is 100% deterministic code. |
 
 ---
 
-### Stage 7 — ✅ Truth Engine
-> **Authoritative reconciliation against provider truth with hash-chained double-entry ledger**
+### Stage 7 — ⚡ Resilient Execution
+> **Idempotent payment link creation with client pool, circuit breaker, rate limiter, and persistent DLQ**
 
-The Truth Engine is the **final arbiter** of recovery outcomes. It follows a strict invariant hierarchy:
+Only `AUTHORIZED` opportunities surviving Action Authority and agent safety checks reach Execution:
+
+| Safeguard | Implementation Details |
+|---|---|
+| **Zero-Bypass Authority Assertion** | Re-evaluates authority verdict before every API call — strictly blocks bypass. |
+| **Client Pool** | Dynamically resolves encrypted AES-256-GCM credentials per tenant and environment (`test` vs `live`). |
+| **Idempotency** | Local SQLite + remote Razorpay `reference_id` deduplication prevents duplicate links. |
+| **Persistent DLQ** | Failed dispatches write to `dlq_jobs` with exponential backoff (`[0.5, 2, 5, 15, 60]` minutes) and automatic HITL escalation. |
+| **Circuit Breaker** | 3-state pattern (CLOSED $\to$ OPEN $\to$ HALF_OPEN) with 5-failure trip and 60s cooldown probing. |
+| **Omnichannel Dispatch** | Payment link delivery via WhatsApp (Meta Cloud API), Email (Resend / SMTP), and native SMS. |
+
+---
+
+### Stage 8 — ✅ Truth Engine & Authoritative Reconciliation
+> **Provider truth reconciliation, SHA-256 double-entry ledger, and closed-loop Bayesian feedback**
+
+The Truth Engine is the **final arbiter** of recovery outcomes. It follows the invariant:
 
 ```
   PROVIDER TRUTH  >  RECONCILIATION  >  LOCAL FINANCIAL STATE
 ```
 
-| Component | Purpose |
+| Component | Architecture |
 |---|---|
-| **Provider Truth Evaluator** | Extracts canonical payment state from raw Razorpay API response |
-| **Canonical State Machine** | Maps provider statuses to 18 internal states with validated transitions |
-| **Authoritative Reconciler** | Atomic SQLite transaction updating opportunity + execution + ledger |
-| **Double-Entry Ledger** | SHA-256 hash-chained entries (debit: `bank_settlement` ↔ credit: `recovered_revenue`) |
-| **Reconciliation SLA Monitor** | Tracks time-to-settlement and flags SLA breaches |
-| **Causal Analysis Engine** | Evaluates intervention effectiveness with Brier score tracking |
-
-**Learning Loop:** Every reconciled outcome feeds back into the Bayesian Calibration engine and Thompson Sampling Bandit, continuously updating probability distributions.
+| **Provider Truth Evaluator** | Extracts canonical settlement state from official Razorpay API responses. |
+| **Canonical State Machine** | Enforces validated lifecycle transitions across 18 terminal and intermediate states. |
+| **Double-Entry Ledger** | Cryptographic SHA-256 hash chaining: $\text{Hash}_t = \text{SHA256}(\text{Hash}_{t-1} \parallel \text{EntryData})$. |
+| **Causal Attribution (DiD)** | Computes Average Treatment Effect on the Treated (ATT) against the 5% synthetic holdout. |
+| **Bayesian Feedback Loop** | Reconciled settlements update Beta conjugate posteriors and Thompson Sampling distributions. |
 
 ---
 
@@ -507,6 +551,26 @@ graph TD
 | **Memory System** | `agents/memory.ts` | Dual-tier **Episodic Memory** (historical failure traces & run histories) and **Semantic Memory** (merchant-specific behavioral patterns). |
 | **Replanning Engine** | `agents/replan_engine.ts` | Dynamic multi-step recovery replanning when environmental conditions change (e.g., bank outage cleared). |
 | **Wait / Wake Daemon** | `agents/wait_wake.ts` | Asynchronous suspension of opportunities awaiting optimal recovery windows without blocking system workers. |
+
+---
+
+## 🏛️ The 11 Pillars of ULTRON V11 Enterprise
+
+ULTRON V11 transforms the research prototype into an enterprise-grade, horizontally scalable autonomous economic control plane while strictly upholding all non-negotiable core invariants:
+
+| Pillar | Focus Area | Architectural Deliverable |
+|:---:|:---|:---|
+| **01** | **TypeScript Strict Mode** | `"strict": true`, `"noUncheckedIndexedAccess": true`, and branded types (`Paise`, `TenantId`, `OpportunityId`, `Probability`) in `src/types/branded.ts`. |
+| **02** | **PostgreSQL & Supabase RLS** | Dual-engine `DatabaseAdapter` supporting SQLite & Supabase PostgreSQL with pool connection scaling and tenant-isolated Row-Level Security. |
+| **03** | **OpenTelemetry Tracing** | End-to-end W3C `traceparent` context propagation linking frontend requests, API gateway, worker tasks, and external Razorpay spans. |
+| **04** | **Enterprise Security** | Strict production CORS allowlist, Content Security Policy, JWT access+refresh rotation with Redis blacklist, Argon2id hashing, and API key scopes. |
+| **05** | **Resilient Execution Triad** | Database-persisted Dead Letter Queue (`dlq_jobs`) with exponential backoff, persistent Redis circuit breakers, and unified `JobScheduler`. |
+| **06** | **Multi-Tenant RLS Isolation** | Centralized `tenant_guard.ts` middleware enforcing strict tenant isolation across all 16 route modules, queries, and background agent loops. |
+| **07** | **Enhanced Economics & DiD** | Persistent `bayesian_priors` table, IVEN Priority Bands (`STRONG`, `MODERATE`, `WEAK`, `NEGATIVE`), and Difference-in-Differences causal ATT engine. |
+| **08** | **Observability Dashboard** | Next.js 16 App Router across **18 production routes** including Tenant Command Center, Economic Intelligence, Audit Explorer, and Presentation Keynote. |
+| **09** | **Enterprise API Gateway** | Centralized Zod validation with RFC 7807 problem details, multi-tier sliding-window rate limiting, API versioning (`/v1/`, `/v2/`), and OpenAPI 3.1 generator. |
+| **10** | **Decoupled Distributed Workers** | Redis-backed background job queue (`src/queue/job_queue.ts`, `LPUSH`/`BRPOP`), decoupled worker process (`src/worker.ts`), and Docker Compose horizontal scaling. |
+| **11** | **Kubernetes Probes & 99.9% SLO** | 3-tier health checks (`/health/live`, `/health/ready`, `/health/deep`), Google SRE multi-window error budget burn rate tracking, and operations runbook. |
 
 ---
 
@@ -621,9 +685,9 @@ Operators and merchants can toggle modes instantly via the top navigation bar:
 
 ```
 ultron/
-├── src/                          # Backend source (116 files, 21,598 LOC)
-│   ├── server.ts                 # Express app entry point & route registration
-│   ├── worker.ts                 # Background worker process
+├── src/                          # Backend source (150+ TypeScript modules, 25 subsystems)
+│   ├── server.ts                 # Express API server entry point & route registration
+│   ├── worker.ts                 # Decoupled distributed background worker process
 │   │
 │   ├── webhooks/                 # Stage 1: Event Fabric
 │   │   ├── razorpay.ts           #   HMAC-verified webhook handlers (real + simulated)
@@ -634,108 +698,75 @@ ultron/
 │   │   └── normalizer.ts         #   Decline taxonomy & opportunity normalization
 │   │
 │   ├── economics/                # Stage 3: Economic Reasoning
-│   │   ├── scorer.ts             #   IVEN computation engine
-│   │   ├── bayesian_calibration.ts  # Beta-Binomial posterior calibration
+│   │   ├── scorer.ts             #   Bayesian IVEN computation engine & bands
+│   │   ├── bayesian_calibration.ts  # Beta-Binomial conjugate posterior calibration
 │   │   ├── bandit_policy.ts      #   Thompson Sampling (Marsaglia-Tsang Gamma)
-│   │   └── anti_blast_engine.ts  #   Value-of-inaction calculator
+│   │   └── anti_blast_engine.ts  #   Value-of-inaction & 5% holdout calculator
 │   │
 │   ├── market/                   # Stage 4: Recovery Market
-│   │   ├── allocator.ts          #   Greedy portfolio allocation with shadow price
-│   │   └── capacity_policy.ts    #   Dual-Mirror budget pacer & capacity limits
+│   │   ├── allocator.ts          #   Greedy portfolio allocation with shadow price λ
+│   │   └── capacity_policy.ts    #   Dual-Mirror budget pacer & Lagrangian multipliers
 │   │
 │   ├── authority/                # Stage 5: Action Authority
 │   │   └── gate.ts               #   5-check compliance gate + multi-level kill switch
 │   │
-│   ├── execution/                # Stage 6: Execution
-│   │   ├── executor.ts           #   Razorpay payment link creation
-│   │   ├── circuit_breaker.ts    #   3-state circuit breaker pattern
-│   │   ├── dlq.ts                #   Dead Letter Queue for failed executions
-│   │   └── rate_limiter.ts       #   Per-endpoint rate limiting
+│   ├── agents/                   # Stage 6: Autonomous AI Agent Subsystem (Phases 1-8)
+│   │   ├── agent_loop.ts         #   Iterative Observe-Reason-Act loop
+│   │   ├── reasoning_engine.ts   #   Chain-of-Thought hypothesis generator
+│   │   ├── specialist_router.ts  #   Specialist delegation (Perception, Strategy, Outreach, Compliance)
+│   │   ├── trace_stream.ts       #   Server-Sent Events (SSE) live execution stream
+│   │   ├── daemon.ts             #   24/7 background autonomous recovery daemon
+│   │   ├── memory/               #   64-dim vector projection & 90-day decay firewall
+│   │   ├── mcp/                  #   Model Context Protocol JSON-RPC 2.0 server & tools
+│   │   ├── llm/providers/        #   Multi-provider cascade (Claude, Gemini, OpenAI, Fallback)
+│   │   ├── hitl/                 #   Human-in-the-Loop manager with 30m SLA monitors
+│   │   └── autonomous/           #   Goal decomposition, rail monitors, adaptive strategy, alerts
 │   │
-│   ├── reconciliation/           # Stage 7: Truth Engine (Reconciliation)
-│   │   ├── authoritative_reconciler.ts  # Atomic provider truth reconciliation
-│   │   └── poller.ts             #   Periodic reconciliation sweep
+│   ├── execution/                # Stage 7: Resilient Execution
+│   │   ├── executor.ts           #   Razorpay payment link creation & client pool
+│   │   ├── circuit_breaker.ts    #   Redis-backed 3-state circuit breaker
+│   │   ├── dlq.ts                #   Persistent Dead Letter Queue with exponential backoff
+│   │   ├── rate_limiter.ts       #   Tiered sliding-window rate limiters
+│   │   └── job_scheduler.ts      #   Unified background maintenance scheduler
 │   │
-│   ├── truth/                    # Stage 7: Truth Engine (Core)
+│   ├── truth/                    # Stage 8: Truth Engine & Reconciliation
 │   │   ├── canonical_state_machine.ts   # 18-state payment lifecycle FSM
-│   │   ├── provider_truth.ts     #   Razorpay API response evaluator
-│   │   ├── double_entry_ledger.ts  #   SHA-256 hash-chained ledger
-│   │   ├── causal_analysis_engine.ts  #  Intervention effectiveness analysis
+│   │   ├── provider_truth.ts     #   Authoritative Razorpay API response evaluator
+│   │   ├── double_entry_ledger.ts  #   Cryptographic SHA-256 hash-chained ledger
+│   │   ├── causal_analysis_engine.ts  #  Diff-in-Diff ATT estimation (<15% parallel trends)
 │   │   └── reconciliation_sla.ts #   Settlement SLA monitoring
 │   │
-│   ├── agents/                   # Autonomous AI Agent System
-│   │   ├── daemon.ts             #   24/7 background recovery daemon
-│   │   ├── orchestrator.ts       #   Multi-step plan executor
-│   │   ├── portfolio_agent.ts    #   Portfolio sweep & ranking
-│   │   ├── planner.ts            #   Recovery plan generator
-│   │   ├── tool_registry.ts      #   15+ autonomous operation tools
-│   │   ├── memory.ts             #   Episodic + semantic memory
-│   │   ├── learning.ts           #   Outcome-based learning engine
-│   │   ├── llm_provider.ts       #   NVIDIA NIM LLM integration
-│   │   ├── specialists/          #   Domain-specific sub-agents
-│   │   └── tools/                #   Read + proposal tool definitions
-│   │
-│   ├── security/                 # Enterprise Security Layer
-│   │   ├── auth.ts               #   JWT authentication
-│   │   ├── rbac.ts               #   Role-based access control
-│   │   ├── api_keys.ts           #   API key management
-│   │   ├── secrets.ts            #   AES-256 credential vault
-│   │   ├── webhook_validator.ts  #   Multi-secret webhook verification
-│   │   ├── tenancy.ts            #   Multi-tenant isolation
-│   │   └── pii.ts                #   PII masking utilities
-│   │
-│   ├── providers/                # Payment Provider Abstraction
-│   │   ├── router.ts             #   Multi-provider routing
-│   │   └── razorpay/             #   Razorpay client pool & connection service
-│   │
-│   ├── notifications/            # Omnichannel Notifications
-│   │   ├── email.ts              #   Resend API + SMTP branded emails
-│   │   └── whatsapp.ts           #   Meta WhatsApp Cloud API
-│   │
-│   ├── simulation/               # Testing & Simulation
-│   │   ├── scenario_runner.ts    #   Automated test scenario execution
-│   │   └── synthetic_generator.ts  # Synthetic payment failure generator
-│   │
-│   ├── db/                       # Data Layer
-│   │   ├── database.ts           #   SQLite schema + CRUD (76KB, 2000+ LOC)
-│   │   ├── adapter.ts            #   SQLite ↔ PostgreSQL dual adapter
-│   │   └── migrations/           #   Schema migration runner
-│   │
-│   ├── cache/                    #   Redis cache manager & rate limiter
-│   ├── realtime/                 #   SSE broadcaster for live dashboard
-│   ├── observability/            #   Logger, Prometheus metrics, health probes
-│   ├── middleware/               #   Audit logger, tenant scoping, tracing
-│   ├── llm/                      #   LLM explainer (decision narratives only)
-│   ├── routes/                   #   16 Express route modules
-│   ├── connectors/               #   External system connectors (Odoo ERP)
-│   └── types/                    #   Core TypeScript interfaces
+│   ├── reconciliation/           # Authoritative reconciliation & Bayesian feedback
+│   ├── security/                 # AES-256 vault, JWT rotation, tenant_guard, API key scopes
+│   ├── gateway/                  # Zod RFC 7807 validation, rate tiers, versioning, OpenAPI 3.1
+│   ├── queue/                    # Distributed Redis job queue (LPUSH/BRPOP)
+│   ├── cache/                    # Redis client manager & distributed caching
+│   ├── db/                       # DatabaseAdapter (SQLite WAL ↔ PostgreSQL RLS) & migrations
+│   ├── observability/            # OpenTelemetry tracing, Prometheus metrics, health probes
+│   ├── notifications/            # Meta WhatsApp Cloud API & Resend email dispatchers
+│   ├── providers/                # Client pool (Razorpay Test/Live, Cashfree, Stripe)
+│   ├── routes/                   # 16 Express route modules (REST, SSE, MCP)
+│   └── types/                    # Branded primitive types (Paise, TenantId, Probability)
 │
-├── frontend/                     # Next.js Dashboard (17 files, 4,762 LOC)
+├── frontend/                     # Next.js 16 (Turbopack) Dashboard (18 routes)
 │   └── src/app/
-│       ├── dashboard/            #   Main operations dashboard
-│       │   ├── page.tsx          #   Dashboard home (32KB)
-│       │   ├── layout.tsx        #   Navigation layout
-│       │   ├── settings/         #   Configuration panels (API keys, integrations, team)
-│       │   └── setup/            #   Merchant setup & onboarding walkthrough
-│       ├── login/                #   Authentication UI
-│       ├── signup/               #   Merchant onboarding
-│       ├── showcase/             #   Product showcase page
-│       └── product/              #   Product information
+│       ├── presentation/         #   Launch Keynote Deck (8 slides, speech synthesis, 4m 45s script)
+│       ├── dashboard/            #   Operations Hub
+│       │   ├── page.tsx          #   Primary Recovery Hub & "Why?" modal
+│       │   ├── command-center/   #   Tenant Command Center (portfolio health & kill switch)
+│       │   ├── economics/        #   Economic Intelligence (Bayesian curves & causal ATT)
+│       │   ├── audit/            #   Cryptographic Audit Timeline & hash verifier
+│       │   ├── setup/            #   Zero-code integration & webhook wizard
+│       │   └── settings/         #   API keys, team RBAC, provider discovery
+│       ├── login/ & signup/      #   Merchant authentication & onboarding
+│       ├── showcase/             #   Interactive failure lab demo sandbox
+│       └── product/              #   Public product information & pricing
 │
-├── scripts/                      # Utility & Test Scripts (85 files)
-├── tests/                        # Structured Test Suites
-│   ├── agent/                    #   AI agent behavior tests
-│   ├── core/                     #   Core hardening tests
-│   ├── economics/                #   Economic model tests
-│   ├── infra/                    #   Infrastructure tests
-│   ├── market/                   #   Market allocation tests
-│   ├── truth/                    #   State consistency & causal stats
-│   └── v6/                       #   V6 phase acceptance tests (Phase 4–12)
-│
-├── docker-compose.yml            # 4-service deployment (Postgres, Redis, Backend, Frontend)
-├── Dockerfile                    # Backend container
-├── nginx.conf                    # Reverse proxy configuration
-└── .env.example                  # Required environment variables
+├── tests/                        # 89 Enterprise Automated Test Suites across 8 domains
+├── scripts/                      # 86 Operational, validation, and migration scripts
+├── docs/                         # Numbered architectural specifications (01-11) & V11 runbook
+├── docker-compose.yml            # 5-service stack (PostgreSQL, Redis, Backend, Worker, Jaeger)
+└── ultron.db                     # Embedded SQLite database (WAL mode)
 ```
 
 ---
@@ -841,7 +872,11 @@ cd frontend && npm run dev
 *The frontend dashboard starts at `http://localhost:3000`.*
 
 #### Interactive Test Endpoints & Live Views:
-- 📊 **Local Dashboard:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+- 📊 **Operations Hub:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+- 🎙️ **Executive Launch Keynote (4m 45s Speech):** [http://localhost:3000/presentation](http://localhost:3000/presentation)
+- 🎛️ **Tenant Command Center:** [http://localhost:3000/dashboard/command-center](http://localhost:3000/dashboard/command-center)
+- 📈 **Economic Intelligence & Bayesian Curves:** [http://localhost:3000/dashboard/economics](http://localhost:3000/dashboard/economics)
+- 📜 **Cryptographic Audit Timeline:** [http://localhost:3000/dashboard/audit](http://localhost:3000/dashboard/audit)
 - 🛒 **Demo Merchant Storefront:** [http://localhost:3001/demo-store](http://localhost:3001/demo-store) (test real failure interception)
 - 🌐 **Live Production Cloud Dashboard:** [https://ultron-power.vercel.app/dashboard](https://ultron-power.vercel.app/dashboard)
 - 🎨 **Live Product Showcase:** [https://ultron-power.vercel.app/showcase](https://ultron-power.vercel.app/showcase)
@@ -866,16 +901,16 @@ npm run verify:v6-truth
 # 4. End-to-End Webhook & Recovery Pipeline Integration
 npm run test:integration
 
-# 5. Stage-by-Stage Module Tests
+# 5. Stage-by-Stage Module Tests (8-Stage Pipeline)
 npm run test:perception        # Stage 2: Decline taxonomy classification
-npm run test:economics         # Stage 3: Bayesian IVEN calculation
+npm run test:economics         # Stage 3: Bayesian IVEN calculation & bands
 npm run test:market            # Stage 4: Portfolio knapsack & shadow price
 npm run test:authority         # Stage 5: Deterministic compliance checks
-npm run test:execution         # Stage 6: Payment link dispatch & idempotency
-npm run test:truth             # Stage 7: Double-entry ledger & reconciliation
+npm run test:agent             # Stage 6: Autonomous multi-agent reasoning & MCP
+npm run test:execution         # Stage 7: Payment link dispatch & DLQ
+npm run test:truth             # Stage 8: Double-entry ledger & reconciliation
 
-# 6. AI Agent System & Stress Tests
-npm run test:agent             # Autonomous multi-agent behavior tests
+# 6. Stress & Concurrency Testing
 npm run stress:all             # System-wide concurrency & load stress test
 ```
 
@@ -1112,16 +1147,16 @@ npm test                       # Alias for npm run test:v6-all
 npm run verify:v6-truth        # Verifies 100% truth consistency across all deliverables
 npm run verify:test-counts     # Verifies cross-file test count consistency
 
-# Individual pipeline stage tests
+# Individual pipeline stage tests (8-Stage Pipeline)
 npm run test:perception        # Decline taxonomy classification (Stage 2)
 npm run test:economics         # IVEN computation & Bayesian engine (Stage 3)
 npm run test:market            # Portfolio allocation & shadow pricing (Stage 4)
 npm run test:authority         # Compliance gate & kill switch (Stage 5)
-npm run test:execution         # Payment link creation & idempotency (Stage 6)
-npm run test:truth             # State consistency & reconciliation (Stage 7)
+npm run test:agent             # Autonomous multi-agent reasoning & MCP (Stage 6)
+npm run test:execution         # Payment link creation & idempotency (Stage 7)
+npm run test:truth             # State consistency & reconciliation (Stage 8)
 
-# AI Agent System test suite (28 safety & specialist tests)
-npm run test:agent             # Autonomous multi-agent behavior & boundary tests
+# AI Agent System safety tests
 npm test tests/agent/test_agent_prompt_injection.ts  # Prompt injection firewall
 npm test tests/agent/test_agent_tool_injection.ts    # Tool execution safety
 npm test tests/agent/test_agent_temporal_firewall.ts # Non-retroactive time firewall

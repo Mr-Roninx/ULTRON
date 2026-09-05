@@ -262,6 +262,32 @@ Where $C_{\text{messaging}} = 85 \text{ paise}$ (Meta WhatsApp utility fee), $C_
 
 ---
 
+### 3.6 IVEN Priority Bands & Causal Difference-in-Differences (DiD)
+
+#### 1. IVEN Priority Band Taxonomy (Phase 7)
+Every computed score is mapped into deterministic priority bands displayed in the dashboard and audit logs via `<IVENBadge>`:
+
+| Band | IVEN Range (Paise) | IVEN Range (₹) | System Policy & Routing |
+| :--- | :--- | :--- | :--- |
+| **`STRONG`** | $\text{IVEN} \ge 15,000$ | $\ge ₹150.00$ | Top priority for immediate allocation ($Rank \le K$). High intervention lift with low risk. |
+| **`MODERATE`** | $5,000 \le \text{IVEN} < 15,000$ | $₹50.00\text{--}₹149.99$ | Eligible for `ACT` when capacity allows. Standard recovery outreach. |
+| **`WEAK`** | $0 < \text{IVEN} < 5,000$ | $₹0.01\text{--}₹49.99$ | Low margin. Cleared only when shadow price $\lambda$ drops and capacity is abundant. |
+| **`NEGATIVE`** | $\text{IVEN} \le 0$ | $\le ₹0.00$ | Unconditional `ABSTAIN`. Prevents capital destruction and protects customer goodwill. |
+
+#### 2. Causal Difference-in-Differences (DiD) ATT Engine
+To rigorously prove causal recovery lift to financial auditors, ULTRON implements a continuous Difference-in-Differences estimator measuring the **Average Treatment Effect on the Treated (ATT)** against the 5% synthetic holdout:
+
+$$\text{ATT} = \left(\bar{Y}_{\text{treat}, \text{post}} - \bar{Y}_{\text{treat}, \text{pre}}\right) - \left(\bar{Y}_{\text{control}, \text{post}} - \bar{Y}_{\text{control}, \text{pre}}\right)$$
+
+Where:
+- $\bar{Y}_{\text{treat}}$: Recovery rate among opportunities receiving intervention (`ACT`).
+- $\bar{Y}_{\text{control}}$: Natural settlement rate among the 5% uncontacted holdout control group.
+- **Parallel Trends Verification:** Automatically checks pre-treatment divergence:
+  $$\Delta_{\text{pre}} = |\bar{Y}_{\text{treat}, \text{pre}} - \bar{Y}_{\text{control}, \text{pre}}| < 0.15 \quad (15\%)$$
+  Ensures causal attribution validity before publishing executive reports.
+
+---
+
 ## 4. Autonomous AI Agent Subsystem (Phases 1–8)
 
 ULTRON v6.0 incorporates a fully autonomous agent architecture adhering to the Model Context Protocol (MCP) and multi-agent specialist design, with zero LLM financial execution authority.
@@ -639,7 +665,7 @@ CREATE TABLE probability_models (
 
 ## 9. Frontend Architecture & User Flows
 
-The frontend is built with **Next.js 16 (Turbopack)**, **React 19**, and **TailwindCSS**, designed for real-time operational transparency.
+The frontend is built with **Next.js 16 (Turbopack)**, **React 19**, and **TailwindCSS**, designed for real-time operational transparency across **18 production routes**.
 
 ### Dashboard Layout & Routes
 
@@ -651,15 +677,18 @@ frontend/src/app/
 ├── dashboard/
 │   ├── layout.tsx                    # Shared frame: Nav, Header, Environment Switcher, Alerts
 │   ├── page.tsx                      # Primary Recovery Hub (KPI cards, Real-time Opportunity Table, Modal)
+│   ├── command-center/page.tsx       # Tenant Command Center (portfolio health, circuit breakers, DLQ sweeps)
+│   ├── economics/page.tsx            # Economic Intelligence (Bayesian calibration, bandit arms, causal ATT)
+│   ├── audit/page.tsx                # Cryptographic Audit Timeline & SHA-256 ledger integrity verification
 │   ├── setup/page.tsx                # Integration Hub: Razorpay Credentials, Webhook Setup, ultron.js
 │   └── settings/
 │       ├── page.tsx                  # General tenant configuration & capacity limits
 │       ├── api-keys/page.tsx         # API Key creation, revocation, and scope assignment
 │       ├── integrations/page.tsx     # Payment provider discovery (Razorpay, Cashfree, Stripe)
 │       └── team/page.tsx             # Team members & Role-Based Access Control (RBAC)
-├── presentation/page.tsx             # Interactive visual presentation deck with animated control room
-├── product/page.tsx                  # Public product overview
-└── showcase/page.tsx                 # Interactive interactive demo sandbox
+├── presentation/page.tsx             # Launch Keynote Deck: 8 slides, synchronized speech narration, control room
+├── product/page.tsx                  # Public product overview & pricing tiers
+└── showcase/page.tsx                 # Interactive failure lab demo sandbox
 ```
 
 ### Core User Experiences
@@ -670,7 +699,11 @@ frontend/src/app/
    - Exact IVEN calculation breakdown (gross expected value, operational cost, fatigue deduction).
    - Portfolio rank, shadow price cutoff, and Action Authority check results.
    - Chain-of-Thought agent reasoning log.
-3. **Integration Wizard:** Allows non-technical merchants to paste Razorpay Test/Live API keys, copy their auto-generated tenant webhook URL, or download a 1-click pre-configured `ultron.js` file for zero-code integration.
+3. **Tenant Command Center (`/dashboard/command-center`):** Real-time operational telemetry displaying circuit breaker status, emergency kill switch controls, DLQ queue depths, and automated background sweep rates.
+4. **Economic Intelligence Panel (`/dashboard/economics`):** Live Beta-Binomial conjugate calibration curves, Thompson Sampling bandit arm distributions, and Difference-in-Differences causal ATT estimation charts.
+5. **Cryptographic Audit Timeline (`/dashboard/audit`):** Complete double-entry ledger explorer with SHA-256 cryptographic chain verification, filtering by tenant and transaction event type.
+6. **Executive Keynote Deck (`/presentation`):** 8-slide presentation deck with synchronized speech synthesis (natural voice detection), 4m 45s CEO script, timeline scrubber, and script modal.
+7. **Integration Wizard (`/dashboard/setup`):** Allows merchants to paste Razorpay credentials, copy their auto-generated tenant webhook URL, or download a 1-click pre-configured `ultron.js` file for zero-code integration.
 
 ---
 
@@ -772,11 +805,11 @@ d:\Work Space\Project\Ultron\
 
 ---
 
-## 9. ULTRON V11 Enterprise Architecture Upgrades
+## 12. ULTRON V11 Enterprise Architecture Upgrades
 
 ULTRON V11 establishes an enterprise-grade autonomous control plane designed for high-availability multi-tenant cloud deployments, sub-millisecond economic reasoning, and strict regulatory compliance.
 
-### 9.1 The Eleven Pillars of ULTRON V11
+### 12.1 The Eleven Pillars of ULTRON V11
 
 1. **TypeScript Strict Mode & Branded Primitive Types**
    - Enabled `"strict": true` and `"noUncheckedIndexedAccess": true` across the entire codebase.
@@ -837,4 +870,41 @@ ULTRON V11 establishes an enterprise-grade autonomous control plane designed for
     - 3-tier Kubernetes-ready health checks (`/health/live`, `/health/ready`, `/health/readiness`, `/health/deep`).
     - Google SRE multi-window error budget burn rate tracking (99.9% availability objective).
     - Production operations runbook in `docs/V11_RUNBOOK.md`.
+
+---
+
+## 13. The Six Core Mathematical & Architectural Breakthroughs
+
+ULTRON fundamentally departs from conventional retry tools through six core innovations that unite continuous economics, deterministic compliance, and autonomous agent reasoning:
+
+### 1. Incremental Lift ($\Delta P$)
+Rather than evaluating raw recovery probability, ULTRON isolates true causal treatment lift:
+$$\Delta P = \max\left(0, P(\text{recovery} \mid \text{intervention}) - P(\text{recovery} \mid \text{natural})\right)$$
+If a customer would settle naturally on their own (e.g., salary deposit or transient bank timeout), intervention provides zero incremental value.
+
+### 2. Shadow Pricing ($\lambda$) with Dual-Mirror Descent
+Intervention capacity is treated as a finite economic asset. Under a capacity constraint $K$, ULTRON dynamically clears the portfolio at the shadow price $\lambda^*$ of the marginal accepted opportunity:
+$$\lambda^* = \text{IVEN}_{(K)}$$
+Online Dual-Mirror Descent continuously regulates the shadow cost of capital across intraday traffic fluctuations, preventing early budget depletion.
+
+### 3. Two-Stage Sovereign Separation
+Economics and compliance are structurally decoupled into two sovereign stages:
+- **Stage 1 (Economics):** Proposes ranked actions based strictly on expected net incremental value ($IVEN$).
+- **Stage 2 (Compliance):** Disposes through 5 sovereign deterministic checks (`hard_decline`, `retry_cap`, `kill_switch`, `confidence`, `capacity`) with absolute veto authority. A positive economic case can never bypass compliance.
+
+### 4. Bayesian Live Calibration
+Static probability assumptions are replaced by continuous Beta-Binomial conjugate Bayesian updating:
+$$\alpha_{\text{post}} = \alpha_0 + k, \quad \beta_{\text{post}} = \beta_0 + (n - k)$$
+Posteriors continuously adapt as settlement webhooks arrive. Unobserved or low-volume reason codes safely regularize toward global empirical priors.
+
+### 5. Causal Attribution Engine (DiD ATT + 5% Synthetic Holdout)
+A deterministic djb2 hash assigns exactly 5% of eligible transactions to an uncontacted holdout control group. The system computes the Difference-in-Differences Average Treatment Effect on the Treated (ATT) with automated parallel-trends validation ($\Delta_{\text{pre}} < 15\%$), providing mathematically provable ROI to finance teams.
+
+### 6. Autonomous AI Agent Subsystem
+An 8-phase autonomous agent loop (`Observe` $\to$ `Hypothesize` $\to$ `Plan` $\to$ `Act` $\to$ `Reflect`) equipped with:
+- Model Context Protocol (MCP) JSON-RPC 2.0 interface and 5 investigation tools.
+- Specialist Agent Network (`Perception`, `Strategy`, `Outreach`, `Compliance`).
+- Multi-provider LLM cascade (`Claude 3.5 Sonnet` $\to$ `Gemini 1.5 Pro` $\to$ `GPT-4o` $\to$ `Deterministic Fallback`).
+- 64-dimensional orthogonal semantic vector memory with temporal decay firewall ($90$-day half-life).
+- Strict non-negotiable invariant: **Zero LLMs on the financial execution path.**
 
