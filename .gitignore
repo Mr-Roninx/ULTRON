@@ -7,6 +7,8 @@
 *.db
 *.db-wal
 *.db-shm
+*.bak
+archive/backups/
 *.contaminated-backup*
 
 # Screenshots & Local Dumps
