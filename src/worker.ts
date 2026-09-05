@@ -84,7 +84,7 @@ export class UltronWorkerProcess {
         switch (job.type) {
           case 'AGENT_REASONING_CYCLE': {
             const daemon = AutonomousRecoveryDaemon.getInstance();
-            await daemon.triggerInstantSweep();
+            await daemon.triggerInstantSweep(job.tenantId);
             break;
           }
           case 'MARKET_ALLOCATION_RUN': {
@@ -97,7 +97,7 @@ export class UltronWorkerProcess {
             break;
           }
           case 'RECONCILIATION_SWEEP': {
-            await pollAndReconcile();
+            await pollAndReconcile(job.tenantId);
             break;
           }
           case 'DLQ_RETRY_SWEEP': {

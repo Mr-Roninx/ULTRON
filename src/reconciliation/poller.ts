@@ -30,8 +30,8 @@ export interface PollerRunResult {
   items: PolledItemResult[];
 }
 
-export async function pollAndReconcile(): Promise<PollerRunResult> {
-  const allOpps = getAllOpportunities();
+export async function pollAndReconcile(tenantId?: string): Promise<PollerRunResult> {
+  const allOpps = getAllOpportunities(tenantId);
   // Opportunities currently in flight
   const executingOpps = allOpps.filter(
     (opp) => opp.status === 'executing' || opp.status === 'authorized' || opp.status === 'allocated'

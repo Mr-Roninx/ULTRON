@@ -153,27 +153,30 @@ export class AutonomousRecoveryDaemon {
         }
       }
     }, intervalMs);
+    this.timer.unref?.();
   }
 
   /**
    * Triggers an immediate sweep execution or queues it to workers.
    */
-  public async triggerInstantSweep(): Promise<void> {
-    await this.sweepOnce();
+  public async triggerInstantSweep(targetTenantId?: string): Promise<void> {
+    await this.sweepOnce(targetTenantId);
   }
 
   /**
    * Perform one full sweep
    */
-  public async sweepOnce(): Promise<void> {
-    if (this.state === 'STOPPED' || this.isSweeping) return;
+  public async sweepOnce(targetTenantId?: string): Promise<void> {
+    if (this.isSweeping) return;
     
+    const previousState = this.state;
     this.isSweeping = true;
     this.state = 'SWEEPING';
     const sweepId = `sweep_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     const startTime = Date.now();
     this.total_sweeps++;
     this.last_sweep_at = new Date(startTime).toISOString();
+    const activeTenant = targetTenantId || 'tenant_system_default';
 
     let opps_scanned = 0;
     let opps_allocated = 0;
@@ -185,13 +188,13 @@ export class AutonomousRecoveryDaemon {
 
     try {
       // 1. Kill switch guard
-      if (isKillSwitchActive()) {
+      if (isKillSwitchActive(activeTenant)) {
         sweepStatus = 'ABORTED';
         insertNotification({
           id: `notif_kill_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          tenant_id: 'tenant_system_default',
+          tenant_id: activeTenant,
           type: 'KILL_SWITCH_TRIGGERED',
-          title: 'Global Kill Switch Active',
+          title: 'Kill Switch Active',
           message: 'Autonomous daemon sweep was aborted due to active kill switch.',
           link_url: '/dashboard',
           created_at: new Date().toISOString(),
@@ -200,9 +203,12 @@ export class AutonomousRecoveryDaemon {
       }
 
       // Quick check: if there are no actionable opportunities to process, skip heavy sweep
-      const activeCount = db.prepare(
-        "SELECT COUNT(*) as c FROM recovery_opportunities WHERE status IN ('pending', 'scored', 'deferred', 'allocated', 'executing')"
-      ).get() as { c: number } | undefined;
+      const sql = targetTenantId
+        ? "SELECT COUNT(*) as c FROM recovery_opportunities WHERE tenant_id = ? AND status IN ('pending', 'scored', 'deferred', 'allocated', 'executing')"
+        : "SELECT COUNT(*) as c FROM recovery_opportunities WHERE status IN ('pending', 'scored', 'deferred', 'allocated', 'executing')";
+      const activeCount = targetTenantId
+        ? (db.prepare(sql).get(targetTenantId) as { c: number } | undefined)
+        : (db.prepare(sql).get() as { c: number } | undefined);
 
       if (!activeCount || activeCount.c === 0) {
         return;
@@ -211,16 +217,23 @@ export class AutonomousRecoveryDaemon {
       // 2. Portfolio Sweep (scan & rank)
       const portfolioProposal = PortfolioAgent.sweep({
         capacity: this.config.capacity,
-        filterStatuses: ['pending', 'scored', 'deferred']
+        filterStatuses: ['pending', 'scored', 'deferred'],
+        tenantId: targetTenantId,
       });
       opps_scanned = portfolioProposal.total_scanned;
 
       // 3. Market Allocation (allocate capacity)
-      const marketResult = runMarketAllocation({ capacity: this.config.capacity });
+      const marketResult = runMarketAllocation({
+        capacity: this.config.capacity,
+        tenantId: targetTenantId,
+      });
       opps_allocated = marketResult.accepted_count;
 
       // 4. Authorized Batch Execution (dispatches Razorpay links)
-      const execResult = await executeAuthorizedBatch({ maxLinks: this.config.capacity });
+      const execResult = await executeAuthorizedBatch({
+        maxLinks: this.config.capacity,
+        tenantId: targetTenantId,
+      });
       opps_executed = execResult.executed_count;
 
       if (execResult.failed_count > 0) {
@@ -229,14 +242,14 @@ export class AutonomousRecoveryDaemon {
       }
 
       // 5. Reconciliation Poller
-      const pollResult = await pollAndReconcile();
+      const pollResult = await pollAndReconcile(targetTenantId);
       opps_reconciled = pollResult.reconciled_count;
       
       // Emit notifications for recovered payments scoped to the specific merchant tenant
       for (const item of pollResult.items) {
         if (item.reconciled && item.new_status === 'recovered') {
           const opp = getOpportunityById(item.opportunity_id);
-          const itemTenantId = opp?.tenant_id || 'tenant_system_default';
+          const itemTenantId = opp?.tenant_id || activeTenant;
           const amountFormatted = opp ? ` (₹${(opp.amount_paise / 100).toFixed(2)})` : '';
 
           const notifItem = {
@@ -255,10 +268,6 @@ export class AutonomousRecoveryDaemon {
           RealtimeBroadcaster.getInstance().broadcastToTenant(itemTenantId, 'NOTIFICATION_CREATED', notifItem);
         }
       }
-
-      // To keep it perfectly accurate for the dashboard metric, let's fetch revenue directly from ledger or items.
-      // We will leave revenue_recovered_paise updated accurately by the DB queries for the main dashboard.
-      // This local counter is just a rough gauge. We will leave it at 0 unless we fetch the amounts.
 
     } catch (err: any) {
       sweepStatus = sweepStatus === 'SUCCESS' ? 'FAILED' : sweepStatus;
@@ -291,7 +300,7 @@ export class AutonomousRecoveryDaemon {
         const alerts = ProactiveAlertsEngine.generateAlerts();
         if (alerts.length > 0) {
           RealtimeBroadcaster.getInstance().broadcastToTenant(
-            'tenant_system_default',
+            activeTenant,
             'PROACTIVE_ALERTS_UPDATED' as any,
             { alerts }
           );
@@ -300,8 +309,12 @@ export class AutonomousRecoveryDaemon {
         // Non-blocking proactive alert generation
       }
       
-      if (this.state === 'SWEEPING') {
-         this.state = 'SLEEPING';
+      if (previousState === 'SLEEPING') {
+        this.state = 'SLEEPING';
+      } else if (previousState === 'STOPPED') {
+        this.state = 'STOPPED';
+      } else {
+        this.state = 'IDLE';
       }
       this.isSweeping = false;
     }
