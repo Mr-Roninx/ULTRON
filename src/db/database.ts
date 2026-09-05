@@ -81,6 +81,9 @@ function createDatabaseInstance(): DatabaseSync {
 }
 
 export const db = createDatabaseInstance();
+export function getDatabase(): DatabaseSync {
+  return db;
+}
 
 export function initDatabase(): void {
   // Enable WAL mode & foreign keys

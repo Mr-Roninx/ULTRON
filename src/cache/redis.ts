@@ -143,6 +143,43 @@ export class CacheManager {
     this.fallbackStore.delete(key);
   }
 
+  /**
+   * Basic INCR operation with fallback.
+   */
+  public async incr(key: string): Promise<number> {
+    if (this.isRedisConnected && this.redisClient) {
+      try {
+        return await this.redisClient.incr(key);
+      } catch (e) {
+        // fallback
+      }
+    }
+
+    const current = (await this.get<number>(key)) || 0;
+    const next = current + 1;
+    await this.set(key, next, 60);
+    return next;
+  }
+
+  /**
+   * Basic EXPIRE operation with fallback.
+   */
+  public async expire(key: string, seconds: number): Promise<void> {
+    if (this.isRedisConnected && this.redisClient) {
+      try {
+        await this.redisClient.expire(key, seconds);
+        return;
+      } catch (e) {
+        // fallback
+      }
+    }
+
+    const item = this.fallbackStore.get(key);
+    if (item) {
+      item.expiresAt = Date.now() + seconds * 1000;
+    }
+  }
+
   // -------------------------------------------------------------
   // High-Level Domain Caching Methods
   // -------------------------------------------------------------
@@ -218,6 +255,10 @@ export class CacheManager {
 
   public onKillSwitchBroadcast(callback: (active: boolean) => void): void {
     this.eventBus.on('kill_switch_update', callback);
+  }
+
+  public isHealthy(): boolean {
+    return this.isRedisConnected;
   }
 
   public async close(): Promise<void> {

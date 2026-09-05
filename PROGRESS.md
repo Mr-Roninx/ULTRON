@@ -35,6 +35,7 @@ Autonomous Economic Control Plane for Failed-Payment Recovery on Razorpay.
 - [x] **ULTRON V11 Phase 6: Multi-Tenant Row-Level Isolation** (Completed & Audited)
 - [x] **ULTRON V11 Phase 7: Enhanced Economic Engine** (Completed & Audited)
 - [x] **ULTRON V11 Phase 8: Advanced Observability Dashboard (Frontend V11)** (Completed & Audited)
+- [x] **ULTRON V11 Phase 9: Enterprise API Gateway Layer** (Completed & Audited)
 
 ---
 
@@ -506,6 +507,22 @@ Following deep forensic research of ULTRON v6.0 and comparative benchmarking aga
   - Backend TypeScript compilation `npx tsc --noEmit` passed with **0 errors**.
   - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
   - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
+### Phase 9: Enterprise API Gateway Layer (Completed & Verified)
+- **What was built**:
+  - Built `src/gateway/validator.ts`: Centralized Zod schema validation registry (`CreateOpportunitySchema`, `ScoreRequestSchema`, `MarketAllocationSchema`, `KillSwitchToggleSchema`, `AuthLoginSchema`, `AuthSignupSchema`, `EventIngestionSchema`) and Express middleware generating structured RFC 7807 problem details (`status: 400`, `type: 'https://ultron.dev/errors/validation-error'`).
+  - Built `src/gateway/rate_tiers.ts`: Multi-tier rate limiting (`FREE` 60 req/min, `STARTER` 300 req/min, `GROWTH` 1,200 req/min, `ENTERPRISE` 6,000 req/min) with Redis sliding-window algorithm, in-memory bucket fallback, RFC rate limit response headers (`X-RateLimit-Tier`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`), and HTTP 429 `Retry-After`.
+  - Built `src/gateway/versioning.ts`: Unified API versioning router supporting canonical `/v1/` and `/v2/` prefixes, content negotiation via `Accept-Version` / `X-API-Version`, and V2 routes (`/v2/economics/bayesian-priors`, `/v2/economics/bandit-arms`, `/v2/economics/causal-attribution`, `/v2/agent/portfolio-state`).
+  - Built `src/gateway/openapi_generator.ts`: Runtime OpenAPI 3.1.0 specification generator providing `GET /openapi.json` and interactive Stoplight Elements API documentation at `GET /docs`.
+  - Updated `src/server.ts`: Mounted versioning, tiered rate limiter, OpenAPI routes, and V2 router directly into backend pipeline.
+  - Added `incr` and `expire` methods to `CacheManager` in `src/cache/redis.ts`.
+  - Created test suite `tests/gateway/test_api_gateway.ts`: Validates Zod request validation, RFC 7807 error formatting, rate limit tier headers, version negotiation, OpenAPI 3.1 specification, and V2 router.
+- **Verification Gate**:
+  - `npx tsx tests/gateway/test_api_gateway.ts` passed **8/8 tests (100%)**.
+  - `npx tsc --noEmit` passed with **0 errors**.
+  - Regression suite `tests/v6/test_autonomous_agent.ts` passed **9/9 tests (100%)**.
+  - Forensic truth audit `npm run verify:v6-truth` passed with **0 discrepancies**.
+
 
 
 

@@ -101,6 +101,9 @@ import { auditLogger } from './middleware/audit_logger.js';
 
 import { getSecurityHeadersMiddleware } from './security/csp_headers.js';
 import { inputSanitizerMiddleware } from './security/input_sanitizer.js';
+import { versionNegotiationMiddleware, createV2Router } from './gateway/versioning.js';
+import { tieredRateLimiter } from './gateway/rate_tiers.js';
+import { createOpenAPIRouter } from './gateway/openapi_generator.js';
 
 // Middlewares
 // 1. Enterprise Security Headers (CSP, HSTS, X-Frame-Options)
@@ -196,6 +199,12 @@ app.use(
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(inputSanitizerMiddleware);
 app.use(tracingMiddleware);
+
+// Enterprise API Gateway Layer (V11)
+app.use(versionNegotiationMiddleware);
+app.use(tieredRateLimiter());
+app.use(createOpenAPIRouter());
+app.use('/v2', createV2Router());
 
 // Enterprise Prometheus Metrics Export Endpoint
 app.get('/metrics', (_req, res) => {
