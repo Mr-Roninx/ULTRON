@@ -347,6 +347,13 @@ authRouter.post('/signup', async (req: Request, res: Response): Promise<void> =>
 // 1-click instant login for testing and hackathon judges
 // ─────────────────────────────────────────────────────────────────────────────
 authRouter.post('/demo-login', async (req: Request, res: Response): Promise<void> => {
+  return handleDemoLogin(req, res);
+});
+authRouter.post('/instant-demo-login', async (req: Request, res: Response): Promise<void> => {
+  return handleDemoLogin(req, res);
+});
+
+async function handleDemoLogin(req: Request, res: Response): Promise<void> {
   try {
     const db = DatabaseAdapter.getInstance();
     const email = 'demo@ultron.app';
@@ -416,7 +423,7 @@ authRouter.post('/demo-login', async (req: Request, res: Response): Promise<void
     console.error('[AUTH] Demo login error:', err.message);
     res.status(500).json({ error: 'Internal Server Error', details: err.message });
   }
-});
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /v1/auth/login
@@ -650,6 +657,37 @@ authRouter.patch(
       });
     } catch (err: any) {
       res.status(500).json({ error: 'Failed to update tenant settings', details: err.message });
+    }
+  }
+);
+
+authRouter.post(
+  '/switch-environment',
+  TenancyEnforcer.authenticateTenant(),
+  async (req: TenantScopedRequest, res: Response): Promise<void> => {
+    try {
+      const ctx = req.tenantContext!;
+      const { environment } = req.body;
+      const targetEnv = environment === 'live' ? 'live' : 'test';
+      const db = DatabaseAdapter.getInstance();
+
+      await db.execute(
+        `UPDATE tenants SET environment = ? WHERE id = ?;`,
+        [targetEnv, ctx.tenantId]
+      );
+
+      const tenants = await db.query<any>(
+        `SELECT id, name, slug, environment, status, capacity_limit, kill_switch_active FROM tenants WHERE id = ?;`,
+        [ctx.tenantId]
+      );
+
+      res.json({
+        success: true,
+        message: `Switched environment to ${targetEnv}`,
+        tenant: tenants[0] || { id: ctx.tenantId, environment: targetEnv },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to switch environment', details: err.message });
     }
   }
 );

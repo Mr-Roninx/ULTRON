@@ -217,7 +217,7 @@ export async function executeOpportunity(opportunityId: string): Promise<SingleE
       type: 'LINK_CREATED',
       title: 'Payment Link Created',
       message: `Recovery link created for opportunity ${opp.id} (₹${(opp.amount_paise / 100).toFixed(2)})`,
-      link_url: '/dashboard/execution',
+      link_url: '/dashboard',
       created_at: now,
     });
 

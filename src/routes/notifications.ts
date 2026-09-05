@@ -98,7 +98,7 @@ notificationsRouter.post(
       const type = (req.body.type || 'LINK_CREATED') as NotificationType;
       const title = req.body.title || 'Autonomous Payment Link Created';
       const message = req.body.message || 'Razorpay payment link created for opportunity opp_sample_999 (₹750.00).';
-      const linkUrl = req.body.link_url || '/dashboard/execution';
+      const linkUrl = req.body.link_url || '/dashboard';
 
       const notificationId = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       insertNotification({
