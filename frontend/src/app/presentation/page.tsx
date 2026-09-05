@@ -18,6 +18,7 @@ import {
   Maximize2,
   Minimize2,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import "./presentation.css";
 
@@ -30,39 +31,39 @@ export const TOTAL_KEYNOTE_SECONDS = 285; // Exactly 4 minutes 45 seconds
 
 export const SLIDE_TIMINGS = [
   { id: "hook",         title: "01 / The Hook",             duration: 33, range: "00:00 - 00:33", targetWords: 76 },
-  { id: "problem",      title: "02 / The Problem",          duration: 35, range: "00:34 - 01:09", targetWords: 68 },
-  { id: "solution",     title: "03 / The Solution",         duration: 37, range: "01:10 - 01:47", targetWords: 73 },
-  { id: "architecture", title: "04 / Architecture",         duration: 37, range: "01:48 - 02:25", targetWords: 78 },
-  { id: "innovation",   title: "05 / Innovation",           duration: 34, range: "02:26 - 03:00", targetWords: 64 },
-  { id: "ai-boundary",  title: "06 / LLM vs Determinism",   duration: 37, range: "03:01 - 03:38", targetWords: 79 },
-  { id: "razorpay",     title: "07 / Razorpay Integration", duration: 35, range: "03:39 - 04:14", targetWords: 74 },
+  { id: "problem",      title: "02 / The Problem",          duration: 35, range: "00:34 - 01:09", targetWords: 72 },
+  { id: "solution",     title: "03 / The Solution",         duration: 37, range: "01:10 - 01:47", targetWords: 76 },
+  { id: "architecture", title: "04 / Architecture",         duration: 37, range: "01:48 - 02:25", targetWords: 80 },
+  { id: "innovation",   title: "05 / Innovation",           duration: 34, range: "02:26 - 03:00", targetWords: 70 },
+  { id: "ai-boundary",  title: "06 / LLM vs Determinism",   duration: 37, range: "03:01 - 03:38", targetWords: 80 },
+  { id: "razorpay",     title: "07 / Razorpay Integration", duration: 35, range: "03:39 - 04:14", targetWords: 78 },
   { id: "conclusion",   title: "08 / Conclusion",           duration: 37, range: "04:15 - 04:45", targetWords: 76 },
 ];
 
 const NARRATIONS: string[] = [
   // 01 — HOOK (00:00 - 00:33 | 33s)
-  `Here is a number that should make every payment leader in this room uncomfortable: twenty-seven percent. That is the exact share of recovered payments that were going to come back on their own. Today, systems fire links blindly, burning four rupees per attempt and destroying customer trust for money already coming home. We built ULTRON — a hundred and fifty module, enterprise-grade autonomous control plane — to answer one question: is this payment worth chasing with your next unit of limited recovery capacity?`,
+  `Here is a number that should make every payment leader in this room uncomfortable: twenty-seven percent. That is the exact share of recovered payments that were going to come back on their own. Today, systems fire links blindly, burning four rupees per attempt and destroying customer trust for money already coming home. We built ULTRON — a one hundred and fifty module autonomous control plane — to answer one question: is this payment worth chasing with your next unit of limited recovery capacity?`,
 
   // 02 — PROBLEM (00:34 - 01:09 | 35s)
-  `Let me show you what the industry hides behind failed payments: three massive invisible costs. First, operational spend: four rupees burned per link, whether the customer pays or not. Second, exponential customer fatigue: the fourth retry costs six times the second in brand damage. And third, counterfactual waste: spending real money to recover revenue that was already yours. Current retry logic is not recovery. It is waste disguised as action.`,
+  `Let me show you what the industry hides behind failed payments: three massive invisible costs. First, operational spend: four rupees burned per payment link, plus eighty-five paise on WhatsApp, whether the customer pays or not. Second, exponential customer fatigue: the fourth retry costs six times the second in brand damage. And third, counterfactual waste: spending real money to recover revenue that was already yours. Current retry logic is not recovery. It is waste disguised as action.`,
 
   // 03 — SOLUTION (01:10 - 01:47 | 37s)
-  `So we built something fundamentally different: ULTRON, an autonomous economic control plane with live Bayesian calibration. Every failed payment becomes a Recovery Opportunity competing for scarce capacity. Every opportunity resolves to exactly one of three deterministic decisions. Act: fire the link when incremental value exceeds cost. Wait: defer when capacity is saturated. Or Abstain: do nothing. In ULTRON, abstaining is not a failure. Abstaining is the core feature that stops value destruction.`,
+  `So we built something fundamentally different: ULTRON, an autonomous economic control plane with live Bayesian calibration and an Anti-Blast savings engine. Every failed payment becomes a Recovery Opportunity competing for scarce capacity. Every opportunity resolves to exactly one of three deterministic decisions. Act: fire the link when incremental value exceeds cost. Wait: defer when capacity is saturated. Or Abstain: do nothing. In ULTRON, abstaining is not a failure. Abstaining is the core feature that protects merchant margins.`,
 
   // 04 — ARCHITECTURE (01:48 - 02:25 | 37s)
-  `Inside ULTRON Version Eleven, eight deterministic stages execute without a single black box. We intercept and deduplicate the webhook, perceive the decline type, and compute Bayesian counterfactual scoring in exact integer paise. Our Lagrangian budget pacer allocates under a hard cap of five links, exposing the shadow price. Five compliance vetoes and an autonomous agent reasoning loop gate every action before triggering Razorpay APIs and appending to an immutable SHA-256 ledger. Eight stages. Zero guesswork.`,
+  `Inside ULTRON Version Eleven, eight deterministic stages execute without a single black box. We intercept and deduplicate the webhook, perceive the decline type across Razorpay and NPCI UPI error codes, and compute Bayesian counterfactual scoring in exact integer paise. Our Lagrangian budget pacer allocates under a hard cap of five links, exposing the shadow price. Five compliance vetoes gate every action before triggering Razorpay APIs and appending to an immutable SHA-256 double-entry ledger. Eight stages. Zero guesswork.`,
 
   // 05 — INNOVATION (02:26 - 03:00 | 34s)
-  `Six breakthroughs separate ULTRON from every retry tool in fintech. Incremental probability scoring. Shadow pricing with Lagrangian budget pacing. Two-stage economic and compliance separation. Live Bayesian calibration from settlement outcomes. Difference-in-Differences causal attribution proving true treatment effect. And an autonomous AI agent with specialist routing, vector memory, and Model Context Protocol tooling. Six innovations. One control plane.`,
+  `Six breakthroughs separate ULTRON from every retry tool in fintech. Incremental probability scoring. Shadow pricing with Lagrangian budget pacing. Two-stage economic and compliance separation. Live Bayesian calibration from settlement outcomes. Difference-in-Differences causal attribution proving true treatment effect. And an Anti-Blast engine that prices the exact financial value of doing nothing. Six innovations. One unified control plane.`,
 
   // 06 — LLM VS DETERMINISM (03:01 - 03:38 | 37s)
   `Here is our fundamental architectural law: zero LLMs on the financial execution path. When moving money, hallucinations are fatal. Bayesian IVEN scoring, Lagrangian portfolio clearing, five compliance vetoes, circuit breakers, and Razorpay payment links are one hundred percent deterministic TypeScript. Our autonomous agent uses a multi-provider LLM cascade — Claude, Gemini, OpenAI — strictly for forensic explanation and investigation. If all providers fail, deterministic rules take over. Zero execution privileges. Decoupled by design.`,
 
   // 07 — RAZORPAY INTEGRATION (03:39 - 04:14 | 35s)
-  `ULTRON does not compete with Razorpay's AI stack. It completes it. We form a unified AI triad. Razorpay Vulcan optimizes in-flight routing at checkout across three thousand signals. When routing fails, ULTRON takes over post-settlement recovery with Bayesian economics, Kubernetes-ready probes tracking ninety-nine point nine percent availability, and distributed workers scaling horizontally. Agent Studio, powered by Claude, consumes ULTRON's OpenTelemetry-traced audit records for merchant operations. Three systems, one seamless lifecycle.`,
+  `ULTRON does not compete with Razorpay's AI stack. It completes it. We form a unified AI triad. Razorpay Vulcan optimizes in-flight routing at checkout across three thousand signals. When routing fails, ULTRON takes over post-settlement recovery with Bayesian economics, native NPCI UPI taxonomies, and ninety-nine point nine percent availability. Agent Studio, powered by Claude, consumes ULTRON's OpenTelemetry-traced audit records for merchant operations. Three systems, one seamless lifecycle.`,
 
   // 08 — CONCLUSION (04:15 - 04:45 | 37s)
-  `Let me leave you with this: ULTRON is not another retry bot. It is an enterprise economic control plane — Version Eleven, one hundred and fifty modules, twenty-five subsystems, eleven architectural pillars. Every decision grounded in Bayesian counterfactual math. Every action verified by deterministic compliance. Every outcome recorded in an immutable ledger and traced end-to-end with OpenTelemetry. Stop asking if a payment can be recovered. The only question that matters is: is it worth your scarce capacity? That system is ULTRON. Thank you.`,
+  `Let me leave you with this: ULTRON is not another retry bot. It is an enterprise economic control plane — Version Eleven, one hundred and fifty modules, twenty-five subsystems, one hundred and seventeen verified tests. Every decision grounded in Bayesian counterfactual math. Every action verified by deterministic compliance. Every outcome recorded in an immutable ledger and traced end-to-end with OpenTelemetry. Stop asking if a payment can be recovered. The only question that matters is: is it worth your scarce capacity? That system is ULTRON. Thank you.`,
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -172,7 +173,6 @@ export default function LuxuryFintechPresentationPage() {
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [gate, setGate] = useState<"ok" | "hard" | "cap" | "kill">("ok");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const speechDoneRef = useRef(false);
   const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -320,7 +320,7 @@ export default function LuxuryFintechPresentationPage() {
 
       utt.onstart = () => {
         setSpeaking(true);
-        // Chromium keepalive heartbeat: keeps TTS engine alive past 15 seconds
+        // Chromium keepalive heartbeat
         if (keepAliveRef.current) clearInterval(keepAliveRef.current);
         keepAliveRef.current = setInterval(() => {
           if (typeof window !== "undefined" && window.speechSynthesis && window.speechSynthesis.speaking) {
@@ -500,6 +500,9 @@ export default function LuxuryFintechPresentationPage() {
           <button className="deck-btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
             {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
+          <Link href="/showcase" className="deck-btn" title="Open Interactive Failure Lab">
+            <Sparkles size={13} /> Failure Lab
+          </Link>
           <Link href="/dashboard" className="deck-btn deck-btn-primary">
             Dashboard <ArrowRight size={13} />
           </Link>
@@ -545,12 +548,12 @@ export default function LuxuryFintechPresentationPage() {
               <span className="stat-sub">Would pay without any intervention</span>
             </div>
             <div className="stat-cell hover-lift">
-              <span className="stat-value glow-emerald" style={{ color: "#059669" }}>150+</span>
-              <span className="stat-label">Enterprise Modules</span>
-              <span className="stat-sub">25 subsystems · 11 architectural pillars</span>
+              <span className="stat-value glow-emerald" style={{ color: "#059669" }}>117 / 117</span>
+              <span className="stat-label">Verified Tests</span>
+              <span className="stat-sub">100% passing across 28 suites</span>
             </div>
             <div className="stat-cell hover-lift">
-              <span className="stat-value glow-blue" style={{ color: "#2563eb" }}>V11</span>
+              <span className="stat-value glow-blue" style={{ color: "#2563eb" }}>V11.0</span>
               <span className="stat-label">Enterprise Edition</span>
               <span className="stat-sub">Kubernetes-ready · Multi-tenant · SLO-tracked</span>
             </div>
@@ -580,20 +583,20 @@ export default function LuxuryFintechPresentationPage() {
             <div className="content-block">
               <span className="block-num">01</span>
               <span className="block-title">Operational Spend</span>
-              <span className="block-body">₹4.00 per link — gateway fees, SMS delivery, infrastructure overhead. Fired whether the customer pays or not. 100 failures = ₹400 burned.</span>
-              <span className="block-tag" style={{ background: "rgba(225,29,72,0.15)", color: "#fb7185" }}>FIXED: 400 PAISE / LINK</span>
+              <span className="block-body">₹4.00 per link plus ₹0.85 WhatsApp fee — gateway fees, SMS delivery, infrastructure overhead. Fired whether the customer pays or not. 100 failures = ₹485 burned.</span>
+              <span className="block-tag" style={{ background: "rgba(225,29,72,0.15)", color: "#fb7185" }}>FIXED: 400P LINK + 85P MSG</span>
             </div>
             <div className="content-block">
               <span className="block-num">02</span>
               <span className="block-title">Customer Fatigue</span>
-              <span className="block-body">Each retry degrades trust. ULTRON models this as an escalating penalty: ₹0 → ₹2.50 → ₹7.50 → ₹15+. The 4th attempt costs 6× the 2nd.</span>
+              <span className="block-body">Each retry degrades trust. ULTRON models this as an escalating penalty: ₹0 → ₹2.50 → ₹7.50 → ₹15+. The 4th attempt costs 6× the 2nd in brand damage.</span>
               <span className="block-tag" style={{ background: "rgba(217,119,6,0.15)", color: "#fbbf24" }}>CURVE: EXPONENTIAL</span>
             </div>
             <div className="content-block">
               <span className="block-num">03</span>
               <span className="block-title">Counterfactual Waste</span>
-              <span className="block-body">27% of recoveries settle naturally. Every link sent to them is pure waste — you spent ₹4.00 to recover money that was already coming back.</span>
-              <span className="block-tag" style={{ background: "rgba(124,58,237,0.15)", color: "#a78bfa" }}>ΔP ≈ 0 → WASTE</span>
+              <span className="block-body">27% of recoveries settle naturally. Every link sent to them is pure waste — you spent real capital claiming credit for money that was already coming back.</span>
+              <span className="block-tag" style={{ background: "rgba(124,58,237,0.15)", color: "#a78bfa" }}>ΔP ≈ 0 → VALUE DESTRUCTIVE</span>
             </div>
           </div>
         </div>
@@ -617,21 +620,21 @@ export default function LuxuryFintechPresentationPage() {
             <div className="triad-block act-block">
               <div className="triad-decision badge-pulse-act">ACT</div>
               <div className="triad-desc">
-                IVEN is positive and ranks within the top K=5. Bayesian-calibrated intervention probability meaningfully exceeds natural baseline. Priority band: <strong>STRONG</strong> (≥₹150) or <strong>MODERATE</strong> (₹50–₹149).
+                Incremental value exceeds cost and ranks within top K=5. Bayesian-calibrated intervention probability meaningfully exceeds natural baseline. Priority band: <strong>STRONG</strong> (≥₹150) or <strong>MODERATE</strong> (₹50–₹149).
               </div>
               <div className="triad-rule">IVEN &gt; 0 AND Rank ≤ K · Bayesian Calibrated</div>
             </div>
             <div className="triad-block wait-block">
               <div className="triad-decision badge-pulse-wait">WAIT</div>
               <div className="triad-desc">
-                IVEN is positive but didn't make the capacity cut. Deferred via Lagrangian budget pacer to the next allocation cycle. Shadow price λ sets the marginal cutoff.
+                Positive IVEN that missed the capacity cutoff. Deferred via Lagrangian dual pacer to the next window. Shadow price λ sets the exact marginal hurdle.
               </div>
               <div className="triad-rule">IVEN &gt; 0 AND Rank &gt; K · λ-Paced</div>
             </div>
             <div className="triad-block abstain-block">
               <div className="triad-decision badge-pulse-abstain">ABSTAIN</div>
               <div className="triad-desc">
-                Costs exceed incremental value, or assigned to 5% synthetic holdout for causal measurement. Do nothing. Save ₹4.00 per link plus customer goodwill.
+                Costs exceed incremental value, or assigned to 5% synthetic holdout. Do nothing. Automatically saves ₹4.85 in operational fees plus customer goodwill.
               </div>
               <div className="triad-rule">IVEN ≤ 0 OR confidence = LOW OR 5% Holdout</div>
             </div>
@@ -639,7 +642,7 @@ export default function LuxuryFintechPresentationPage() {
 
           <div className="divider reveal d5" />
           <p className="subline reveal d5" style={{ marginBottom: 0 }}>
-            <strong>The anti-blast advantage:</strong> While traditional systems fire 100 links, ULTRON sends 5 — proves via Bayesian IVEN that every one was worth sending, and measures true causal lift via Difference-in-Differences on the holdout.
+            <strong>The Anti-Blast Advantage:</strong> While traditional systems fire 100 links blindly, ULTRON sends 5 — proves via Bayesian IVEN that every one was worth sending, and measures true causal lift via Difference-in-Differences on the holdout.
           </p>
         </div>
       </section>
@@ -658,19 +661,19 @@ export default function LuxuryFintechPresentationPage() {
             <span className="accent-blue">Zero guesswork.</span>
           </h1>
           <p className="subline reveal d3">
-            Every failed payment passes through a deterministic pipeline — <strong>150+ modules across 25 subsystems</strong>. No stage is skipped. Every decision is stored at the moment it's made — never generated after the fact.
+            Every failed payment passes through a deterministic pipeline — <strong>150+ modules across 25 subsystems</strong>. Governed by a runtime Finite State Machine that strictly blocks illegal bypasses and regressions.
           </p>
 
           <div className="pipeline-flow reveal-scale d4">
             {[
-              { n: "01", name: "Intercept",  desc: "HMAC webhook + idempotency guard" },
-              { n: "02", name: "Perceive",   desc: "Gateway taxonomy + temporal signals" },
+              { n: "01", name: "Intercept",  desc: "HMAC webhook + 300s replay window" },
+              { n: "02", name: "Perceive",   desc: "Razorpay & NPCI UPI taxonomy" },
               { n: "03", name: "Score",      desc: "Bayesian IVEN = ΔP × Amt − Costs" },
               { n: "04", name: "Allocate",   desc: "Lagrangian pacer, K=5, λ shadow" },
-              { n: "05", name: "Authorize",  desc: "5 compliance vetoes + HITL gate" },
+              { n: "05", name: "Authorize",  desc: "5 compliance vetoes + Kill Switch" },
               { n: "06", name: "Reason",     desc: "Agent loop: Observe→Reason→Act" },
               { n: "07", name: "Execute",    desc: "Circuit breaker + DLQ + rate limit" },
-              { n: "08", name: "Reconcile",  desc: "SHA-256 ledger + Bayesian feedback" },
+              { n: "08", name: "Reconcile",  desc: "Double-entry SHA-256 block ledger" },
             ].map((s, i) => (
               <div key={i} className="pipeline-step">
                 <span className="step-num">STAGE {s.n}</span>
@@ -687,19 +690,19 @@ export default function LuxuryFintechPresentationPage() {
               <span className="stat-sub">λ-paced Lagrangian allocation</span>
             </div>
             <div className="stat-cell hover-lift">
-              <span className="stat-value glow-rose">5 vetoes</span>
+              <span className="stat-value glow-rose">5 Vetoes</span>
               <span className="stat-label">Compliance Gate</span>
-              <span className="stat-sub">+ HITL escalation for high-ticket</span>
+              <span className="stat-sub">Hard declines &amp; Kill Switch veto 100%</span>
             </div>
             <div className="stat-cell hover-lift">
-              <span className="stat-value glow-blue">150+</span>
-              <span className="stat-label">TypeScript Modules</span>
-              <span className="stat-sub">25 subsystems · 89 test suites</span>
+              <span className="stat-value glow-emerald">FSM Locked</span>
+              <span className="stat-label">State Machine</span>
+              <span className="stat-sub">Blocks illegal leaps &amp; regressions</span>
             </div>
             <div className="stat-cell hover-lift">
-              <span className="stat-value glow-emerald">11 Pillars</span>
-              <span className="stat-label">V11 Enterprise</span>
-              <span className="stat-sub">Kubernetes · OTel · RLS · SLO</span>
+              <span className="stat-value glow-blue">117 / 117</span>
+              <span className="stat-label">Test Verification</span>
+              <span className="stat-sub">Zero discrepancies on clean reset</span>
             </div>
           </div>
         </div>
@@ -716,14 +719,14 @@ export default function LuxuryFintechPresentationPage() {
             <span className="accent-blue">One control plane.</span>
           </h1>
           <p className="subline reveal d3">
-            ULTRON isn't an incremental improvement over retry systems. <strong>It's a fundamentally different operating model built on six core innovations.</strong>
+            ULTRON isn't an incremental improvement over retry systems. <strong>It's a fundamentally different operating model built on six core mathematical innovations.</strong>
           </p>
 
           <div className="cols-3 reveal d4" style={{ rowGap: 24 }}>
             <div className="content-block hover-lift">
               <span className="block-num" style={{ color: "#2563eb" }}>INNOVATION 01</span>
               <span className="block-title">Incremental Lift (ΔP)</span>
-              <span className="block-body">We don't ask "what's the recovery probability?" We calculate counterfactual lift: ΔP = P(ACT) − P(NATURAL). Isolates true causal lift so you never pay for natural settlement.</span>
+              <span className="block-body">We calculate counterfactual lift: ΔP = P(ACT) − P(NATURAL). Isolates true causal lift so you never pay to claim credit for natural settlement.</span>
               <span className="block-tag" style={{ background: "#dbeafe", color: "#1e40af" }}>ΔP = P(ACT) − P(NATURAL)</span>
             </div>
             <div className="content-block hover-lift">
@@ -752,9 +755,9 @@ export default function LuxuryFintechPresentationPage() {
             </div>
             <div className="content-block hover-lift">
               <span className="block-num" style={{ color: "#7c3aed" }}>INNOVATION 06</span>
-              <span className="block-title">Autonomous AI Agent</span>
-              <span className="block-body">8-phase agent subsystem with specialist routing, vector memory, and Model Context Protocol (MCP) tooling. Multi-provider cascade (Claude, Gemini, OpenAI) with zero execution risk.</span>
-              <span className="block-tag" style={{ background: "#ede9fe", color: "#6d28d9" }}>MCP AGENT + VECTOR MEMORY</span>
+              <span className="block-title">Anti-Blast Savings Engine</span>
+              <span className="block-body">Explicitly computes capital saved by NOT acting: WhatsApp messaging fees, Razorpay link overhead, and customer goodwill protection. Making inaction profitable.</span>
+              <span className="block-tag" style={{ background: "#ede9fe", color: "#6d28d9" }}>PREVENTED INTERVENTION LEDGER</span>
             </div>
           </div>
         </div>
@@ -798,7 +801,7 @@ export default function LuxuryFintechPresentationPage() {
                 </div>
                 <div className="boundary-card-item">
                   <Check size={16} className="boundary-card-icon" />
-                  <span><strong>5 Compliance Vetoes:</strong> Hard declines, retry limits, cooloffs + HITL escalation.</span>
+                  <span><strong>5 Compliance Vetoes:</strong> Hard declines, retry limits, cooloffs + Kill Switch.</span>
                 </div>
                 <div className="boundary-card-item">
                   <Check size={16} className="boundary-card-icon" />
@@ -834,7 +837,7 @@ export default function LuxuryFintechPresentationPage() {
                 </div>
                 <div className="boundary-card-item">
                   <Check size={16} className="boundary-card-icon" />
-                  <span><strong>MCP Tooling &amp; Memory:</strong> Semantic vector search over payment patterns and history.</span>
+                  <span><strong>HITL Communications:</strong> Drafts recovery notices held in PENDING_REVIEW for approval.</span>
                 </div>
               </div>
               <div className="boundary-card-footer">
@@ -862,7 +865,7 @@ export default function LuxuryFintechPresentationPage() {
                 </div>
                 <div className="boundary-card-item">
                   <X size={16} className="boundary-card-icon" />
-                  <span><strong>Cannot Trigger Payments:</strong> Zero Razorpay API credentials.</span>
+                  <span><strong>Cannot Trigger Payments:</strong> Zero Razorpay API execution privileges.</span>
                 </div>
                 <div className="boundary-card-item">
                   <X size={16} className="boundary-card-icon" />
@@ -905,7 +908,7 @@ export default function LuxuryFintechPresentationPage() {
               <span className="pos-label">POST-FAILURE &amp; ENTERPRISE CONTROL</span>
               <span className="pos-name">ULTRON V11 Enterprise</span>
               <span className="pos-desc">
-                Autonomous economic control plane. Bayesian IVEN scoring, Lagrangian budget pacer (K=5), 5 compliance vetoes. Multi-tenant, Kubernetes-ready with 99.9% SLO tracking, distributed workers, and multi-provider AI explainer.
+                Autonomous economic control plane. Bayesian IVEN scoring, Lagrangian budget pacer (K=5), 5 compliance vetoes. Multi-tenant, Kubernetes-ready with 99.9% SLO tracking, native NPCI UPI taxonomies, and multi-provider AI explainer.
               </span>
               <span className="pos-domain">DOMAIN → Post-Failure Economic Recovery</span>
             </div>
@@ -946,14 +949,14 @@ export default function LuxuryFintechPresentationPage() {
               <span className="stat-sub">Seamless handoff at authorization failure</span>
             </div>
             <div className="stat-cell">
-              <span className="stat-value" style={{ color: "#111827" }}>OTel Traced</span>
-              <span className="stat-label">→ W3C traceparent</span>
-              <span className="stat-sub">Distributed spans across Vulcan → ULTRON → Agent Studio</span>
+              <span className="stat-value" style={{ color: "#111827" }}>NPCI Native</span>
+              <span className="stat-label">→ U30, U69, ZA, ZM, XB</span>
+              <span className="stat-sub">India-specific UPI error code taxonomy</span>
             </div>
             <div className="stat-cell">
-              <span className="stat-value" style={{ color: "#7c3aed" }}>150+ Modules</span>
-              <span className="stat-label">→ 25 Subsystems</span>
-              <span className="stat-sub">Enterprise-grade: K8s probes · RLS multi-tenant · 99.9% SLO</span>
+              <span className="stat-value" style={{ color: "#7c3aed" }}>117 / 117 Tests</span>
+              <span className="stat-label">→ Zero Discrepancies</span>
+              <span className="stat-sub">Verified clean-slate reproducible build</span>
             </div>
           </div>
         </div>
@@ -984,12 +987,12 @@ export default function LuxuryFintechPresentationPage() {
               <span className="stat-sub">Beta-Binomial live calibration</span>
             </div>
             <div className="stat-cell hover-lift">
-              <span className="stat-value glow-rose" style={{ color: "#e11d48" }}>11 Pillars</span>
-              <span className="stat-label">Enterprise Architecture</span>
-              <span className="stat-sub">5 vetoes + HITL + K8s + RLS</span>
+              <span className="stat-value glow-rose" style={{ color: "#e11d48" }}>Anti-Blast</span>
+              <span className="stat-label">Capital Protection</span>
+              <span className="stat-sub">Saving ₹4.85+ on every abstention</span>
             </div>
             <div className="stat-cell hover-lift">
-              <span className="stat-value glow-blue" style={{ color: "#2563eb" }}>99.9% SLO</span>
+              <span className="stat-value glow-blue" style={{ color: "#2563eb" }}>117 Tests</span>
               <span className="stat-label">Reliability Contract</span>
               <span className="stat-sub">SHA-256 ledger · OTel distributed</span>
             </div>
@@ -998,11 +1001,16 @@ export default function LuxuryFintechPresentationPage() {
           <div className="reveal d5" style={{ marginTop: "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 16px", borderRadius: "9999px", background: "rgba(37, 99, 235, 0.12)", border: "1px solid rgba(37, 99, 235, 0.25)", color: "#60a5fa", fontSize: "12px", fontFamily: "var(--ff-mono)", letterSpacing: "0.5px" }}>
               <Zap size={13} style={{ color: "#38bdf8" }} />
-              <span>VERSION 11.0.0 ENTERPRISE · 150+ MODULES · 25 SUBSYSTEMS</span>
+              <span>VERSION 11.0.0 RELEASE CANDIDATE · 150+ MODULES · 117 VERIFIED TESTS</span>
             </div>
-            <Link href="/dashboard" className="deck-btn deck-btn-primary gradient-border" style={{ padding: "14px 32px", fontSize: "16px", borderRadius: "10px" }}>
-              Experience ULTRON Live <ArrowRight size={18} />
-            </Link>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <Link href="/showcase" className="deck-btn" style={{ padding: "14px 24px", fontSize: "15px", borderRadius: "10px" }}>
+                <Sparkles size={16} /> Interactive Failure Lab
+              </Link>
+              <Link href="/dashboard" className="deck-btn deck-btn-primary gradient-border" style={{ padding: "14px 32px", fontSize: "15px", borderRadius: "10px" }}>
+                Experience Control Plane <ArrowRight size={18} />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
