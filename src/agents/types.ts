@@ -142,8 +142,8 @@ export interface PlanValidityAssumption {
   id: string;
   parameter: string;
   condition: string;
-  expected_value: any;
-  current_value?: any;
+  expected_value: unknown;
+  current_value?: unknown;
   is_valid: boolean;
 }
 
@@ -176,7 +176,7 @@ export interface AgentProposalRecord {
   run_id: string;
   opportunity_id: string;
   proposal_type: 'INTERVENTION' | 'RETRY_DELAY' | 'PARAMETER_UPDATE' | 'OUTREACH';
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
   review_notes: string | null;
   created_at: string;

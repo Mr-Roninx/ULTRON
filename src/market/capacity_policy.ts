@@ -208,7 +208,7 @@ export class DualMirrorBudgetPacer {
 
     if (totalPulls < 3) {
       // Round-robin cold-start
-      return arms[totalPulls % 3];
+      return arms[totalPulls % 3] ?? 'NEUTRAL';
     }
 
     let bestArm: PacingArm = 'NEUTRAL';

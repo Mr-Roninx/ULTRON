@@ -94,6 +94,7 @@ export class ProviderRouter {
 
     for (let i = 0; i < order.length; i++) {
       const providerId = order[i];
+      if (!providerId) continue;
       const provider = this.providers.get(providerId);
       const health = this.health.get(providerId);
 

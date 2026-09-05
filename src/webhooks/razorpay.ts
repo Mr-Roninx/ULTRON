@@ -258,7 +258,7 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
 
     // Extract tenant_id from simulated request params or fallback to system default
     const rawTenantId = req.params.tenant_id;
-    const tenantId = Array.isArray(rawTenantId) ? rawTenantId[0] : (rawTenantId || 'tenant_system_default');
+    const tenantId = (Array.isArray(rawTenantId) ? rawTenantId[0] : rawTenantId) || 'tenant_system_default';
     const webhookSecrets = await RazorpayConnectionService.getWebhookSecrets(tenantId, 'test');
     
     // In simulated test routes without explicit webhook setup, we use the fallback

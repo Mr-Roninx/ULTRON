@@ -76,7 +76,7 @@ export class DoubleEntryLedger {
     const latest = await adapter.query<DoubleEntryRecord>(
       'SELECT entry_hash FROM double_entry_ledger ORDER BY rowid DESC LIMIT 1;'
     );
-    const prev_hash = latest.length > 0 ? latest[0].entry_hash : this.GENESIS_HASH;
+    const prev_hash = latest[0]?.entry_hash ?? this.GENESIS_HASH;
 
     const id = `del_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const timestamp = new Date().toISOString();
@@ -92,35 +92,24 @@ export class DoubleEntryLedger {
       timestamp,
     });
 
-    const record: DoubleEntryRecord = {
+    await adapter.execute(
+      `INSERT INTO double_entry_ledger 
+       (id, opportunity_id, event_type, debit_account, credit_account, amount_paise, prev_hash, entry_hash, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [id, params.opportunity_id, params.event_type, params.debit_account, params.credit_account, params.amount_paise, prev_hash, entry_hash, timestamp]
+    );
+
+    return {
       id,
       opportunity_id: params.opportunity_id,
       event_type: params.event_type,
       debit_account: params.debit_account,
       credit_account: params.credit_account,
       amount_paise: params.amount_paise,
-      timestamp,
       prev_hash,
       entry_hash,
+      timestamp,
     };
-
-    await adapter.execute(
-      `INSERT INTO double_entry_ledger (id, opportunity_id, event_type, debit_account, credit_account, amount_paise, timestamp, prev_hash, entry_hash)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [
-        record.id,
-        record.opportunity_id,
-        record.event_type,
-        record.debit_account,
-        record.credit_account,
-        record.amount_paise,
-        record.timestamp,
-        record.prev_hash,
-        record.entry_hash,
-      ]
-    );
-
-    return record;
   }
 
   /**
@@ -153,6 +142,7 @@ export class DoubleEntryLedger {
 
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
+      if (!entry) continue;
 
       // 1. Verify prev_hash matches
       if (entry.prev_hash !== expectedPrevHash) {

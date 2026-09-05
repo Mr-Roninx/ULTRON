@@ -68,18 +68,34 @@ async function runTruthVerification() {
     'ULTRON_V6_PHASE12_SIMULATION_HARNESS.json',
   ];
 
+  const resolveDeliverable = (fileName: string) => {
+    const rootPath = path.resolve(process.cwd(), fileName);
+    if (fs.existsSync(rootPath)) return rootPath;
+    const archivePath = path.resolve(process.cwd(), 'archive', 'historical_reports', fileName);
+    if (fs.existsSync(archivePath)) return archivePath;
+    return rootPath;
+  };
+
   for (const file of requiredFiles) {
-    const filePath = path.resolve(process.cwd(), file);
+    const filePath = resolveDeliverable(file);
     assert.equal(fs.existsSync(filePath), true, `Missing deliverable file: ${file}`);
     console.log(`✅ Verified deliverable: ${file}`);
   }
 
   // Cross-Validate JSON Deliverables
+  const searchDirs = [process.cwd(), path.resolve(process.cwd(), 'archive', 'historical_reports')];
   for (const p of v6PhaseAudits) {
-    const jsonPath = path.resolve(process.cwd(), `ULTRON_V6_PHASE${p.phase}_*.json`);
-    const files = fs.readdirSync(process.cwd()).filter((f) => f.startsWith(`ULTRON_V6_PHASE${p.phase}_`) && f.endsWith('.json'));
-    assert.equal(files.length, 1, `Expected 1 JSON file for phase ${p.phase}`);
-    const content = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), files[0]), 'utf8'));
+    let matchedFile: string | null = null;
+    for (const dir of searchDirs) {
+      if (!fs.existsSync(dir)) continue;
+      const files = fs.readdirSync(dir).filter((f) => f.startsWith(`ULTRON_V6_PHASE${p.phase}_`) && f.endsWith('.json'));
+      if (files.length > 0) {
+        matchedFile = path.resolve(dir, files[0]!);
+        break;
+      }
+    }
+    assert.ok(matchedFile, `Expected 1 JSON file for phase ${p.phase}`);
+    const content = JSON.parse(fs.readFileSync(matchedFile, 'utf8'));
     assert.equal(content.phase, p.phase);
     console.log(`✅ Phase ${p.phase} JSON payload verified (Suites: ${p.suites}, Tests: ${p.test_cases}).`);
   }

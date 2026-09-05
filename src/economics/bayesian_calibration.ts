@@ -150,14 +150,15 @@ export class BayesianProbabilityCalibrator {
       else if (normReason.includes('generic_decline') || normReason.includes('do_not_honor')) staticBase = STATIC_PROBABILITY_TABLE['generic_decline'];
       else staticBase = STATIC_PROBABILITY_TABLE['default'];
     }
+    const resolvedBase = staticBase ?? STATIC_PROBABILITY_TABLE['default']!;
 
     return {
-      p_natural: staticBase.natural_recovery_prob,
-      p_intervention: staticBase.intervention_recovery_prob,
+      p_natural: resolvedBase.natural_recovery_prob,
+      p_intervention: resolvedBase.intervention_recovery_prob,
       source: 'STATIC',
       credible_interval_95: [
-        Math.max(0.01, Number((staticBase.intervention_recovery_prob - 0.10).toFixed(2))),
-        Math.min(0.99, Number((staticBase.intervention_recovery_prob + 0.10).toFixed(2)))
+        Math.max(0.01, Number((resolvedBase.intervention_recovery_prob - 0.10).toFixed(2))),
+        Math.min(0.99, Number((resolvedBase.intervention_recovery_prob + 0.10).toFixed(2)))
       ],
     };
   }
@@ -214,17 +215,18 @@ export class BayesianProbabilityCalibrator {
       [reasonCode]
     );
 
-    if (records.length > 0 && records[0].sample_size >= 100 && records[0].model_type === 'CALIBRATED') {
-      this.cache.set(reasonCode, records[0]);
+    const firstRecord = records[0];
+    if (firstRecord && firstRecord.sample_size >= 100 && firstRecord.model_type === 'CALIBRATED') {
+      this.cache.set(reasonCode, firstRecord);
       return {
-        p_natural: records[0].p_natural_mean,
-        p_intervention: records[0].p_interv_mean,
+        p_natural: firstRecord.p_natural_mean,
+        p_intervention: firstRecord.p_interv_mean,
         source: 'CALIBRATED',
       };
     }
 
     // Static fallback baseline
-    const staticBase = STATIC_PROBABILITY_TABLE[reasonCode] || STATIC_PROBABILITY_TABLE['default'];
+    const staticBase = STATIC_PROBABILITY_TABLE[reasonCode] ?? STATIC_PROBABILITY_TABLE['default']!;
     return {
       p_natural: staticBase.natural_recovery_prob,
       p_intervention: staticBase.intervention_recovery_prob,
@@ -243,7 +245,7 @@ export class BayesianProbabilityCalibrator {
     const adapter = DatabaseAdapter.getInstance();
     await this.initTable(adapter);
 
-    const staticBase = STATIC_PROBABILITY_TABLE[reasonCode] || STATIC_PROBABILITY_TABLE['default'];
+    const staticBase = STATIC_PROBABILITY_TABLE[reasonCode] ?? STATIC_PROBABILITY_TABLE['default']!;
     const priorNatAlpha = staticBase.natural_recovery_prob * 10;
     const priorNatBeta = 10 - priorNatAlpha;
 

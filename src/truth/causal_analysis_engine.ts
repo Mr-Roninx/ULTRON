@@ -131,8 +131,13 @@ export class CausalAnalysisEngine {
 
     const sortedControl = [...controlVals].sort((a, b) => a - b);
     const sortedTreatment = [...treatmentVals].sort((a, b) => a - b);
-    const medianControl = n % 2 === 0 ? (sortedControl[n / 2 - 1] + sortedControl[n / 2]) / 2 : sortedControl[Math.floor(n / 2)];
-    const medianTreatment = n % 2 === 0 ? (sortedTreatment[n / 2 - 1] + sortedTreatment[n / 2]) / 2 : sortedTreatment[Math.floor(n / 2)];
+    const c1 = sortedControl[n / 2 - 1] ?? 0;
+    const c2 = sortedControl[n / 2] ?? c1;
+    const medianControl = n % 2 === 0 ? (c1 + c2) / 2 : (sortedControl[Math.floor(n / 2)] ?? 0);
+
+    const t1 = sortedTreatment[n / 2 - 1] ?? 0;
+    const t2 = sortedTreatment[n / 2] ?? t1;
+    const medianTreatment = n % 2 === 0 ? (t1 + t2) / 2 : (sortedTreatment[Math.floor(n / 2)] ?? 0);
 
     const varControl = controlVals.reduce((s, c) => s + Math.pow(c - meanControl, 2), 0) / (n - 1);
     const varTreatment = treatmentVals.reduce((s, t) => s + Math.pow(t - meanTreatment, 2), 0) / (n - 1);
@@ -142,7 +147,9 @@ export class CausalAnalysisEngine {
     // 3. Paired Difference Statistics
     const meanDiff = deltas.reduce((a, b) => a + b, 0) / n;
     const sortedDeltas = [...deltas].sort((a, b) => a - b);
-    const medianDiff = n % 2 === 0 ? (sortedDeltas[n / 2 - 1] + sortedDeltas[n / 2]) / 2 : sortedDeltas[Math.floor(n / 2)];
+    const d1 = sortedDeltas[n / 2 - 1] ?? 0;
+    const d2 = sortedDeltas[n / 2] ?? d1;
+    const medianDiff = n % 2 === 0 ? (d1 + d2) / 2 : (sortedDeltas[Math.floor(n / 2)] ?? 0);
 
     const varDiff = deltas.reduce((s, d) => s + Math.pow(d - meanDiff, 2), 0) / (n - 1);
     const stdDiff = Math.sqrt(varDiff);

@@ -31,12 +31,15 @@ export class PIIMasker {
     const parts = email.split('@');
     if (parts.length !== 2) return '****@domain.com';
 
-    const [user, domain] = parts;
+    const user = parts[0];
+    const domain = parts[1];
+    if (!user || !domain) return '****@domain.com';
+
     if (user.length <= 2) {
-      return `${user[0]}*@${domain}`;
+      return `${user[0] ?? ''}*@${domain}`;
     }
 
-    return `${user[0]}****${user[user.length - 1]}@${domain}`;
+    return `${user[0] ?? ''}****${user[user.length - 1] ?? ''}@${domain}`;
   }
 
   /**
@@ -45,8 +48,10 @@ export class PIIMasker {
   public static maskName(name?: string | null): string {
     if (!name) return 'Customer';
     const tokens = name.trim().split(/\s+/);
-    if (tokens.length === 1) return tokens[0];
-    return `${tokens[0]} ${tokens[1][0]}.`;
+    const first = tokens[0] ?? '';
+    const second = tokens[1];
+    if (!second) return first || 'Customer';
+    return `${first} ${second[0] ?? ''}.`;
   }
 
   /**

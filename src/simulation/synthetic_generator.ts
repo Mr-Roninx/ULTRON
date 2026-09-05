@@ -48,7 +48,8 @@ export class SyntheticDataGenerator {
       { code: 'card_reported_lost_or_stolen', desc: 'Card reported stolen or fraudulent.', declineType: 'hard' as const },
     ];
 
-    const selectedReason = failureReasons[Math.floor(Math.random() * failureReasons.length)];
+    const defaultReason = failureReasons[0]!;
+    const selectedReason = failureReasons[Math.floor(Math.random() * failureReasons.length)] ?? defaultReason;
     const amountPaise = overrides.amount_paise || Math.floor(Math.random() * (500000 - 50000) + 50000); // ₹500 to ₹5000
 
     const rawEvent = {

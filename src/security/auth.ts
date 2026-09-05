@@ -97,6 +97,10 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
   }
 
   const token = authHeader.split(' ')[1];
+  if (!token) {
+    res.status(401).json({ error: 'Unauthorized: Malformed Authorization header' });
+    return;
+  }
 
   // 1. Try API Key Authentication (Machine-to-Machine)
   if (token.startsWith('ul_live_') || token.startsWith('ul_test_')) {

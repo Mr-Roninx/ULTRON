@@ -45,7 +45,11 @@ notificationsRouter.post(
     try {
       const tenantContext = req.tenantContext!;
       const rawId = req.params.id;
-      const notificationId = Array.isArray(rawId) ? rawId[0] : rawId;
+      const notificationId = (Array.isArray(rawId) ? rawId[0] : rawId) || '';
+      if (!notificationId) {
+        res.status(400).json({ error: 'Notification ID required' });
+        return;
+      }
 
       markNotificationAsRead(notificationId, tenantContext.tenantId);
 

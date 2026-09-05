@@ -104,7 +104,7 @@ export class ScenarioRunner {
     const deferred = positiveIven.slice(capacity);
     const negative = scoredPairs.filter((p) => p.score.expected_incremental_value_paise <= 0);
 
-    const shadowPricePaise = accepted.length > 0 ? accepted[accepted.length - 1].score.expected_incremental_value_paise : 0;
+    const shadowPricePaise = accepted.length > 0 ? (accepted[accepted.length - 1]?.score.expected_incremental_value_paise ?? 0) : 0;
 
     // Step 3: Action Authority Compliance Evaluation (Stage 2 Gate)
     let allocated_count = 0;
@@ -114,7 +114,9 @@ export class ScenarioRunner {
     let total_allocated_expected_revenue_paise = 0;
 
     for (let i = 0; i < accepted.length; i++) {
-      const { opp, score } = accepted[i];
+      const pair = accepted[i];
+      if (!pair) continue;
+      const { opp, score } = pair;
       const decision: AllocationDecision = {
         opportunity_id: opp.id,
         decision: 'ACT',

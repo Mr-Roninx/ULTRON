@@ -100,7 +100,11 @@ apiKeysRouter.delete(
     try {
       const tenantContext = req.tenantContext!;
       const rawKeyId = req.params.id;
-      const keyId = Array.isArray(rawKeyId) ? rawKeyId[0] : rawKeyId;
+      const keyId = (Array.isArray(rawKeyId) ? rawKeyId[0] : rawKeyId) || '';
+      if (!keyId) {
+        res.status(400).json({ error: 'Bad Request', message: 'Missing API key ID.' });
+        return;
+      }
 
       const revoked = await ApiKeyService.revokeApiKey(tenantContext.tenantId, keyId);
       if (!revoked) {

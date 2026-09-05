@@ -129,7 +129,7 @@ export class InvestigationTools {
       total_attempts: relatedRuns.length > 0 ? relatedRuns.length : 1,
       prior_recoveries: trust > 0.7 ? 2 : 0,
       channels_contacted: channels,
-      last_interaction_timestamp: relatedRuns.length > 0 ? relatedRuns[0].start_time : null,
+      last_interaction_timestamp: relatedRuns[0]?.start_time ?? null,
       fatigue_level: fatigue,
       preferred_channel: trust > 0.8 ? 'WHATSAPP' : 'SMS',
       unsubscribed: false,
@@ -174,11 +174,17 @@ export class InvestigationTools {
       ];
     }
 
-    const optimal = projections.find((p) => p.recommended) ?? projections[0];
+    const defaultProjection = projections[0] ?? {
+      window: 'T+24h',
+      estimated_recovery_prob: 0.25,
+      operational_cost_paise: 250,
+      recommended: true,
+    };
+    const optimal = projections.find((p) => p.recommended) ?? defaultProjection;
 
     return {
       opportunity_id: params.opportunity_id,
-      current_odds: projections[0].estimated_recovery_prob,
+      current_odds: defaultProjection.estimated_recovery_prob,
       projections,
       optimal_window: optimal.window,
       recommendation_rationale: `Optimal retry window is ${optimal.window} with ${(optimal.estimated_recovery_prob * 100).toFixed(0)}% simulated recovery probability based on failure code '${reason}'.`,

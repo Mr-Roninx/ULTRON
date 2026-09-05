@@ -97,11 +97,13 @@ export class ReasoningEngine {
       let toolChoice: ToolCallRequest | null = null;
       if (intent.requested_tools.length > 0 && context.iteration < this.MAX_REASONING_STEPS - 1) {
         const firstTool = intent.requested_tools[0];
-        toolChoice = {
-          tool_name: firstTool.tool_name,
-          params: firstTool.params,
-          rationale: `LLM reasoning step ${context.iteration + 1}: investigating ${firstTool.tool_name}`,
-        };
+        if (firstTool) {
+          toolChoice = {
+            tool_name: firstTool.tool_name,
+            params: firstTool.params,
+            rationale: `LLM reasoning step ${context.iteration + 1}: investigating ${firstTool.tool_name}`,
+          };
+        }
       }
 
       // Determine if agent should continue investigating or decide

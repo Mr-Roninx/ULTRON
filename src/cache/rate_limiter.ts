@@ -71,7 +71,7 @@ export class DistributedRateLimiter {
     timestamps = timestamps.filter((t) => t > cutoff);
 
     if (timestamps.length >= maxRequests) {
-      const oldest = timestamps[0];
+      const oldest = timestamps[0] ?? now;
       const resetSeconds = Math.ceil((oldest + windowMs - now) / 1000);
       return {
         allowed: false,

@@ -26,7 +26,7 @@ export class AdaptiveStrategyEngine {
     // Epsilon exploration: randomly explore alternative channels
     if (Math.random() < this.epsilon) {
       const channels: ('WHATSAPP' | 'SMS' | 'EMAIL')[] = ['WHATSAPP', 'SMS', 'EMAIL'];
-      return channels[Math.floor(Math.random() * channels.length)];
+      return channels[Math.floor(Math.random() * channels.length)] ?? 'WHATSAPP';
     }
 
     // Exploitation: return highest weighted channel

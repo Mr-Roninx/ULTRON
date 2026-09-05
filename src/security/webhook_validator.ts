@@ -114,6 +114,7 @@ export class WebhookValidator {
 
     for (let i = 0; i < candidateSecrets.length; i++) {
       const secret = candidateSecrets[i];
+      if (!secret) continue;
       const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
       const expBuf = Buffer.from(expectedSignature, 'utf-8');
       if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(expBuf, sigBuf)) {

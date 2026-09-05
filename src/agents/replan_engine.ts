@@ -50,8 +50,9 @@ export class AgentReplanEngine {
     const failedAssumptions: PlanValidationCheck['failed_assumptions'] = [];
 
     for (const assumption of activePlan.validity_assumptions) {
+      const expNum = typeof assumption.expected_value === 'number' ? assumption.expected_value : (Number(assumption.expected_value) || 0);
       if (assumption.parameter === 'gateway_health' && params.currentGatewayHealth !== undefined) {
-        if (params.currentGatewayHealth < assumption.expected_value) {
+        if (params.currentGatewayHealth < expNum) {
           failedAssumptions.push({
             assumption_id: assumption.id,
             parameter: assumption.parameter,
@@ -64,7 +65,7 @@ export class AgentReplanEngine {
       }
 
       if (assumption.parameter === 'attempt_count' && params.currentAttemptCount !== undefined) {
-        if (params.currentAttemptCount >= assumption.expected_value) {
+        if (params.currentAttemptCount >= expNum) {
           failedAssumptions.push({
             assumption_id: assumption.id,
             parameter: assumption.parameter,

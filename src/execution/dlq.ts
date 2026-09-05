@@ -38,14 +38,14 @@ export class ExecutionDLQ {
       [opportunityId]
     );
 
-    const prevCount = existing.length > 0 ? existing[0].failure_count : 0;
+    const prevCount = existing[0]?.failure_count ?? 0;
     const newCount = prevCount + 1;
 
     let nextRetryAt: string | null = null;
     let status: 'PENDING_RETRY' | 'PERMANENTLY_FAILED' = 'PENDING_RETRY';
 
     if (newCount <= this.retryIntervalsMin.length) {
-      const delayMin = this.retryIntervalsMin[newCount - 1];
+      const delayMin = this.retryIntervalsMin[newCount - 1] ?? 1;
       nextRetryAt = new Date(Date.now() + delayMin * 60 * 1000).toISOString();
       console.warn(`📥 ExecutionDLQ: Opportunity ${opportunityId} scheduled for retry #${newCount} in ${delayMin}m (${nextRetryAt})`);
     } else {

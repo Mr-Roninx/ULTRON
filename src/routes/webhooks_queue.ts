@@ -46,7 +46,11 @@ webhooksQueueRouter.post(
     try {
       const tenantContext = req.tenantContext!;
       const rawId = req.params.id;
-      const deliveryId = Array.isArray(rawId) ? rawId[0] : rawId;
+      const deliveryId = (Array.isArray(rawId) ? rawId[0] : rawId) || '';
+      if (!deliveryId) {
+        res.status(400).json({ error: 'Delivery ID required' });
+        return;
+      }
 
       const queueEngine = WebhookQueueEngine.getInstance();
       const result = await queueEngine.replayWebhook(deliveryId, tenantContext.tenantId);

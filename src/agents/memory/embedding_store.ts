@@ -39,26 +39,33 @@ export class EmbeddingStore {
     // Unigrams and bigrams
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
+      if (!token) continue;
       const hash1 = this.hashString(token) % this.VECTOR_DIM;
-      vector[Math.abs(hash1)] += 1.0;
+      const idx1 = Math.abs(hash1);
+      vector[idx1] = (vector[idx1] ?? 0) + 1.0;
 
       if (i < tokens.length - 1) {
-        const bigram = `${token}_${tokens[i + 1]}`;
-        const hash2 = this.hashString(bigram) % this.VECTOR_DIM;
-        vector[Math.abs(hash2)] += 1.5;
+        const nextToken = tokens[i + 1];
+        if (nextToken) {
+          const bigram = `${token}_${nextToken}`;
+          const hash2 = this.hashString(bigram) % this.VECTOR_DIM;
+          const idx2 = Math.abs(hash2);
+          vector[idx2] = (vector[idx2] ?? 0) + 1.5;
+        }
       }
     }
 
     // L2 Normalize
     let norm = 0;
     for (let i = 0; i < this.VECTOR_DIM; i++) {
-      norm += vector[i] * vector[i];
+      const v = vector[i] ?? 0;
+      norm += v * v;
     }
     norm = Math.sqrt(norm);
 
     if (norm > 0) {
       for (let i = 0; i < this.VECTOR_DIM; i++) {
-        vector[i] /= norm;
+        vector[i] = (vector[i] ?? 0) / norm;
       }
     }
 
@@ -80,7 +87,9 @@ export class EmbeddingStore {
     if (a.length !== b.length || a.length === 0) return 0;
     let dot = 0;
     for (let i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
+      const ai = a[i] ?? 0;
+      const bi = b[i] ?? 0;
+      dot += ai * bi;
     }
     return Math.max(0, Math.min(1, dot));
   }

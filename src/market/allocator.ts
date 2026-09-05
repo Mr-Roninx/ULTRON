@@ -117,7 +117,7 @@ export function runMarketAllocation(options: { capacity?: number; opportunities?
   const acceptedCount = Math.min(capacity, eligibleList.length);
   let shadowPricePaise = 0;
   if (acceptedCount > 0) {
-    shadowPricePaise = eligibleList[acceptedCount - 1].score.expected_incremental_value_paise;
+    shadowPricePaise = eligibleList[acceptedCount - 1]?.score.expected_incremental_value_paise ?? 0;
   }
   const shadowPriceDisplay = `₹${(shadowPricePaise / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -126,7 +126,9 @@ export function runMarketAllocation(options: { capacity?: number; opportunities?
   // 5. Assign ACT and WAIT decisions to ranked items
   for (let i = 0; i < eligibleList.length; i++) {
     const rank = i + 1;
-    const { opportunity, score } = eligibleList[i];
+    const item = eligibleList[i];
+    if (!item) continue;
+    const { opportunity, score } = item;
     let decision: DecisionType;
     let reason: string;
 

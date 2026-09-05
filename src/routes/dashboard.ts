@@ -146,15 +146,17 @@ dashboardRouter.get('/analytics', async (req: Request, res: Response) => {
       else {
         const hash = opp.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
         const keys = ['SBI', 'HDFC', 'ICICI', 'AXIS', 'KOTAK', 'UPI_OTHER'];
-        assignedBank = keys[hash % keys.length];
+        assignedBank = keys[hash % keys.length] ?? 'UPI_OTHER';
       }
 
       const group = bankGroups[assignedBank];
-      group.failures += 1;
-      if (opp.status === 'recovered') group.recovered += 1;
-      group.volume_paise += opp.amount_paise;
-      const rCode = opp.reason_code || 'generic_decline';
-      group.reasons[rCode] = (group.reasons[rCode] || 0) + 1;
+      if (group) {
+        group.failures += 1;
+        if (opp.status === 'recovered') group.recovered += 1;
+        group.volume_paise += opp.amount_paise;
+        const rCode = opp.reason_code || 'generic_decline';
+        group.reasons[rCode] = (group.reasons[rCode] || 0) + 1;
+      }
     }
 
     const bank_data = Object.values(bankGroups).map((g) => {

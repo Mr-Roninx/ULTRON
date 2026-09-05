@@ -31,7 +31,7 @@ export function tracingMiddleware(req: Request, res: Response, next: NextFunctio
 
   if (traceparent && traceparent.startsWith('00-')) {
     const parts = traceparent.split('-');
-    if (parts.length >= 4) {
+    if (parts.length >= 4 && parts[1] && parts[2]) {
       traceId = parts[1];
       parentSpanId = parts[2];
     }

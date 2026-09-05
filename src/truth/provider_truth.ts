@@ -55,9 +55,7 @@ export class ProviderTruthEvaluator {
     const sourceEnv = payload.source_env || 'RAZORPAY_TEST';
     const now = new Date().toISOString();
 
-    const paymentId = payload.payments && payload.payments.length > 0
-      ? payload.payments[0].id
-      : null;
+    const paymentId = payload.payments?.[0]?.id ?? null;
 
     // Case 1: Provider confirms payment completed with non-zero amount paid
     if ((status === 'paid' || status === 'captured') && amountPaid > 0) {

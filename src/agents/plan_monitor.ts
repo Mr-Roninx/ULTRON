@@ -44,10 +44,11 @@ export class PlanMonitor {
     // -----------------------------------------------------------------------
     for (const assumption of params.plan.validity_assumptions) {
       const currentValue = this.getCurrentValue(assumption, params);
+      const expectedNum = typeof assumption.expected_value === 'number' ? assumption.expected_value : Number(assumption.expected_value) || 0;
       const isNowValid = this.evaluateCondition(
         currentValue,
         assumption.condition,
-        assumption.expected_value
+        expectedNum
       );
 
       if (!isNowValid) {
@@ -117,9 +118,9 @@ export class PlanMonitor {
       case 'capacity_available':
         return params.currentCapacityAvailable;
       case 'attempt_count':
-        return assumption.current_value ?? 0;
+        return typeof assumption.current_value === 'number' ? assumption.current_value : (Number(assumption.current_value) || 0);
       default:
-        return assumption.current_value ?? 0;
+        return typeof assumption.current_value === 'number' ? assumption.current_value : (Number(assumption.current_value) || 0);
     }
   }
 

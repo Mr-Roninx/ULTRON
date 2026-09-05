@@ -202,8 +202,9 @@ integrationsRouter.get(
       // Retrieve or automatically provision an active integration API key for this merchant
       const { ApiKeyService } = await import('../security/api_keys.js');
       const apiKeys = await ApiKeyService.listApiKeys(tenantContext.tenantId);
-      let activeKey = apiKeys.length > 0
-        ? (apiKeys[0].key_prefix ? `${apiKeys[0].key_prefix}${apiKeys[0].key_id}` : apiKeys[0].id)
+      const firstKey = apiKeys[0];
+      let activeKey = firstKey
+        ? (firstKey.key_prefix ? `${firstKey.key_prefix}${firstKey.key_id}` : firstKey.id)
         : null;
 
       if (!activeKey) {

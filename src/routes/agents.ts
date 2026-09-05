@@ -271,7 +271,12 @@ agentsRouter.get('/outreach/drafts', (_req: Request, res: Response) => {
 // POST review outreach draft
 agentsRouter.post('/outreach/drafts/:id/review', (req: Request, res: Response) => {
   try {
-    const draftId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const draftId = rawId || '';
+    if (!draftId) {
+      res.status(400).json({ error: 'Missing draft ID' });
+      return;
+    }
     const { status, feedback } = req.body;
     if (!['APPROVED', 'REJECTED'].includes(status)) {
       res.status(400).json({ error: 'Status must be APPROVED or REJECTED' });
