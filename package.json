@@ -1,6 +1,6 @@
 {
   "name": "ultron-backend",
-  "version": "6.0.0",
+  "version": "11.0.0",
   "description": "ULTRON: Autonomous economic control plane for failed-payment recovery on Razorpay",
   "type": "module",
   "main": "src/server.ts",

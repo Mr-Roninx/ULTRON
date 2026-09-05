@@ -1,6 +1,6 @@
 # ULTRON: Autonomous Economic Control Plane for Failed-Payment Recovery
 
-> **Version:** 6.0.0 Enterprise Autonomous Edition  
+> **Version:** 11.0.0 Enterprise Autonomous Edition  
 > **Target Gateway:** Razorpay (Test & Live Production)  
 > **Supported Fallbacks:** Cashfree, Stripe  
 > **Core Principle:** ULTRON does not ask *"can we recover this payment?"* It asks *"is recovering this payment worth spending our next unit of limited recovery capacity?"* — and only acts when the decision survives a deterministic compliance gate.
@@ -769,3 +769,72 @@ d:\Work Space\Project\Ultron\
 ├── archive/                      # Historical reports and archived intermediate logs
 └── Ultron.md                     # Master definitive project documentation (This Document)
 ```
+
+---
+
+## 9. ULTRON V11 Enterprise Architecture Upgrades
+
+ULTRON V11 establishes an enterprise-grade autonomous control plane designed for high-availability multi-tenant cloud deployments, sub-millisecond economic reasoning, and strict regulatory compliance.
+
+### 9.1 The Eleven Pillars of ULTRON V11
+
+1. **TypeScript Strict Mode & Branded Primitive Types**
+   - Enabled `"strict": true` and `"noUncheckedIndexedAccess": true` across the entire codebase.
+   - Introduced branded types in `src/types/branded.ts` (`Paise`, `TenantId`, `OpportunityId`, `Probability`) eliminating type-coercion bugs.
+
+2. **PostgreSQL Migration & Supabase Row-Level Security**
+   - High-throughput PostgreSQL connection pool (`max: 20`, `idleTimeoutMillis: 30000`).
+   - Batch streaming migrator (`scripts/migrate_sqlite_to_postgres.ts`) with 500-row chunking.
+   - Supabase Row-Level Security (RLS) migrations enforcing `current_app_tenant_id()` isolation.
+
+3. **OpenTelemetry Distributed Tracing & W3C Context Propagation**
+   - NodeSDK OpenTelemetry integration exporting to Jaeger / Tempo (`http://localhost:4318/v1/traces`).
+   - Contextual span wrapper `withSpan()` instrumenting agent reasoning, market allocation, and execution dispatch.
+   - W3C `traceparent` header propagation linking frontend requests, backend API, and worker processes.
+
+4. **Advanced Security Hardening**
+   - Strict production CORS allowlist rejecting unauthorized origins.
+   - Enterprise Content Security Policy (`getSecurityHeadersMiddleware`).
+   - JWT token-pair rotation (15m access + 7d refresh) with Redis token blacklist revocation.
+   - API key granular scopes (`events:write`, `payments:read`, `analytics:read`) and Redis per-key rate limits.
+
+5. **Resilient Execution Engine**
+   - Database-persisted Dead Letter Queue (`dlq_jobs`) with deterministic exponential backoff intervals (`[0.5, 2, 5, 15, 60]` minutes).
+   - Automatic Human-in-the-Loop (HITL) escalation upon 5 exhausted attempts.
+   - Persistent Circuit Breaker in Redis with cooldown probing and half-open transitions.
+   - Unified background scheduler (`job_scheduler.ts`) and graceful shutdown handlers (`waitForDrain`).
+
+6. **Multi-Tenant Row-Level Isolation**
+   - Centralized tenant resolver `tenant_guard.ts` across JWT sessions, API keys, and gateway headers.
+   - Enforced `tenantId` parameter filtering across all database query operations.
+   - Autonomous AI Agent Loop scoped strictly to merchant tenant boundary.
+
+7. **Enhanced Economic Engine & Causal Attribution**
+   - Persistent Bayesian priors table (`bayesian_priors`) with continuous Beta conjugate learning.
+   - IVEN priority band classification: `STRONG` (≥ ₹150), `MODERATE` (₹50-₹149), `WEAK` (< ₹50), `NEGATIVE` (≤ ₹0 / ABSTAIN).
+   - Difference-in-Differences (Diff-in-Diff) causal attribution engine computing Average Treatment Effect on the Treated (ATT), p-values, and parallel trends check (< 15% pre divergence).
+   - Multi-Armed Contextual Bandit using Thompson Sampling over conjugate Beta posteriors.
+
+8. **Advanced Observability Dashboard (Frontend V11)**
+   - Resilient SSE client (`sse-client.ts`) with sub-2s exponential backoff auto-reconnect.
+   - Reusable `IVENBadge.tsx` with explicit model-estimated counterfactual disclosures.
+   - Tenant Command Center (`/dashboard/command-center`) with live kill switch and portfolio telemetry.
+   - Economic Intelligence Panel (`/dashboard/economics`) visualizing Bayesian priors, bandit arms, and causal ATT.
+   - Audit & Compliance Timeline (`/dashboard/audit`) reading durable stored fields with two-stage decision verification.
+
+9. **Enterprise API Gateway Layer**
+   - Centralized Zod schema validation registry generating RFC 7807 problem details.
+   - Multi-tiered sliding-window rate limiting (`FREE`, `STARTER`, `GROWTH`, `ENTERPRISE`) with RFC headers.
+   - API versioning router (`/v1/` and `/v2/`) with content negotiation.
+   - Dynamic OpenAPI 3.1.0 generator (`/openapi.json`) and interactive documentation (`/docs`).
+
+10. **Horizontal Scalability & Decoupled Workers**
+    - Distributed background job queue (`src/queue/job_queue.ts`) backed by Redis List (`LPUSH` / `BRPOP`).
+    - Decoupled worker process (`src/worker.ts`) executing reasoning, allocation, execution, and reconciliation under OpenTelemetry spans.
+    - Updated `docker-compose.yml` with scalable worker service, Jaeger, and Prometheus.
+
+11. **Production Readiness, Kubernetes Probes & SLO Engine**
+    - 3-tier Kubernetes-ready health checks (`/health/live`, `/health/ready`, `/health/readiness`, `/health/deep`).
+    - Google SRE multi-window error budget burn rate tracking (99.9% availability objective).
+    - Production operations runbook in `docs/V11_RUNBOOK.md`.
+

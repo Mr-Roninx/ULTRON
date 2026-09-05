@@ -215,6 +215,7 @@ app.get('/metrics', (_req, res) => {
 // 3-Tier Enterprise Health Check Probes
 app.get('/health/live', HealthService.liveness);
 app.get('/health/ready', HealthService.readiness);
+app.get('/health/readiness', HealthService.readiness);
 app.get('/health/deep', HealthService.deep);
 
 // Health Check with Connection Pool Metrics & Cache Telemetry (Legacy /health)
