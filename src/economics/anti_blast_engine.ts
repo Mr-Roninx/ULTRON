@@ -94,6 +94,25 @@ export class AntiBlastEngine {
     const tenantId = (opp as any).tenant_id || 'tenant_system_default';
     const now = new Date().toISOString();
 
+    // Deduplicate: do not record duplicate prevented intervention for same opportunity
+    const existing = await adapter.query<any>(
+      `SELECT id FROM interventions_prevented WHERE opportunity_id = ? LIMIT 1;`,
+      [opp.id]
+    );
+    if (existing.length > 0) {
+      return {
+        id: existing[0].id,
+        opportunity_id: opp.id,
+        tenant_id: tenantId,
+        prevention_reason: reason,
+        messaging_fee_saved_paise: savings.messaging_saved,
+        provider_fee_saved_paise: savings.provider_saved,
+        goodwill_saved_paise: savings.goodwill_saved,
+        total_capital_saved_paise: savings.total_saved,
+        timestamp: now,
+      };
+    }
+
     await adapter.execute(
       `INSERT INTO interventions_prevented (
         id, opportunity_id, tenant_id, prevention_reason,
@@ -129,25 +148,47 @@ export class AntiBlastEngine {
   /**
    * Retrieves aggregate anti-blast metrics across the portfolio or for a tenant
    */
-  public static async getAntiBlastSummary(tenantId?: string): Promise<AntiBlastSummary> {
+  public static async getAntiBlastSummary(tenantId?: string, environment?: 'test' | 'live'): Promise<AntiBlastSummary> {
     const adapter = DatabaseAdapter.getInstance();
     await this.initTable(adapter);
 
-    let query = `
-      SELECT 
-        COUNT(*) as total_prevented,
-        COALESCE(SUM(messaging_fee_saved_paise), 0) as messaging_saved_paise,
-        COALESCE(SUM(provider_fee_saved_paise), 0) as provider_saved_paise,
-        COALESCE(SUM(goodwill_saved_paise), 0) as goodwill_saved_paise,
-        COALESCE(SUM(total_capital_saved_paise), 0) as total_capital_saved_paise
-      FROM interventions_prevented
-    `;
+    let query: string;
     const params: any[] = [];
-    if (tenantId) {
-      query += ` WHERE tenant_id = ?;`;
-      params.push(tenantId);
+
+    if (environment === 'live') {
+      query = `
+        SELECT 
+          COUNT(p.id) as total_prevented,
+          COALESCE(SUM(p.messaging_fee_saved_paise), 0) as messaging_saved_paise,
+          COALESCE(SUM(p.provider_fee_saved_paise), 0) as provider_saved_paise,
+          COALESCE(SUM(p.goodwill_saved_paise), 0) as goodwill_saved_paise,
+          COALESCE(SUM(p.total_capital_saved_paise), 0) as total_capital_saved_paise
+        FROM interventions_prevented p
+        JOIN recovery_opportunities o ON p.opportunity_id = o.id
+        WHERE o.environment = 'live'
+      `;
+      if (tenantId) {
+        query += ` AND p.tenant_id = ?;`;
+        params.push(tenantId);
+      } else {
+        query += `;`;
+      }
     } else {
-      query += `;`;
+      query = `
+        SELECT 
+          COUNT(*) as total_prevented,
+          COALESCE(SUM(messaging_fee_saved_paise), 0) as messaging_saved_paise,
+          COALESCE(SUM(provider_fee_saved_paise), 0) as provider_saved_paise,
+          COALESCE(SUM(goodwill_saved_paise), 0) as goodwill_saved_paise,
+          COALESCE(SUM(total_capital_saved_paise), 0) as total_capital_saved_paise
+        FROM interventions_prevented
+      `;
+      if (tenantId) {
+        query += ` WHERE tenant_id = ?;`;
+        params.push(tenantId);
+      } else {
+        query += `;`;
+      }
     }
 
     const rows = await adapter.query<any>(query, params);

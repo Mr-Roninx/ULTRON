@@ -221,7 +221,7 @@ playgroundRouter.post(
           notes: { name: customer_name || 'Aarav Patel', source: 'PLAYGROUND' },
         },
         eventId,
-        { source: 'synthetic', tenantId }
+        { source: 'synthetic', tenantId, environment: 'test' }
       );
       insertOpportunity(opp);
 

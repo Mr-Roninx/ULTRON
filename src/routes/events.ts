@@ -277,6 +277,7 @@ eventsRouter.post(
           {
             source: 'real',
             tenantId: tenantContext.tenantId,
+            environment: event.environment || tenantContext.environment || 'test',
           }
         );
 
@@ -511,6 +512,7 @@ eventsRouter.post(
         {
           source: 'synthetic',
           tenantId: tenantContext.tenantId,
+          environment: 'test',
         }
       );
 

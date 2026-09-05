@@ -23,8 +23,18 @@ dashboardRouter.get('/summary', async (req: Request, res: Response) => {
     const envQuery = req.query.environment as string | undefined;
     const environment = (envQuery === 'live' || envQuery === 'test') ? envQuery : undefined;
     const allOpps = getAllOpportunities(tenantId, environment);
-    const decisions = getAllAllocationDecisions(tenantId);
-    const executionRecords = getAllExecutionRecords(tenantId);
+    
+    // In live production mode, decisions and executions must strictly match opportunities in the live environment
+    const oppIds = new Set(allOpps.map((o) => o.id));
+    const allDecisions = getAllAllocationDecisions(tenantId);
+    const decisions = environment === 'live'
+      ? allDecisions.filter((d) => oppIds.has(d.opportunity_id))
+      : allDecisions;
+
+    const allExecutionRecords = getAllExecutionRecords(tenantId);
+    const executionRecords = environment === 'live'
+      ? allExecutionRecords.filter((e) => oppIds.has(e.opportunity_id))
+      : allExecutionRecords;
 
     // 1. Total Opportunities
     const total_opportunities = allOpps.length;
@@ -64,7 +74,7 @@ dashboardRouter.get('/summary', async (req: Request, res: Response) => {
     const activeWebApps = webApps.filter((a) => a.status === 'ONLINE');
 
     // 8. Anti-Blast Gating Savings (Capital & Brand Goodwill Saved)
-    const antiBlast = await AntiBlastEngine.getAntiBlastSummary(tenantId);
+    const antiBlast = await AntiBlastEngine.getAntiBlastSummary(tenantId, environment);
 
     res.json({
       total_opportunities,

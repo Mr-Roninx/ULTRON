@@ -404,6 +404,7 @@ app.post('/v1/webhooks/whatsapp', handleWhatsAppWebhookEvent);
 
 // Opportunities endpoints
 app.use('/opportunities', authenticateJWT, auditLogger('access_opportunities', 'opportunities'), opportunitiesRouter);
+app.use('/v1/opportunities', authenticateJWT, auditLogger('access_opportunities', 'opportunities'), opportunitiesRouter);
 
 // Recovery Market endpoints (Feature 4)
 app.use('/market', authenticateJWT, authorizeRole([UserRole.ADMIN, UserRole.OPERATOR]), auditLogger('access_market', 'market'), marketRouter);

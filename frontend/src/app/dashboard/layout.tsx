@@ -5,8 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Shield, LayoutDashboard, Settings, Power, LogOut, ChevronRight, Sparkles,
-  Bell, CheckCircle2, CheckCheck, Search, HelpCircle, Zap,
-  Activity, TrendingUp, FileCheck
+  Bell, CheckCircle2, CheckCheck, Search, HelpCircle, Zap
 } from "lucide-react";
 import { useAuth, api } from "../../lib/auth";
 
@@ -23,9 +22,6 @@ interface NotificationItem {
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Recovery Hub", icon: LayoutDashboard, exact: true, badge: "LIVE" },
-  { href: "/dashboard/command-center", label: "Command Center", icon: Activity, exact: false, badge: "V11" },
-  { href: "/dashboard/economics", label: "Economic Intelligence", icon: TrendingUp, exact: false },
-  { href: "/dashboard/audit", label: "Audit Timeline", icon: FileCheck, exact: false },
   { href: "/dashboard/setup", label: "Integration Hub", icon: Sparkles, exact: false, highlight: true },
   { href: "/presentation", label: "Visual Presentation", icon: Sparkles, exact: false, badge: "DECK" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },

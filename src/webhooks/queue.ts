@@ -144,6 +144,7 @@ export class WebhookQueueEngine {
             {
               source: event.environment === 'live' ? 'real' : 'synthetic',
               tenantId: item.tenant_id,
+              environment: event.environment || 'test',
             }
           );
 

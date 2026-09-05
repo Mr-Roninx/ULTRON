@@ -363,8 +363,8 @@ export async function handleSimulatedWebhook(req: Request, res: Response): Promi
         return;
       }
 
-      // Run Perception Normalization with source='synthetic' unconditionally
-      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'synthetic', tenantId });
+      // Run Perception Normalization with source='synthetic' and environment='test' unconditionally
+      const opportunity = normalizeOpportunity(paymentEntity, eventId, { source: 'synthetic', tenantId, environment: 'test' });
 
       // Insert synthetic opportunity
       insertOpportunity(opportunity);

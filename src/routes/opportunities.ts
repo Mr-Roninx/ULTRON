@@ -7,6 +7,7 @@ import {
   getScoreByOpportunityId,
   getAllocationDecisionByOpportunityId,
   getAuthorityChecksByOpportunityId,
+  getExecutionRecordByOpportunityId,
 } from '../db/database.js';
 import { scoreOpportunity } from '../economics/scorer.js';
 import { evaluateOpportunity } from '../authority/gate.js';
@@ -21,10 +22,25 @@ opportunitiesRouter.get('/', (req: Request, res: Response) => {
     const tenantId = resolveTenantId(req) || undefined;
     const envQuery = req.query.environment as string | undefined;
     const environment = (envQuery === 'live' || envQuery === 'test') ? envQuery : undefined;
-    const opportunities = getAllOpportunities(tenantId, environment);
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    let opportunities = getAllOpportunities(tenantId, environment);
+    if (limit && limit > 0) {
+      opportunities = opportunities.slice(0, limit);
+    }
+    const enriched = opportunities.map((opp) => {
+      const score = getScoreByOpportunityId(opp.id);
+      const decision = getAllocationDecisionByOpportunityId(opp.id);
+      const execution = getExecutionRecordByOpportunityId(opp.id);
+      return {
+        ...opp,
+        score,
+        decision,
+        execution,
+      };
+    });
     res.json({
-      count: opportunities.length,
-      opportunities,
+      count: enriched.length,
+      opportunities: enriched,
     });
   } catch (error) {
     console.error('Failed to fetch opportunities:', error);

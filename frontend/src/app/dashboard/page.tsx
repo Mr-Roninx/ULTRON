@@ -79,7 +79,7 @@ export default function UnifiedRecoveryHubPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [filterTab, setFilterTab] = useState<string>("ALL");
-  const [sourceFilter, setSourceFilter] = useState<"ALL" | "REAL" | "SYNTHETIC">("REAL");
+  const [sourceFilter, setSourceFilter] = useState<"ALL" | "REAL" | "SYNTHETIC">("ALL");
   const [selectedOpp, setSelectedOpp] = useState<OpportunityItem | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [runningSweep, setRunningSweep] = useState(false);
